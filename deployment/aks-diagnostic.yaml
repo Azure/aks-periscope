@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aks-diagnostic
+  labels:
+    app: aks-diagnostic
+spec:
+  selector:
+    matchLabels:
+      app: aks-diagnostic
+  template:
+    metadata:
+      labels:
+        app: aks-diagnostic
+    spec:
+      containers:
+      - name: aks-diagnostic
+        image: aksrepos.azurecr.io/staging/aks-diagnostic:v0.1
+        securityContext:
+          privileged: true
+        imagePullPolicy: Always
+        volumeMounts:
+        - mountPath: /var/run/docker.sock
+          name: docker-sock-volume
+        - mountPath: /var/log
+          name: log
+          readOnly: true
+        - mountPath: /etc/hostname
+          name: etc
+          subPath: hostname
+        - mountPath: "/etc/azure-blob"
+          name: azure-blob
+          readOnly: true
+      volumes:
+      - name: docker-sock-volume
+        hostPath:
+          path: /var/run/docker.sock
+      - name: log
+        hostPath:
+          path: /var/log
+      - name: etc
+        hostPath:
+          path: /etc
+      - name: azure-blob
+        secret:
+          secretName: azure-blob
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: azure-blob
+type: Opaque
+data:
+  accountName: anVzdWJsb2IK
+  accountKey: dGlteTBUK3RSbkJ0cXptdnNpN2x1WWR3UlljRVZKUENMaThvTGRDS0FRcnlETWZlNTNINzh4KzJaL3F6TWs1WEdUVEl4MHRsV1ZCZ3E1RUJKOUpkVWc9PQo=
