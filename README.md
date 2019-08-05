@@ -1,11 +1,25 @@
 
-# AKS diagnostic tool
+# AKS Diagnostic Tool
 Quick troubleshooting your AKS cluster.
 
 # Overview
 AKS (Azure kubernetes Service) customers needs a tool to diagnose their cluster issues which many times are caused by wrong configuration of their environment, such as networking or permission issues. This tool will allow AKS customers to run initial diagnostics and collect logs that helps them identify the underlying problems.
 
-# Getting started
+# Build Instructions
+
+The container image is currently stored in aksrepos.azurecr.io. A JIT ticket is needed and then login by:
+```
+az acr login -n aksrepos
+```
+
+Then build and push to ACR by:
+```
+docker build -f ./builder/Dockerfile -t staging/aks-diagnostic .
+docker tag staging/aks-diagnostic aksrepos.azurecr.io/staging/aks-diagnostic:v0.1
+docker push aksrepos.azurecr.io/staging/aks-diagnostic:v0.1
+```
+
+# Getting Started
 
 # Contributing
 

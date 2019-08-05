@@ -51,5 +51,5 @@ metadata:
   name: azure-blob
 type: Opaque
 data:
-  accountName: anVzdWJsb2IK
-  accountKey: dGlteTBUK3RSbkJ0cXptdnNpN2x1WWR3UlljRVZKUENMaThvTGRDS0FRcnlETWZlNTNINzh4KzJaL3F6TWs1WEdUVEl4MHRsV1ZCZ3E1RUJKOUpkVWc9PQo=
+  accountName: # <accountName, base64 encoded>
+  accountKey: # <accountKey, base64 encoded>
