@@ -24,7 +24,7 @@ func CheckNetworkConnectivity(urls []string) (string, error) {
 	file, _ := os.Create(networkConnectivityFile)
 	defer file.Close()
 
-	fmt.Fprintf(file, "%25v%20v%100v\n", "URL", "Connectivity", "Error")
+	fmt.Fprintf(file, "%50v%20v%100v\n", "URL", "Connectivity", "Error")
 	timeout := time.Duration(60 * time.Second)
 
 	for _, url := range urls {
@@ -32,7 +32,7 @@ func CheckNetworkConnectivity(urls []string) (string, error) {
 		if err != nil {
 			log.Println("Site unreachable, error: ", err)
 		}
-		fmt.Fprintf(file, "%25v%20v%100v\n", url, err == nil, err)
+		fmt.Fprintf(file, "%50v%20v%100v\n", url, err == nil, err)
 	}
 
 	return networkConnectivityFile, nil

@@ -17,7 +17,7 @@ func main() {
 	systemlogs, _ := actions.PollSystemLogs([]string{"docker", "kubelet"})
 	storage.WriteToBlob("systemlogs-"+timeStamp, systemlogs)
 
-	networkConnectivity, _ := actions.CheckNetworkConnectivity([]string{"google.com:80", "azurecr.io:80", "bad.site:80"})
+	networkConnectivity, _ := actions.CheckNetworkConnectivity([]string{"google.com:80", "azurecr.io:80", "mcr.microsoft.com:80", "kubernetes.default.svc.cluster.local:443"})
 	storage.WriteToBlob("networkconnectivity-"+timeStamp, []string{networkConnectivity})
 
 	iptables, _ := actions.DumpIPTables()
