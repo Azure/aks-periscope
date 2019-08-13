@@ -12,11 +12,11 @@ func GetHostName() string {
 	return strings.TrimSuffix(string(hostname), "\n")
 }
 
-// GetAzureBlobLogin get azure blob login info
-func GetAzureBlobLogin() (string, string) {
+// GetAzureBlobCredential get azure blob access info
+func GetAzureBlobCredential() (string, string) {
 	accountName, _ := ioutil.ReadFile("/etc/azure-blob/accountName")
-	accountKey, _ := ioutil.ReadFile("/etc/azure-blob/accountKey")
-	return strings.TrimSuffix(string(accountName), "\n"), strings.TrimSuffix(string(accountKey), "\n")
+	sasKey, _ := ioutil.ReadFile("/etc/azure-blob/sasKey")
+	return strings.TrimSuffix(string(accountName), "\n"), strings.TrimSuffix(string(sasKey), "\n")
 }
 
 // RunCommandOnHost runs a command on host system
