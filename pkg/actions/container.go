@@ -1,15 +1,10 @@
 package actions
 
 import (
-	"context"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
@@ -26,37 +21,25 @@ func PollContainerLogs(podNameSpace string) ([]string, error) {
 		return nil, err
 	}
 
-	ctx := context.Background()
-	cli, err := client.NewEnvClient()
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
-
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
+	output, _ := utils.RunCommandOnHost("docker", "ps", "--format", "{{.Names}}")
+	containers := strings.Split(output, "\n")
+	containers = containers[:len(containers)-1]
 
 	for _, container := range containers {
-		parts := strings.Split(container.Names[0], "_")
+		parts := strings.Split(container, "_")
 		if parts[1] != "POD" && parts[3] == podNameSpace {
-			containerNames = append(containerNames, strings.TrimPrefix(container.Names[0], "/"))
+			containerNames = append(containerNames, strings.TrimPrefix(container, "/"))
 		}
 	}
 
 	for _, containerName := range containerNames {
-		out, err := cli.ContainerLogs(ctx, containerName, types.ContainerLogsOptions{ShowStdout: true})
-		if err != nil {
-			log.Fatal(err)
-			return nil, err
-		}
+		output, _ := utils.RunCommandOnHost("docker", "logs", containerName)
 
 		containerLog := filepath.Join(rootPath, containerName)
-		file, err := os.Create(containerLog)
+		file, _ := os.Create(containerLog)
 		defer file.Close()
-		io.Copy(file, out)
+
+		_, err = file.Write([]byte(output))
 
 		containerLogs = append(containerLogs, containerLog)
 	}

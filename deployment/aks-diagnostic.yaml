@@ -13,34 +13,18 @@ spec:
       labels:
         app: aks-diagnostic
     spec:
+      hostPID: true
       containers:
       - name: aks-diagnostic
-        image: aksrepos.azurecr.io/staging/aks-diagnostic:v0.1
+        image: aksrepos.azurecr.io/staging/aks-diagnostic:v0.2
         securityContext:
           privileged: true
         imagePullPolicy: Always
         volumeMounts:
-        - mountPath: /var/run/docker.sock
-          name: docker-sock-volume
-        - mountPath: /var/log
-          name: log
-          readOnly: true
-        - mountPath: /etc/hostname
-          name: etc
-          subPath: hostname
         - mountPath: "/etc/azure-blob"
           name: azure-blob
           readOnly: true
       volumes:
-      - name: docker-sock-volume
-        hostPath:
-          path: /var/run/docker.sock
-      - name: log
-        hostPath:
-          path: /var/log
-      - name: etc
-        hostPath:
-          path: /etc
       - name: azure-blob
         secret:
           secretName: azure-blob

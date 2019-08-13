@@ -1,13 +1,11 @@
 package actions
 
 import (
-	"io"
 	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
-	"github.com/coreos/go-systemd/sdjournal"
 )
 
 // PollSystemLogs poll systemd logs using journal client
@@ -22,39 +20,13 @@ func PollSystemLogs(services []string) ([]string, error) {
 	}
 
 	for _, service := range services {
-		journalReaderConfig := sdjournal.JournalReaderConfig{
-			Path: "/var/log/journal/",
-			Matches: []sdjournal.Match{
-				{
-					Field: sdjournal.SD_JOURNAL_FIELD_SYSTEMD_UNIT,
-					Value: service + ".service",
-				},
-			},
-		}
-
-		jr, err := sdjournal.NewJournalReader(journalReaderConfig)
-		if err != nil {
-			log.Fatal(err)
-			return nil, err
-		}
+		output, _ := utils.RunCommandOnHost("journalctl", "-u", service)
 
 		systemLog := filepath.Join(rootPath, service)
-		file, err := os.Create(systemLog)
+		file, _ := os.Create(systemLog)
 		defer file.Close()
 
-		b := make([]byte, 64*1<<(10))
-		for {
-			c, err := jr.Read(b)
-			if err != nil {
-				if err == io.EOF {
-					break
-				}
-				log.Fatal(err)
-				return nil, err
-			}
-
-			_, err = file.Write(b[:c])
-		}
+		_, err = file.Write([]byte(output))
 
 		systemLogs = append(systemLogs, systemLog)
 	}
