@@ -30,11 +30,6 @@ steps:
 
 - script: |
     go version
-    go get -v -t -d ./...
-    if [ -f Gopkg.toml ]; then
-        curl https://raw.githubusercontent.com/golang/dep/master/install.sh | sh
-        dep ensure
-    fi
-    go build -v cmd/aks-diagnostic/aks-diagnostic.go
+    go build -mod=vendor -v cmd/aks-diagnostic/aks-diagnostic.go
   workingDirectory: '$(modulePath)'
   displayName: 'Get dependencies, then build'
