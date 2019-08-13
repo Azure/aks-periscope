@@ -8,33 +8,27 @@ import (
 	"os"
 	"strings"
 
-	blob "github.com/Azure/azure-storage-blob-go/azblob"
-
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
+	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
 // WriteToBlob write data to blob
 func WriteToBlob(containerName string, files []string) error {
 	ctx := context.Background()
 
-	accountName, accountKey := utils.GetAzureBlobLogin()
-	credential, err := blob.NewSharedKeyCredential(accountName, accountKey)
-	if err != nil {
-		log.Fatal(err)
-		return err
-	}
-	p := blob.NewPipeline(credential, blob.PipelineOptions{})
+	p := azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{})
+	accountName, sasKey := utils.GetAzureBlobCredential()
 
-	URL, _ := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, containerName))
-	containerURL := blob.NewContainerURL(*URL, p)
+	URL, _ := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s?%s", accountName, containerName, sasKey))
+	containerURL := azblob.NewContainerURL(*URL, p)
 
 	fmt.Printf("Creating a container named %s\n", containerName)
-	_, err = containerURL.Create(ctx, blob.Metadata{}, blob.PublicAccessNone)
+	_, err := containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
 	if err != nil {
-		storageError, ok := err.(blob.StorageError)
+		storageError, ok := err.(azblob.StorageError)
 		if ok {
 			switch storageError.ServiceCode() {
-			case blob.ServiceCodeContainerAlreadyExists:
+			case azblob.ServiceCodeContainerAlreadyExists:
 			default:
 				log.Fatal(err)
 				return err
@@ -54,7 +48,7 @@ func WriteToBlob(containerName string, files []string) error {
 		}
 
 		fmt.Printf("Uploading the file with blob name: %s\n", blobURL.String())
-		_, err = blob.UploadFileToBlockBlob(ctx, file, blobURL, blob.UploadToBlockBlobOptions{
+		_, err = azblob.UploadFileToBlockBlob(ctx, file, blobURL, azblob.UploadToBlockBlobOptions{
 			BlockSize:   4 * 1024 * 1024,
 			Parallelism: 16})
 		if err != nil {

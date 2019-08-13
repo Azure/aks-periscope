@@ -36,4 +36,4 @@ metadata:
 type: Opaque
 data:
   accountName: # <accountName, base64 encoded>
-  accountKey: # <accountKey, base64 encoded>
+  sasKey: # <saskey, base64 encoded>
