@@ -19,7 +19,7 @@ func WriteToBlob(containerName string, files []string) error {
 	p := azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{})
 	accountName, sasKey := utils.GetAzureBlobCredential()
 
-	URL, _ := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s?%s", accountName, containerName, sasKey))
+	URL, _ := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s%s", accountName, containerName, sasKey))
 	containerURL := azblob.NewContainerURL(*URL, p)
 
 	fmt.Printf("Creating a container named %s\n", containerName)
