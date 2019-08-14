@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"errors"
 	"io/ioutil"
+	"log"
 	"os/exec"
 	"strings"
 )
@@ -10,6 +12,29 @@ import (
 func GetHostName() string {
 	hostname, _ := RunCommandOnHost("cat", "/etc/hostname")
 	return strings.TrimSuffix(string(hostname), "\n")
+}
+
+// GetFQDN gets the API server FQDN from the kubeconfig file
+func GetFQDN() (string, error) {
+	output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
+
+	if err != nil {
+		log.Println("Can't open kubeconfig file: ", err)
+		return "", err
+	}
+
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		index := strings.Index(line, "server: ")
+		if index >= 0 {
+			fqdn := line[index+len("server:"):]
+			fqdn = strings.Replace(fqdn, "https://", "", -1)
+			fqdn = strings.Replace(fqdn, ":443", "", -1)
+			return fqdn, nil
+		}
+	}
+
+	return "", errors.New("Could not find server definitions in kubeconfig")
 }
 
 // GetAzureBlobCredential get azure blob access info
