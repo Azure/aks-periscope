@@ -31,6 +31,6 @@ steps:
 
 - script: |
     go version
-    go build -v cmd/aks-diagnostic/aks-diagnostic.go
+    go build -mod=vendor cmd/aks-diagnostic/aks-diagnostic.go
   workingDirectory: '$(modulePath)'
   displayName: 'Get dependencies, then build'
