@@ -34,5 +34,8 @@ func main() {
 	snapshot, _ := actions.Snapshot()
 	storage.WriteToBlob("snapshot-"+timeStamp, []string{snapshot})
 
+	provisionLogs, _ := actions.ProvisionLogs()
+	storage.WriteToBlob("provision-"+timeStamp, []string{provisionLogs})
+
 	time.Sleep(24 * time.Hour)
 }
