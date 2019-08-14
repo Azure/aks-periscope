@@ -8,8 +8,8 @@ import (
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
 
-// DumpIPTables print out the host's NAT IP Table
-func DumpIPTables() (string, error) {
+// Snapshot dumps a snapshot of node info
+func Snapshot() (string, error) {
 	rootPath := filepath.Join("/aks-diagnostic", utils.GetHostName())
 	err := os.MkdirAll(rootPath, os.ModePerm)
 	if err != nil {
@@ -17,16 +17,16 @@ func DumpIPTables() (string, error) {
 		return "", err
 	}
 
-	iptablesFile := filepath.Join(rootPath, "iptables")
-	file, _ := os.Create(iptablesFile)
+	snapshotFile := filepath.Join(rootPath, "snapshot")
+	file, _ := os.Create(snapshotFile)
 	defer file.Close()
 
-	output, _ := utils.RunCommandOnHost("iptables", "-t", "nat", "-L")
+	output, _ := utils.RunCommandOnHost("cat", "/etc/resolv.conf")
 	_, err = file.Write([]byte(output))
 
 	if err != nil {
-		log.Println("Error while dumping iptables: ", err)
+		log.Println("Error while taking snapshot of /etc/resolv.conf: ", err)
 	}
 
-	return iptablesFile, nil
+	return snapshotFile, nil
 }

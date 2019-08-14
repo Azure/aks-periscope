@@ -15,6 +15,7 @@ variables:
   GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
   modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
   GO111MODULE: 'on'
+  GOFLAGS: '-mod=vendor'
 
 steps:
 - script: |
@@ -30,6 +31,6 @@ steps:
 
 - script: |
     go version
-    go build -mod=vendor -v cmd/aks-diagnostic/aks-diagnostic.go
+    go build -v cmd/aks-diagnostic/aks-diagnostic.go
   workingDirectory: '$(modulePath)'
   displayName: 'Get dependencies, then build'
