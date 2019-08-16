@@ -19,7 +19,7 @@ spec:
         env:
         - name: CLUSTER
           value: aks
-        image: aksrepos.azurecr.io/staging/aks-diagnostic:v0.2
+        image: aksrepos.azurecr.io/staging/aks-diagnostic:v0.3
         securityContext:
           privileged: true
         imagePullPolicy: Always
