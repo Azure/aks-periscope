@@ -16,6 +16,9 @@ spec:
       hostPID: true
       containers:
       - name: aks-diagnostic
+        env:
+        - name: CLUSTER
+          value: aks
         image: aksrepos.azurecr.io/staging/aks-diagnostic:v0.2
         securityContext:
           privileged: true
