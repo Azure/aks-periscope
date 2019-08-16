@@ -13,13 +13,13 @@ import (
 )
 
 // WriteToBlob write data to blob
-func WriteToBlob(containerName string, files []string) error {
+func WriteToBlob(cluster, containerName string, files []string) error {
 	ctx := context.Background()
 
 	p := azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{})
 	accountName, sasKey := utils.GetAzureBlobCredential()
 
-	URL, _ := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s%s", accountName, containerName, sasKey))
+	URL, _ := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s%s", accountName, cluster, sasKey))
 	containerURL := azblob.NewContainerURL(*URL, p)
 
 	fmt.Printf("Creating a container named %s\n", containerName)
@@ -40,7 +40,7 @@ func WriteToBlob(containerName string, files []string) error {
 	}
 
 	for _, file := range files {
-		blobURL := containerURL.NewBlockBlobURL(strings.TrimPrefix(file, "/aks-diagnostic/"))
+		blobURL := containerURL.NewBlockBlobURL(strings.Replace(file, "/aks-diagnostic", containerName, -1))
 		file, err := os.Open(file)
 		if err != nil {
 			log.Fatal(err)

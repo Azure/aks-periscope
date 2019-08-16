@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/actions"
@@ -9,13 +10,17 @@ import (
 )
 
 func main() {
-	timeStamp := time.Now().Format("200601021504")
+
+	cluster := os.Getenv("CLUSTER")
+	if cluster == "" {
+		cluster = "default"
+	}
 
 	containerLogs, _ := actions.PollContainerLogs("kube-system")
-	storage.WriteToBlob("containerlogs-"+timeStamp, containerLogs)
+	storage.WriteToBlob(cluster, "containerlogs", containerLogs)
 
 	systemlogs, _ := actions.PollSystemLogs([]string{"docker", "kubelet"})
-	storage.WriteToBlob("systemlogs-"+timeStamp, systemlogs)
+	storage.WriteToBlob(cluster, "systemlogs", systemlogs)
 
 	connectionsToCheck := []string{"google.com:80", "azurecr.io:80", "mcr.microsoft.com:80", "kubernetes.default.svc.cluster.local:443"}
 	fqdn, err := utils.GetFQDN()
@@ -26,16 +31,16 @@ func main() {
 	}
 
 	networkConnectivity, _ := actions.CheckNetworkConnectivity(connectionsToCheck)
-	storage.WriteToBlob("networkconnectivity-"+timeStamp, []string{networkConnectivity})
+	storage.WriteToBlob(cluster, "networkconnectivity", []string{networkConnectivity})
 
 	iptables, _ := actions.DumpIPTables()
-	storage.WriteToBlob("iptables-"+timeStamp, []string{iptables})
+	storage.WriteToBlob(cluster, "iptables", []string{iptables})
 
 	snapshot, _ := actions.Snapshot()
-	storage.WriteToBlob("snapshot-"+timeStamp, []string{snapshot})
+	storage.WriteToBlob(cluster, "snapshot", []string{snapshot})
 
 	provisionLogs, _ := actions.ProvisionLogs()
-	storage.WriteToBlob("provision-"+timeStamp, []string{provisionLogs})
+	storage.WriteToBlob(cluster, "provision", []string{provisionLogs})
 
 	time.Sleep(24 * time.Hour)
 }
