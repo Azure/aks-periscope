@@ -4,8 +4,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Azure/aks-diagnostic-tool/pkg/actions"
-	"github.com/Azure/aks-diagnostic-tool/pkg/storage"
+	"github.com/Azure/aks-diagnostic-tool/pkg/datacollector"
+	"github.com/Azure/aks-diagnostic-tool/pkg/dataexporter"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
 
@@ -16,11 +16,11 @@ func main() {
 		cluster = "default"
 	}
 
-	containerLogs, _ := actions.PollContainerLogs("kube-system")
-	storage.WriteToBlob(cluster, "containerlogs", containerLogs)
+	containerLogs, _ := datacollector.PollContainerLogs("kube-system")
+	dataexporter.WriteToBlob(cluster, "containerlogs", containerLogs)
 
-	systemlogs, _ := actions.PollSystemLogs([]string{"docker", "kubelet"})
-	storage.WriteToBlob(cluster, "systemlogs", systemlogs)
+	systemlogs, _ := datacollector.PollSystemLogs([]string{"docker", "kubelet"})
+	dataexporter.WriteToBlob(cluster, "systemlogs", systemlogs)
 
 	connectionsToCheck := []string{"google.com:80", "azurecr.io:80", "mcr.microsoft.com:80", "kubernetes.default.svc.cluster.local:443"}
 	fqdn, err := utils.GetFQDN()
@@ -30,17 +30,17 @@ func main() {
 		connectionsToCheck = append(connectionsToCheck, fqdn+":9000")
 	}
 
-	networkConnectivity, _ := actions.CheckNetworkConnectivity(connectionsToCheck)
-	storage.WriteToBlob(cluster, "networkconnectivity", []string{networkConnectivity})
+	networkConnectivity, _ := datacollector.CheckNetworkConnectivity(connectionsToCheck)
+	dataexporter.WriteToBlob(cluster, "networkconnectivity", []string{networkConnectivity})
 
-	iptables, _ := actions.DumpIPTables()
-	storage.WriteToBlob(cluster, "iptables", []string{iptables})
+	iptables, _ := datacollector.DumpIPTables()
+	dataexporter.WriteToBlob(cluster, "iptables", []string{iptables})
 
-	snapshot, _ := actions.Snapshot()
-	storage.WriteToBlob(cluster, "snapshot", []string{snapshot})
+	snapshot, _ := datacollector.Snapshot()
+	dataexporter.WriteToBlob(cluster, "snapshot", []string{snapshot})
 
-	provisionLogs, _ := actions.ProvisionLogs()
-	storage.WriteToBlob(cluster, "provision", []string{provisionLogs})
+	provisionLogs, _ := datacollector.ProvisionLogs()
+	dataexporter.WriteToBlob(cluster, "provision", []string{provisionLogs})
 
 	time.Sleep(24 * time.Hour)
 }
