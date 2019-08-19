@@ -27,7 +27,7 @@ func GetFQDN() (string, error) {
 	for _, line := range lines {
 		index := strings.Index(line, "server: ")
 		if index >= 0 {
-			fqdn := line[index+len("server:"):]
+			fqdn := line[index+len("server: "):]
 			fqdn = strings.Replace(fqdn, "https://", "", -1)
 			fqdn = strings.Replace(fqdn, ":443", "", -1)
 			return fqdn, nil
