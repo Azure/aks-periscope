@@ -2,9 +2,12 @@ package utils
 
 import (
 	"errors"
+	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -14,8 +17,8 @@ func GetHostName() string {
 	return strings.TrimSuffix(string(hostname), "\n")
 }
 
-// GetFQDN gets the API server FQDN from the kubeconfig file
-func GetFQDN() (string, error) {
+// GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
+func GetAPIServerFQDN() (string, error) {
 	output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
 
 	if err != nil {
@@ -54,4 +57,49 @@ func RunCommandOnHost(command string, arg ...string) (string, error) {
 	cmd := exec.Command("nsenter", args...)
 	out, err := cmd.CombinedOutput()
 	return string(out), err
+}
+
+// CreateCollectorDir creates a working dir for a collector
+func CreateCollectorDir(name string) (string, error) {
+	rootPath := filepath.Join("/aks-diagnostic/", GetHostName(), "metrics", name)
+	err := os.MkdirAll(rootPath, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+		return "", err
+	}
+
+	return rootPath, nil
+}
+
+// CreateDiagnosticDir creates a working dir for diagnostic
+func CreateDiagnosticDir() (string, error) {
+	rootPath := filepath.Join("/aks-diagnostic/", GetHostName(), "diagnostic")
+	err := os.MkdirAll(rootPath, os.ModePerm)
+	if err != nil {
+		log.Fatal(err)
+		return "", err
+	}
+
+	return rootPath, nil
+}
+
+// CopyLocalFile copy a local file
+func CopyLocalFile(src string, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	if err != nil {
+		return err
+	}
+	return out.Close()
 }

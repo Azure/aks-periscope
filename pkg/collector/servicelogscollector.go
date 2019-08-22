@@ -1,23 +1,19 @@
-package datacollector
+package collector
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
 
-// PollSystemLogs poll systemd logs using journal client
-func PollSystemLogs(services []string) ([]string, error) {
+// CollectServiceLogs collect systemd service logs
+func CollectServiceLogs(name string) ([]string, error) {
+	services := []string{"docker", "kubelet"}
+
 	systemLogs := make([]string, 0)
 
-	rootPath := filepath.Join("/aks-diagnostic", utils.GetHostName())
-	err := os.MkdirAll(rootPath, os.ModePerm)
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
+	rootPath, _ := utils.CreateCollectorDir(name)
 
 	for _, service := range services {
 		output, _ := utils.RunCommandOnHost("journalctl", "-u", service)
@@ -26,7 +22,7 @@ func PollSystemLogs(services []string) ([]string, error) {
 		file, _ := os.Create(systemLog)
 		defer file.Close()
 
-		_, err = file.Write([]byte(output))
+		file.Write([]byte(output))
 
 		systemLogs = append(systemLogs, systemLog)
 	}

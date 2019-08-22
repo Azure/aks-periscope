@@ -1,7 +1,6 @@
-package datacollector
+package collector
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,17 +8,14 @@ import (
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
 
-// PollContainerLogs poll container logs in namespace
-func PollContainerLogs(podNameSpace string) ([]string, error) {
+// CollectContainerLogs collect container logs in namespace
+func CollectContainerLogs(name string) ([]string, error) {
+	podNameSpace := "kube-system"
+
 	containerNames := make([]string, 0)
 	containerLogs := make([]string, 0)
 
-	rootPath := filepath.Join("/aks-diagnostic", utils.GetHostName())
-	err := os.MkdirAll(rootPath, os.ModePerm)
-	if err != nil {
-		log.Fatal(err)
-		return nil, err
-	}
+	rootPath, _ := utils.CreateCollectorDir(name)
 
 	output, _ := utils.RunCommandOnHost("docker", "ps", "--format", "{{.Names}}")
 	containers := strings.Split(output, "\n")
@@ -39,7 +35,7 @@ func PollContainerLogs(podNameSpace string) ([]string, error) {
 		file, _ := os.Create(containerLog)
 		defer file.Close()
 
-		_, err = file.Write([]byte(output))
+		file.Write([]byte(output))
 
 		containerLogs = append(containerLogs, containerLog)
 	}
