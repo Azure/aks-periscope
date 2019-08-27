@@ -14,6 +14,8 @@ func main() {
 	actions = append(actions, &action.IPTablesAction{})
 	actions = append(actions, &action.ProvisionLogsAction{})
 	actions = append(actions, &action.DNSAction{})
+	actions = append(actions, &action.KubeObjectsAction{})
+	actions = append(actions, &action.KubeletCmdAction{})
 
 	for _, a := range actions {
 		go func(a interfaces.Action) {
