@@ -1,27 +1,59 @@
-package processor
+package action
 
 import (
 	"bufio"
 	"encoding/json"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
+	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
 
-// DNSDiagnosticData defines DNS diagnostic data
-type DNSDiagnosticData struct {
+// DNSDiagnosticDatum defines a DNS diagnostic datum
+type DNSDiagnosticDatum struct {
 	LeveL       string   `json:"Level"`
 	NameServers []string `json:"NameServer"`
 	Custom      bool     `json:"Custom"`
 }
 
-// ProcessDNS processes DNS metrics
-func ProcessDNS(name string, files []string) error {
+// DNSAction defines an action on DNS
+type DNSAction struct{}
+
+var _ interfaces.Action = &DNSAction{}
+
+// GetName implements the interface method
+func (action *DNSAction) GetName() string {
+	return "dns"
+}
+
+// Collect implements the interface method
+func (action *DNSAction) Collect() ([]string, error) {
+	rootPath, _ := utils.CreateCollectorDir(action.GetName())
+
+	hostDNSFile := filepath.Join(rootPath, "host")
+	file, _ := os.Create(hostDNSFile)
+	defer file.Close()
+
+	output, _ := utils.RunCommandOnHost("cat", "/etc/resolv.conf")
+	_, err := file.Write([]byte(output))
+	if err != nil {
+		log.Println("Error while taking snapshot of /etc/resolv.conf: ", err)
+	}
+
+	containerDNSFile := filepath.Join(rootPath, "container")
+	utils.CopyLocalFile("/etc/resolv.conf", containerDNSFile)
+
+	return []string{hostDNSFile, containerDNSFile}, nil
+}
+
+// Process implements the interface method
+func (action *DNSAction) Process(files []string) error {
 	rootPath, _ := utils.CreateDiagnosticDir()
-	DNSDiagnosticFile := filepath.Join(rootPath, name)
+	DNSDiagnosticFile := filepath.Join(rootPath, action.GetName())
 
 	ticker := time.NewTicker(time.Duration(ProcessIntervalInSeconds) * time.Second)
 	for {
@@ -36,7 +68,7 @@ func processDNS(files []string, DNSDiagnosticFile string) error {
 	f, _ := os.OpenFile(DNSDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
 	defer f.Close()
 
-	var dnsDiagnosticData []DNSDiagnosticData
+	var dnsDiagnosticData []DNSDiagnosticDatum
 
 	for _, file := range files {
 		t, _ := os.Open(file)
@@ -65,7 +97,7 @@ func processDNS(files []string, DNSDiagnosticFile string) error {
 			isCustom = dns[0] != "10.0.0.10"
 		}
 
-		dataPoint := DNSDiagnosticData{
+		dataPoint := DNSDiagnosticDatum{
 			LeveL:       dnsLevel,
 			NameServers: dns,
 			Custom:      isCustom,

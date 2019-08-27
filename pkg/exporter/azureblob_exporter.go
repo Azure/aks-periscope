@@ -10,15 +10,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
-// ExportIntervalInSeconds defines interval for exporting data
-var ExportIntervalInSeconds = 30
+// AzureBlobExporter defines an Azure Blob Exporter
+type AzureBlobExporter struct {
+	IntervalInSeconds int
+}
 
-// ExportToAZBlob write data to azblob
-func ExportToAZBlob() error {
+var _ interfaces.Exporter = &AzureBlobExporter{}
+
+// Export implements the interface method
+func (exporter *AzureBlobExporter) Export() error {
 	APIServerFQDN, err := utils.GetAPIServerFQDN()
 	if err != nil {
 		return err
@@ -50,7 +55,7 @@ func ExportToAZBlob() error {
 		}
 	}
 
-	ticker := time.NewTicker(time.Duration(ExportIntervalInSeconds) * time.Second)
+	ticker := time.NewTicker(time.Duration(exporter.IntervalInSeconds) * time.Second)
 	for {
 		select {
 		case <-ticker.C:

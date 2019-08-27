@@ -24,10 +24,16 @@ spec:
         - mountPath: "/etc/azure-blob"
           name: azure-blob
           readOnly: true
+        - mountPath: /aks-diagnostic
+          name: aks-diagnostic-storage
       volumes:
       - name: azure-blob
         secret:
           secretName: azure-blob
+      - name: aks-diagnostic-storage
+        hostPath:
+          path: /var/log/aks-diagnostic
+          type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Secret
