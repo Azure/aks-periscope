@@ -21,7 +21,7 @@ var _ interfaces.Action = &serviceLogsAction{}
 // NewServiceLogsAction is a constructor
 func NewServiceLogsAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
 	return &serviceLogsAction{
-		name:                     "containerlogs",
+		name:                     "servicelogs",
 		collectIntervalInSeconds: collectIntervalInSeconds,
 		processIntervalInSeconds: processIntervalInSeconds,
 		exportIntervalInSeconds:  exportIntervalInSeconds,

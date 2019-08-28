@@ -80,7 +80,7 @@ func (action *networkOutboundAction) Collect() ([]string, error) {
 	outboundTypes = append(outboundTypes,
 		networkOutboundType{
 			Type: "TunnelConnectivity",
-			URL:  APIServerFQDN + ":9999",
+			URL:  APIServerFQDN + ":9000",
 		},
 	)
 	outboundTypes = append(outboundTypes,
@@ -92,7 +92,7 @@ func (action *networkOutboundAction) Collect() ([]string, error) {
 	outboundTypes = append(outboundTypes,
 		networkOutboundType{
 			Type: "MCRConnectivity",
-			URL:  "mcr.microsoft.net:80",
+			URL:  "mcr.microsoft.com:80",
 		},
 	)
 
