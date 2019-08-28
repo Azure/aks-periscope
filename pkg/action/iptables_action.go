@@ -9,18 +9,34 @@ import (
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
 
-// IPTablesAction defines an action on iptables
-type IPTablesAction struct{}
+type iptablesAction struct {
+	name                     string
+	collectIntervalInSeconds int
+	processIntervalInSeconds int
+	exportIntervalInSeconds  int
+	exporter                 interfaces.Exporter
+}
 
-var _ interfaces.Action = &IPTablesAction{}
+var _ interfaces.Action = &iptablesAction{}
+
+// NewIPTablesAction is a constructor
+func NewIPTablesAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+	return &iptablesAction{
+		name:                     "iptables",
+		collectIntervalInSeconds: collectIntervalInSeconds,
+		processIntervalInSeconds: processIntervalInSeconds,
+		exportIntervalInSeconds:  exportIntervalInSeconds,
+		exporter:                 exporter,
+	}
+}
 
 // GetName implements the interface method
-func (action *IPTablesAction) GetName() string {
-	return "iptables"
+func (action *iptablesAction) GetName() string {
+	return action.name
 }
 
 // Collect implements the interface method
-func (action *IPTablesAction) Collect() ([]string, error) {
+func (action *iptablesAction) Collect() ([]string, error) {
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 
 	iptablesFile := filepath.Join(rootPath, action.GetName())
@@ -37,6 +53,15 @@ func (action *IPTablesAction) Collect() ([]string, error) {
 }
 
 // Process implements the interface method
-func (action *IPTablesAction) Process([]string) error {
+func (action *iptablesAction) Process(collectFiles []string) ([]string, error) {
+	return nil, nil
+}
+
+// Export implements the interface method
+func (action *iptablesAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
+	if exporter != nil {
+		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+	}
+
 	return nil
 }

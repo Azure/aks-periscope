@@ -6,7 +6,6 @@ import (
 	"log"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -16,14 +15,12 @@ import (
 )
 
 // AzureBlobExporter defines an Azure Blob Exporter
-type AzureBlobExporter struct {
-	IntervalInSeconds int
-}
+type AzureBlobExporter struct{}
 
 var _ interfaces.Exporter = &AzureBlobExporter{}
 
 // Export implements the interface method
-func (exporter *AzureBlobExporter) Export() error {
+func (exporter *AzureBlobExporter) Export(files []string, intervalInSeconds int) error {
 	APIServerFQDN, err := utils.GetAPIServerFQDN()
 	if err != nil {
 		return err
@@ -55,20 +52,23 @@ func (exporter *AzureBlobExporter) Export() error {
 		}
 	}
 
-	ticker := time.NewTicker(time.Duration(exporter.IntervalInSeconds) * time.Second)
-	for {
-		select {
-		case <-ticker.C:
-			err := exportData(ctx, containerURL)
-			if err != nil {
-				return err
+	go func(ctx context.Context, containerURL azblob.ContainerURL, files []string) error {
+		ticker := time.NewTicker(time.Duration(intervalInSeconds) * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				err := exportData(ctx, containerURL, files)
+				if err != nil {
+					return err
+				}
 			}
 		}
-	}
+	}(ctx, containerURL, files)
+
+	return nil
 }
 
-func exportData(ctx context.Context, containerURL azblob.ContainerURL) error {
-	files, _ := listFilesInDir("/aks-diagnostic")
+func exportData(ctx context.Context, containerURL azblob.ContainerURL, files []string) error {
 	for _, file := range files {
 		blobURL := containerURL.NewBlockBlobURL(strings.Replace(file, "/aks-diagnostic/", "", -1))
 		file, err := os.Open(file)
@@ -88,20 +88,4 @@ func exportData(ctx context.Context, containerURL azblob.ContainerURL) error {
 	}
 
 	return nil
-}
-
-func listFilesInDir(dir string) ([]string, error) {
-	var files []string
-
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if !info.IsDir() {
-			files = append(files, path)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return files, nil
 }

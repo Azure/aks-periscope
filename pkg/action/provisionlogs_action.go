@@ -9,18 +9,34 @@ import (
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
 
-// ProvisionLogsAction defines an action on provision logs
-type ProvisionLogsAction struct{}
+type provisionLogsAction struct {
+	name                     string
+	collectIntervalInSeconds int
+	processIntervalInSeconds int
+	exportIntervalInSeconds  int
+	exporter                 interfaces.Exporter
+}
 
-var _ interfaces.Action = &ProvisionLogsAction{}
+var _ interfaces.Action = &provisionLogsAction{}
+
+// NewProvisionLogsAction is a constructor
+func NewProvisionLogsAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+	return &provisionLogsAction{
+		name:                     "provisionlogs",
+		collectIntervalInSeconds: collectIntervalInSeconds,
+		processIntervalInSeconds: processIntervalInSeconds,
+		exportIntervalInSeconds:  exportIntervalInSeconds,
+		exporter:                 exporter,
+	}
+}
 
 // GetName implements the interface method
-func (action *ProvisionLogsAction) GetName() string {
-	return "provisionlogs"
+func (action *provisionLogsAction) GetName() string {
+	return action.name
 }
 
 // Collect implements the interface method
-func (action *ProvisionLogsAction) Collect() ([]string, error) {
+func (action *provisionLogsAction) Collect() ([]string, error) {
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 
 	provisionlogsFile := filepath.Join(rootPath, action.GetName())
@@ -37,6 +53,15 @@ func (action *ProvisionLogsAction) Collect() ([]string, error) {
 }
 
 // Process implements the interface method
-func (action *ProvisionLogsAction) Process([]string) error {
+func (action *provisionLogsAction) Process(collectFiles []string) ([]string, error) {
+	return nil, nil
+}
+
+// Export implements the interface method
+func (action *provisionLogsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
+	if exporter != nil {
+		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+	}
+
 	return nil
 }

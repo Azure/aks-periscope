@@ -6,5 +6,7 @@ type Action interface {
 
 	Collect() ([]string, error)
 
-	Process([]string) error
+	Process([]string) ([]string, error)
+
+	Export(Exporter, []string, []string) error
 }

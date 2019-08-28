@@ -13,25 +13,40 @@ import (
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
 
-// DNSDiagnosticDatum defines a DNS diagnostic datum
-type DNSDiagnosticDatum struct {
+type dnsDiagnosticDatum struct {
 	LeveL       string   `json:"Level"`
 	NameServers []string `json:"NameServer"`
 	Custom      bool     `json:"Custom"`
 }
 
-// DNSAction defines an action on DNS
-type DNSAction struct{}
+type dnsAction struct {
+	name                     string
+	collectIntervalInSeconds int
+	processIntervalInSeconds int
+	exportIntervalInSeconds  int
+	exporter                 interfaces.Exporter
+}
 
-var _ interfaces.Action = &DNSAction{}
+var _ interfaces.Action = &dnsAction{}
+
+// NewDNSAction is a constructor
+func NewDNSAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+	return &dnsAction{
+		name:                     "dns",
+		collectIntervalInSeconds: collectIntervalInSeconds,
+		processIntervalInSeconds: processIntervalInSeconds,
+		exportIntervalInSeconds:  exportIntervalInSeconds,
+		exporter:                 exporter,
+	}
+}
 
 // GetName implements the interface method
-func (action *DNSAction) GetName() string {
-	return "dns"
+func (action *dnsAction) GetName() string {
+	return action.name
 }
 
 // Collect implements the interface method
-func (action *DNSAction) Collect() ([]string, error) {
+func (action *dnsAction) Collect() ([]string, error) {
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 
 	hostDNSFile := filepath.Join(rootPath, "host")
@@ -51,24 +66,37 @@ func (action *DNSAction) Collect() ([]string, error) {
 }
 
 // Process implements the interface method
-func (action *DNSAction) Process(files []string) error {
+func (action *dnsAction) Process(collectFiles []string) ([]string, error) {
 	rootPath, _ := utils.CreateDiagnosticDir()
 	DNSDiagnosticFile := filepath.Join(rootPath, action.GetName())
 
-	ticker := time.NewTicker(time.Duration(ProcessIntervalInSeconds) * time.Second)
-	for {
-		select {
-		case <-ticker.C:
-			processDNS(files, DNSDiagnosticFile)
+	go func(collectFiles []string, output string) {
+		ticker := time.NewTicker(time.Duration(action.processIntervalInSeconds) * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				processDNS(collectFiles, output)
+			}
 		}
+	}(collectFiles, DNSDiagnosticFile)
+
+	return []string{DNSDiagnosticFile}, nil
+}
+
+// Export implements the interface method
+func (action *dnsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
+	if exporter != nil {
+		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
 	}
+
+	return nil
 }
 
 func processDNS(files []string, DNSDiagnosticFile string) error {
 	f, _ := os.OpenFile(DNSDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
 	defer f.Close()
 
-	var dnsDiagnosticData []DNSDiagnosticDatum
+	var dnsDiagnosticData []dnsDiagnosticDatum
 
 	for _, file := range files {
 		t, _ := os.Open(file)
@@ -97,7 +125,7 @@ func processDNS(files []string, DNSDiagnosticFile string) error {
 			isCustom = dns[0] != "10.0.0.10"
 		}
 
-		dataPoint := DNSDiagnosticDatum{
+		dataPoint := dnsDiagnosticDatum{
 			LeveL:       dnsLevel,
 			NameServers: dns,
 			Custom:      isCustom,

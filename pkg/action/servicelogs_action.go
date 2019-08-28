@@ -8,18 +8,34 @@ import (
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
 
-// ServiceLogsAction defines an action on service logs
-type ServiceLogsAction struct{}
+type serviceLogsAction struct {
+	name                     string
+	collectIntervalInSeconds int
+	processIntervalInSeconds int
+	exportIntervalInSeconds  int
+	exporter                 interfaces.Exporter
+}
 
-var _ interfaces.Action = &ServiceLogsAction{}
+var _ interfaces.Action = &serviceLogsAction{}
+
+// NewServiceLogsAction is a constructor
+func NewServiceLogsAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+	return &serviceLogsAction{
+		name:                     "containerlogs",
+		collectIntervalInSeconds: collectIntervalInSeconds,
+		processIntervalInSeconds: processIntervalInSeconds,
+		exportIntervalInSeconds:  exportIntervalInSeconds,
+		exporter:                 exporter,
+	}
+}
 
 // GetName implements the interface method
-func (action *ServiceLogsAction) GetName() string {
-	return "servicelogs"
+func (action *serviceLogsAction) GetName() string {
+	return action.name
 }
 
 // Collect implements the interface method
-func (action *ServiceLogsAction) Collect() ([]string, error) {
+func (action *serviceLogsAction) Collect() ([]string, error) {
 	services := []string{"docker", "kubelet"}
 
 	systemLogs := make([]string, 0)
@@ -42,6 +58,15 @@ func (action *ServiceLogsAction) Collect() ([]string, error) {
 }
 
 // Process implements the interface method
-func (action *ServiceLogsAction) Process([]string) error {
+func (action *serviceLogsAction) Process(collectFiles []string) ([]string, error) {
+	return nil, nil
+}
+
+// Export implements the interface method
+func (action *serviceLogsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
+	if exporter != nil {
+		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+	}
+
 	return nil
 }

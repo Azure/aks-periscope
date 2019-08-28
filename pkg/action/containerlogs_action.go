@@ -9,18 +9,34 @@ import (
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
 )
 
-// ContainerLogsAction defines an action on container logs
-type ContainerLogsAction struct{}
+type containerLogsAction struct {
+	name                     string
+	collectIntervalInSeconds int
+	processIntervalInSeconds int
+	exportIntervalInSeconds  int
+	exporter                 interfaces.Exporter
+}
 
-var _ interfaces.Action = &ContainerLogsAction{}
+var _ interfaces.Action = &containerLogsAction{}
+
+// NewContainerLogsAction is a constructor
+func NewContainerLogsAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+	return &containerLogsAction{
+		name:                     "containerlogs",
+		collectIntervalInSeconds: collectIntervalInSeconds,
+		processIntervalInSeconds: processIntervalInSeconds,
+		exportIntervalInSeconds:  exportIntervalInSeconds,
+		exporter:                 exporter,
+	}
+}
 
 // GetName implements the interface method
-func (action *ContainerLogsAction) GetName() string {
-	return "containerlogs"
+func (action *containerLogsAction) GetName() string {
+	return action.name
 }
 
 // Collect implements the interface method
-func (action *ContainerLogsAction) Collect() ([]string, error) {
+func (action *containerLogsAction) Collect() ([]string, error) {
 	podNameSpace := "kube-system"
 
 	containerNames := make([]string, 0)
@@ -55,6 +71,15 @@ func (action *ContainerLogsAction) Collect() ([]string, error) {
 }
 
 // Process implements the interface method
-func (action *ContainerLogsAction) Process([]string) error {
+func (action *containerLogsAction) Process(collectFiles []string) ([]string, error) {
+	return nil, nil
+}
+
+// Export implements the interface method
+func (action *containerLogsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
+	if exporter != nil {
+		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+	}
+
 	return nil
 }
