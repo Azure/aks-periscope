@@ -26,6 +26,13 @@ spec:
           readOnly: true
         - mountPath: /aks-diagnostic
           name: aks-diagnostic-storage
+        resources:
+          requests:
+            memory: "500Mi"
+            cpu: "250m"
+          limits:
+            memory: "2000Mi"
+            cpu: "1000m"
       volumes:
       - name: azure-blob
         secret:
