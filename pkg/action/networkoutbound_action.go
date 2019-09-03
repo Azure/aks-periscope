@@ -95,23 +95,18 @@ func (action *networkOutboundAction) Collect() ([]string, error) {
 			URL:  "mcr.microsoft.com:80",
 		},
 	)
-
-	networkOutboundFiles := make([]string, 0)
-
 	rootPath, _ := utils.CreateCollectorDir(action.name)
 
+	networkOutboundFiles := []string{}
 	for _, outboundType := range outboundTypes {
 		networkOutboundFile := filepath.Join(rootPath, outboundType.Type)
 
-		go func(outboundType networkOutboundType, output string) {
+		go func(outboundType networkOutboundType, networkOutboundFile string) {
 			ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-			f, _ := os.OpenFile(output, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-			defer f.Close()
-
 			for {
 				select {
 				case <-ticker.C:
-					tcpDial(outboundType, f)
+					collectNetworkOutbound(outboundType, networkOutboundFile)
 				}
 			}
 		}(outboundType, networkOutboundFile)
@@ -127,12 +122,12 @@ func (action *networkOutboundAction) Process(collectFiles []string) ([]string, e
 	rootPath, _ := utils.CreateDiagnosticDir()
 	networkOutboundDiagnosticFile := filepath.Join(rootPath, action.name)
 
-	go func(collectFiles []string, output string) {
+	go func(collectFiles []string, networkOutboundDiagnosticFile string) {
 		ticker := time.NewTicker(time.Duration(action.processIntervalInSeconds) * time.Second)
 		for {
 			select {
 			case <-ticker.C:
-				processNetworkOutbound(collectFiles, output, action.collectIntervalInSeconds)
+				processNetworkOutbound(collectFiles, networkOutboundDiagnosticFile, action.collectIntervalInSeconds)
 			}
 		}
 	}(collectFiles, networkOutboundDiagnosticFile)
@@ -149,7 +144,10 @@ func (action *networkOutboundAction) Export(exporter interfaces.Exporter, collec
 	return nil
 }
 
-func tcpDial(outboundType networkOutboundType, f *os.File) {
+func collectNetworkOutbound(outboundType networkOutboundType, networkOutboundFile string) {
+	f, _ := os.OpenFile(networkOutboundFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer f.Close()
+
 	timeout := time.Duration(5 * time.Second)
 	_, err := net.DialTimeout("tcp", outboundType.URL, timeout)
 

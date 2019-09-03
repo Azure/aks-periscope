@@ -1,9 +1,8 @@
 package action
 
 import (
-	"log"
-	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -38,18 +37,19 @@ func (action *provisionLogsAction) GetName() string {
 // Collect implements the interface method
 func (action *provisionLogsAction) Collect() ([]string, error) {
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
+	provisionLog := filepath.Join(rootPath, action.GetName())
 
-	provisionlogsFile := filepath.Join(rootPath, action.GetName())
-	file, _ := os.Create(provisionlogsFile)
-	defer file.Close()
+	go func(provisionLog string) {
+		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				collectProvisionLogs(provisionLog)
+			}
+		}
+	}(provisionLog)
 
-	output, _ := utils.RunCommandOnHost("cat", "/var/log/azure/cluster-provision.log")
-	_, err := file.Write([]byte(output))
-	if err != nil {
-		log.Println("Error getting /var/log/azure/cluster-provision.log: ", err)
-	}
-
-	return []string{provisionlogsFile}, nil
+	return []string{provisionLog}, nil
 }
 
 // Process implements the interface method
@@ -61,6 +61,16 @@ func (action *provisionLogsAction) Process(collectFiles []string) ([]string, err
 func (action *provisionLogsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
 	if exporter != nil {
 		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+	}
+
+	return nil
+}
+
+func collectProvisionLogs(provisionLog string) error {
+	output, _ := utils.RunCommandOnHost("cat", "/var/log/azure/cluster-provision.log")
+	err := utils.WriteToFile(provisionLog, output)
+	if err != nil {
+		return err
 	}
 
 	return nil

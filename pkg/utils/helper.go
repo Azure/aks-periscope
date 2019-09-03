@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -59,6 +58,23 @@ func RunCommandOnHost(command string, arg ...string) (string, error) {
 	return string(out), err
 }
 
+// RunCommandOnContainer runs a command on container system
+func RunCommandOnContainer(command string, arg ...string) (string, error) {
+	cmd := exec.Command(command, arg...)
+	out, err := cmd.CombinedOutput()
+	return string(out), err
+}
+
+// WriteToFile writes data to a file
+func WriteToFile(fileName string, data string) error {
+	f, _ := os.Create(fileName)
+	defer f.Close()
+
+	_, err := f.Write([]byte(data))
+
+	return err
+}
+
 // CreateCollectorDir creates a working dir for a collector
 func CreateCollectorDir(name string) (string, error) {
 	rootPath := filepath.Join("/aks-diagnostic/", GetHostName(), "metrics", name)
@@ -81,25 +97,4 @@ func CreateDiagnosticDir() (string, error) {
 	}
 
 	return rootPath, nil
-}
-
-// CopyLocalFile copy a local file
-func CopyLocalFile(src string, dst string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-
-	out, err := os.Create(dst)
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, in)
-	if err != nil {
-		return err
-	}
-	return out.Close()
 }

@@ -1,9 +1,9 @@
 package action
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -38,16 +38,13 @@ func (action *containerLogsAction) GetName() string {
 // Collect implements the interface method
 func (action *containerLogsAction) Collect() ([]string, error) {
 	podNameSpace := "kube-system"
-
-	containerNames := make([]string, 0)
-	containerLogs := make([]string, 0)
-
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 
 	output, _ := utils.RunCommandOnHost("docker", "ps", "--format", "{{.Names}}")
 	containers := strings.Split(output, "\n")
 	containers = containers[:len(containers)-1]
 
+	containerNames := []string{}
 	for _, container := range containers {
 		parts := strings.Split(container, "_")
 		if parts[1] != "POD" && parts[3] == podNameSpace {
@@ -55,14 +52,19 @@ func (action *containerLogsAction) Collect() ([]string, error) {
 		}
 	}
 
+	containerLogs := []string{}
 	for _, containerName := range containerNames {
-		output, _ := utils.RunCommandOnHost("docker", "logs", containerName)
-
 		containerLog := filepath.Join(rootPath, containerName)
-		file, _ := os.Create(containerLog)
-		defer file.Close()
 
-		file.Write([]byte(output))
+		go func(containerName string, containerLog string) {
+			ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
+			for {
+				select {
+				case <-ticker.C:
+					collectContainerLogs(containerName, containerLog)
+				}
+			}
+		}(containerName, containerLog)
 
 		containerLogs = append(containerLogs, containerLog)
 	}
@@ -79,6 +81,16 @@ func (action *containerLogsAction) Process(collectFiles []string) ([]string, err
 func (action *containerLogsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
 	if exporter != nil {
 		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+	}
+
+	return nil
+}
+
+func collectContainerLogs(containerName string, containerLog string) error {
+	output, _ := utils.RunCommandOnHost("docker", "logs", containerName)
+	err := utils.WriteToFile(containerLog, output)
+	if err != nil {
+		return err
 	}
 
 	return nil

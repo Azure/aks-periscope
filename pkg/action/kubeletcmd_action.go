@@ -1,8 +1,8 @@
 package action
 
 import (
-	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -37,13 +37,18 @@ func (action *kubeletCmdAction) GetName() string {
 // Collect implements the interface method
 func (action *kubeletCmdAction) Collect() ([]string, error) {
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
-	output, _ := utils.RunCommandOnHost("ps", "-o", "cmd=", "-C", "kubelet")
-
 	kubeletcmdFile := filepath.Join(rootPath, action.GetName())
-	file, _ := os.Create(kubeletcmdFile)
-	defer file.Close()
 
-	file.Write([]byte(output))
+	go func(kubeletcmdFile string) {
+		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				collectKubeletCmd(kubeletcmdFile)
+			}
+		}
+	}(kubeletcmdFile)
+
 	return []string{kubeletcmdFile}, nil
 }
 
@@ -56,6 +61,16 @@ func (action *kubeletCmdAction) Process(collectFiles []string) ([]string, error)
 func (action *kubeletCmdAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
 	if exporter != nil {
 		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+	}
+
+	return nil
+}
+
+func collectKubeletCmd(kubeletcmdFile string) error {
+	output, _ := utils.RunCommandOnHost("ps", "-o", "cmd=", "-C", "kubelet")
+	err := utils.WriteToFile(kubeletcmdFile, output)
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -13,7 +13,7 @@ func main() {
 
 	actions := []interfaces.Action{}
 	actions = append(actions, action.NewContainerLogsAction(5, 30, 60, exporter))
-	actions = append(actions, action.NewServiceLogsAction(5, 30, 60, exporter))
+	actions = append(actions, action.NewSystemLogsAction(5, 30, 60, exporter))
 	actions = append(actions, action.NewNetworkOutboundAction(5, 30, 60, exporter))
 	actions = append(actions, action.NewIPTablesAction(5, 30, 60, exporter))
 	actions = append(actions, action.NewProvisionLogsAction(5, 30, 60, exporter))

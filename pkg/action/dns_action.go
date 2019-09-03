@@ -3,7 +3,6 @@ package action
 import (
 	"bufio"
 	"encoding/json"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -48,19 +47,18 @@ func (action *dnsAction) GetName() string {
 // Collect implements the interface method
 func (action *dnsAction) Collect() ([]string, error) {
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
-
 	hostDNSFile := filepath.Join(rootPath, "host")
-	file, _ := os.Create(hostDNSFile)
-	defer file.Close()
-
-	output, _ := utils.RunCommandOnHost("cat", "/etc/resolv.conf")
-	_, err := file.Write([]byte(output))
-	if err != nil {
-		log.Println("Error while taking snapshot of /etc/resolv.conf: ", err)
-	}
-
 	containerDNSFile := filepath.Join(rootPath, "container")
-	utils.CopyLocalFile("/etc/resolv.conf", containerDNSFile)
+
+	go func(hostDNSFile string, containerDNSFile string) {
+		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				collectDNS(hostDNSFile, containerDNSFile)
+			}
+		}
+	}(hostDNSFile, containerDNSFile)
 
 	return []string{hostDNSFile, containerDNSFile}, nil
 }
@@ -68,25 +66,41 @@ func (action *dnsAction) Collect() ([]string, error) {
 // Process implements the interface method
 func (action *dnsAction) Process(collectFiles []string) ([]string, error) {
 	rootPath, _ := utils.CreateDiagnosticDir()
-	DNSDiagnosticFile := filepath.Join(rootPath, action.GetName())
+	dnsDiagnosticFile := filepath.Join(rootPath, action.GetName())
 
-	go func(collectFiles []string, output string) {
+	go func(collectFiles []string, dnsDiagnosticFile string) {
 		ticker := time.NewTicker(time.Duration(action.processIntervalInSeconds) * time.Second)
 		for {
 			select {
 			case <-ticker.C:
-				processDNS(collectFiles, output)
+				processDNS(collectFiles, dnsDiagnosticFile)
 			}
 		}
-	}(collectFiles, DNSDiagnosticFile)
+	}(collectFiles, dnsDiagnosticFile)
 
-	return []string{DNSDiagnosticFile}, nil
+	return []string{dnsDiagnosticFile}, nil
 }
 
 // Export implements the interface method
 func (action *dnsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
 	if exporter != nil {
 		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+	}
+
+	return nil
+}
+
+func collectDNS(hostDNSFile string, containerDNSFile string) error {
+	output, _ := utils.RunCommandOnHost("cat", "/etc/resolv.conf")
+	err := utils.WriteToFile(hostDNSFile, output)
+	if err != nil {
+		return err
+	}
+
+	output, _ = utils.RunCommandOnContainer("cat", "/etc/resolv.conf")
+	err = utils.WriteToFile(containerDNSFile, output)
+	if err != nil {
+		return err
 	}
 
 	return nil

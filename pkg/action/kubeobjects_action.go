@@ -1,8 +1,8 @@
 package action
 
 import (
-	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -38,19 +38,21 @@ func (action *kubeObjectsAction) GetName() string {
 func (action *kubeObjectsAction) Collect() ([]string, error) {
 	nameSpace := "kube-system"
 	kubernetesObjects := []string{"pod", "service"}
-
-	kubernetesObjectFiles := make([]string, 0)
-
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 
+	kubernetesObjectFiles := make([]string, 0)
 	for _, kubernetesObject := range kubernetesObjects {
-		output, _ := utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "-n", nameSpace, "describe", kubernetesObject)
-
 		kubernetesObjectFile := filepath.Join(rootPath, kubernetesObject)
-		file, _ := os.Create(kubernetesObjectFile)
-		defer file.Close()
 
-		file.Write([]byte(output))
+		go func(nameSpace string, kubernetesObject string, kubernetesObjectFile string) {
+			ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
+			for {
+				select {
+				case <-ticker.C:
+					collectKubeObjects(nameSpace, kubernetesObject, kubernetesObjectFile)
+				}
+			}
+		}(nameSpace, kubernetesObject, kubernetesObjectFile)
 
 		kubernetesObjectFiles = append(kubernetesObjectFiles, kubernetesObjectFile)
 	}
@@ -67,6 +69,16 @@ func (action *kubeObjectsAction) Process(collectFiles []string) ([]string, error
 func (action *kubeObjectsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
 	if exporter != nil {
 		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+	}
+
+	return nil
+}
+
+func collectKubeObjects(nameSpace string, kubernetesObject string, kubernetesObjectFile string) error {
+	output, _ := utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "-n", nameSpace, "describe", kubernetesObject)
+	err := utils.WriteToFile(kubernetesObjectFile, output)
+	if err != nil {
+		return err
 	}
 
 	return nil

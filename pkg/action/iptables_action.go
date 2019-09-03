@@ -1,9 +1,8 @@
 package action
 
 import (
-	"log"
-	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -38,16 +37,17 @@ func (action *iptablesAction) GetName() string {
 // Collect implements the interface method
 func (action *iptablesAction) Collect() ([]string, error) {
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
-
 	iptablesFile := filepath.Join(rootPath, action.GetName())
-	file, _ := os.Create(iptablesFile)
-	defer file.Close()
 
-	output, _ := utils.RunCommandOnHost("iptables", "-t", "nat", "-L")
-	_, err := file.Write([]byte(output))
-	if err != nil {
-		log.Println("Error while dumping iptables: ", err)
-	}
+	go func(iptablesFile string) {
+		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				collectIPTables(iptablesFile)
+			}
+		}
+	}(iptablesFile)
 
 	return []string{iptablesFile}, nil
 }
@@ -61,6 +61,16 @@ func (action *iptablesAction) Process(collectFiles []string) ([]string, error) {
 func (action *iptablesAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
 	if exporter != nil {
 		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+	}
+
+	return nil
+}
+
+func collectIPTables(iptablesFile string) error {
+	output, _ := utils.RunCommandOnHost("iptables", "-t", "nat", "-L")
+	err := utils.WriteToFile(iptablesFile, output)
+	if err != nil {
+		return err
 	}
 
 	return nil
