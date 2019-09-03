@@ -41,11 +41,8 @@ func (action *provisionLogsAction) Collect() ([]string, error) {
 
 	go func(provisionLog string) {
 		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-		for {
-			select {
-			case <-ticker.C:
-				collectProvisionLogs(provisionLog)
-			}
+		for ; true; <-ticker.C {
+			collectProvisionLogs(provisionLog)
 		}
 	}(provisionLog)
 

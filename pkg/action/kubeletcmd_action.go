@@ -41,11 +41,8 @@ func (action *kubeletCmdAction) Collect() ([]string, error) {
 
 	go func(kubeletcmdFile string) {
 		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-		for {
-			select {
-			case <-ticker.C:
-				collectKubeletCmd(kubeletcmdFile)
-			}
+		for ; true; <-ticker.C {
+			collectKubeletCmd(kubeletcmdFile)
 		}
 	}(kubeletcmdFile)
 

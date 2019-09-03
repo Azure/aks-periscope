@@ -45,11 +45,8 @@ func (action *systemLogsAction) Collect() ([]string, error) {
 
 		go func(systemService string, systemLog string) {
 			ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-			for {
-				select {
-				case <-ticker.C:
-					collectSystemLogs(systemService, systemLog)
-				}
+			for ; true; <-ticker.C {
+				collectSystemLogs(systemService, systemLog)
 			}
 		}(systemService, systemLog)
 

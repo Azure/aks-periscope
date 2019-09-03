@@ -58,11 +58,8 @@ func (action *containerLogsAction) Collect() ([]string, error) {
 
 		go func(containerName string, containerLog string) {
 			ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-			for {
-				select {
-				case <-ticker.C:
-					collectContainerLogs(containerName, containerLog)
-				}
+			for ; true; <-ticker.C {
+				collectContainerLogs(containerName, containerLog)
 			}
 		}(containerName, containerLog)
 

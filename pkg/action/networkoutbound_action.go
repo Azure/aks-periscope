@@ -103,11 +103,8 @@ func (action *networkOutboundAction) Collect() ([]string, error) {
 
 		go func(outboundType networkOutboundType, networkOutboundFile string) {
 			ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-			for {
-				select {
-				case <-ticker.C:
-					collectNetworkOutbound(outboundType, networkOutboundFile)
-				}
+			for ; true; <-ticker.C {
+				collectNetworkOutbound(outboundType, networkOutboundFile)
 			}
 		}(outboundType, networkOutboundFile)
 
@@ -123,12 +120,12 @@ func (action *networkOutboundAction) Process(collectFiles []string) ([]string, e
 	networkOutboundDiagnosticFile := filepath.Join(rootPath, action.name)
 
 	go func(collectFiles []string, networkOutboundDiagnosticFile string) {
+		// sleep 10 secs before the initial data process
+		time.Sleep(10 * time.Second)
+
 		ticker := time.NewTicker(time.Duration(action.processIntervalInSeconds) * time.Second)
-		for {
-			select {
-			case <-ticker.C:
-				processNetworkOutbound(collectFiles, networkOutboundDiagnosticFile, action.collectIntervalInSeconds)
-			}
+		for ; true; <-ticker.C {
+			processNetworkOutbound(collectFiles, networkOutboundDiagnosticFile, action.collectIntervalInSeconds)
 		}
 	}(collectFiles, networkOutboundDiagnosticFile)
 

@@ -41,11 +41,8 @@ func (action *iptablesAction) Collect() ([]string, error) {
 
 	go func(iptablesFile string) {
 		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-		for {
-			select {
-			case <-ticker.C:
-				collectIPTables(iptablesFile)
-			}
+		for ; true; <-ticker.C {
+			collectIPTables(iptablesFile)
 		}
 	}(iptablesFile)
 

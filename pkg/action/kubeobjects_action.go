@@ -46,11 +46,8 @@ func (action *kubeObjectsAction) Collect() ([]string, error) {
 
 		go func(nameSpace string, kubernetesObject string, kubernetesObjectFile string) {
 			ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-			for {
-				select {
-				case <-ticker.C:
-					collectKubeObjects(nameSpace, kubernetesObject, kubernetesObjectFile)
-				}
+			for ; true; <-ticker.C {
+				collectKubeObjects(nameSpace, kubernetesObject, kubernetesObjectFile)
 			}
 		}(nameSpace, kubernetesObject, kubernetesObjectFile)
 

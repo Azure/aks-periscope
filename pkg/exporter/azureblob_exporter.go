@@ -53,16 +53,17 @@ func (exporter *AzureBlobExporter) Export(files []string, intervalInSeconds int)
 	}
 
 	go func(ctx context.Context, containerURL azblob.ContainerURL, files []string) error {
+		// sleep 20 secs before the initial data export
+		time.Sleep(20 * time.Second)
+
 		ticker := time.NewTicker(time.Duration(intervalInSeconds) * time.Second)
-		for {
-			select {
-			case <-ticker.C:
-				err := exportData(ctx, containerURL, files)
-				if err != nil {
-					return err
-				}
+		for ; true; <-ticker.C {
+			err := exportData(ctx, containerURL, files)
+			if err != nil {
+				return err
 			}
 		}
+		return nil
 	}(ctx, containerURL, files)
 
 	return nil

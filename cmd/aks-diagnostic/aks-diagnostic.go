@@ -12,14 +12,14 @@ func main() {
 	exporter := &exporter.AzureBlobExporter{}
 
 	actions := []interfaces.Action{}
-	actions = append(actions, action.NewContainerLogsAction(5, 30, 60, exporter))
-	actions = append(actions, action.NewSystemLogsAction(5, 30, 60, exporter))
-	actions = append(actions, action.NewNetworkOutboundAction(5, 30, 60, exporter))
-	actions = append(actions, action.NewIPTablesAction(5, 30, 60, exporter))
-	actions = append(actions, action.NewProvisionLogsAction(5, 30, 60, exporter))
-	actions = append(actions, action.NewDNSAction(5, 30, 60, exporter))
-	actions = append(actions, action.NewKubeObjectsAction(5, 30, 60, exporter))
-	actions = append(actions, action.NewKubeletCmdAction(5, 30, 60, exporter))
+	actions = append(actions, action.NewContainerLogsAction(60, 250, 300, exporter))
+	actions = append(actions, action.NewSystemLogsAction(60, 250, 300, exporter))
+	actions = append(actions, action.NewNetworkOutboundAction(5, 50, 60, exporter))
+	actions = append(actions, action.NewIPTablesAction(300, 1500, 1800, exporter))
+	actions = append(actions, action.NewProvisionLogsAction(300, 1500, 1800, exporter))
+	actions = append(actions, action.NewDNSAction(300, 1500, 1800, exporter))
+	actions = append(actions, action.NewKubeObjectsAction(60, 250, 300, exporter))
+	actions = append(actions, action.NewKubeletCmdAction(300, 1500, 1800, exporter))
 
 	for _, a := range actions {
 		go func(a interfaces.Action) {

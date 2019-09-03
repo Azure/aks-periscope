@@ -52,11 +52,8 @@ func (action *dnsAction) Collect() ([]string, error) {
 
 	go func(hostDNSFile string, containerDNSFile string) {
 		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-		for {
-			select {
-			case <-ticker.C:
-				collectDNS(hostDNSFile, containerDNSFile)
-			}
+		for ; true; <-ticker.C {
+			collectDNS(hostDNSFile, containerDNSFile)
 		}
 	}(hostDNSFile, containerDNSFile)
 
@@ -69,12 +66,12 @@ func (action *dnsAction) Process(collectFiles []string) ([]string, error) {
 	dnsDiagnosticFile := filepath.Join(rootPath, action.GetName())
 
 	go func(collectFiles []string, dnsDiagnosticFile string) {
+		// sleep 10 secs before the initial data process
+		time.Sleep(10 * time.Second)
+
 		ticker := time.NewTicker(time.Duration(action.processIntervalInSeconds) * time.Second)
-		for {
-			select {
-			case <-ticker.C:
-				processDNS(collectFiles, dnsDiagnosticFile)
-			}
+		for ; true; <-ticker.C {
+			processDNS(collectFiles, dnsDiagnosticFile)
 		}
 	}(collectFiles, dnsDiagnosticFile)
 
