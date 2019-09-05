@@ -2,7 +2,6 @@ package action
 
 import (
 	"path/filepath"
-	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -11,20 +10,22 @@ import (
 type iptablesAction struct {
 	name                     string
 	collectIntervalInSeconds int
-	processIntervalInSeconds int
-	exportIntervalInSeconds  int
+	collectCountForProcess   int
+	collectCountForExport    int
 	exporter                 interfaces.Exporter
+	collectFiles             []string
+	processFiles             []string
 }
 
 var _ interfaces.Action = &iptablesAction{}
 
 // NewIPTablesAction is a constructor
-func NewIPTablesAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+func NewIPTablesAction(collectIntervalInSeconds int, collectCountForProcess int, collectCountForExport int, exporter interfaces.Exporter) interfaces.Action {
 	return &iptablesAction{
 		name:                     "iptables",
 		collectIntervalInSeconds: collectIntervalInSeconds,
-		processIntervalInSeconds: processIntervalInSeconds,
-		exportIntervalInSeconds:  exportIntervalInSeconds,
+		collectCountForProcess:   collectCountForProcess,
+		collectCountForExport:    collectCountForExport,
 		exporter:                 exporter,
 	}
 }
@@ -34,40 +35,48 @@ func (action *iptablesAction) GetName() string {
 	return action.name
 }
 
+// GetName implements the interface method
+func (action *iptablesAction) GetCollectIntervalInSeconds() int {
+	return action.collectIntervalInSeconds
+}
+
+// GetName implements the interface method
+func (action *iptablesAction) GetCollectCountForProcess() int {
+	return action.collectCountForProcess
+}
+
+// GetName implements the interface method
+func (action *iptablesAction) GetCollectCountForExport() int {
+	return action.collectCountForExport
+}
+
 // Collect implements the interface method
-func (action *iptablesAction) Collect() ([]string, error) {
+func (action *iptablesAction) Collect() error {
+	action.collectFiles = []string{}
+
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 	iptablesFile := filepath.Join(rootPath, action.GetName())
 
-	go func(iptablesFile string) {
-		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-		for ; true; <-ticker.C {
-			collectIPTables(iptablesFile)
-		}
-	}(iptablesFile)
-
-	return []string{iptablesFile}, nil
-}
-
-// Process implements the interface method
-func (action *iptablesAction) Process(collectFiles []string) ([]string, error) {
-	return nil, nil
-}
-
-// Export implements the interface method
-func (action *iptablesAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
-	if exporter != nil {
-		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
-	}
-
-	return nil
-}
-
-func collectIPTables(iptablesFile string) error {
 	output, _ := utils.RunCommandOnHost("iptables", "-t", "nat", "-L")
 	err := utils.WriteToFile(iptablesFile, output)
 	if err != nil {
 		return err
+	}
+
+	action.collectFiles = append(action.collectFiles, iptablesFile)
+
+	return nil
+}
+
+// Process implements the interface method
+func (action *iptablesAction) Process() error {
+	return nil
+}
+
+// Export implements the interface method
+func (action *iptablesAction) Export() error {
+	if action.exporter != nil {
+		return action.exporter.Export(append(action.collectFiles, action.processFiles...))
 	}
 
 	return nil

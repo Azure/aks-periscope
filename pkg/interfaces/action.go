@@ -4,9 +4,15 @@ package interfaces
 type Action interface {
 	GetName() string
 
-	Collect() ([]string, error)
+	GetCollectIntervalInSeconds() int
 
-	Process([]string) ([]string, error)
+	GetCollectCountForProcess() int
 
-	Export(Exporter, []string, []string) error
+	GetCollectCountForExport() int
+
+	Collect() error
+
+	Process() error
+
+	Export() error
 }

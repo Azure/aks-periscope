@@ -34,20 +34,22 @@ type networkOutboundDiagnosticDatum struct {
 type networkOutboundAction struct {
 	name                     string
 	collectIntervalInSeconds int
-	processIntervalInSeconds int
-	exportIntervalInSeconds  int
+	collectCountForProcess   int
+	collectCountForExport    int
 	exporter                 interfaces.Exporter
+	collectFiles             []string
+	processFiles             []string
 }
 
 var _ interfaces.Action = &networkOutboundAction{}
 
 // NewNetworkOutboundAction is a constructor
-func NewNetworkOutboundAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+func NewNetworkOutboundAction(collectIntervalInSeconds int, collectCountForProcess int, collectCountForExport int, exporter interfaces.Exporter) interfaces.Action {
 	return &networkOutboundAction{
 		name:                     "networkoutbound",
 		collectIntervalInSeconds: collectIntervalInSeconds,
-		processIntervalInSeconds: processIntervalInSeconds,
-		exportIntervalInSeconds:  exportIntervalInSeconds,
+		collectCountForProcess:   collectCountForProcess,
+		collectCountForExport:    collectCountForExport,
 		exporter:                 exporter,
 	}
 }
@@ -57,11 +59,28 @@ func (action *networkOutboundAction) GetName() string {
 	return action.name
 }
 
+// GetName implements the interface method
+func (action *networkOutboundAction) GetCollectIntervalInSeconds() int {
+	return action.collectIntervalInSeconds
+}
+
+// GetName implements the interface method
+func (action *networkOutboundAction) GetCollectCountForProcess() int {
+	return action.collectCountForProcess
+}
+
+// GetName implements the interface method
+func (action *networkOutboundAction) GetCollectCountForExport() int {
+	return action.collectCountForExport
+}
+
 // Collect implements the interface method
-func (action *networkOutboundAction) Collect() ([]string, error) {
+func (action *networkOutboundAction) Collect() error {
+	action.collectFiles = []string{}
+
 	APIServerFQDN, err := utils.GetAPIServerFQDN()
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	outboundTypes := []networkOutboundType{}
@@ -97,78 +116,47 @@ func (action *networkOutboundAction) Collect() ([]string, error) {
 	)
 	rootPath, _ := utils.CreateCollectorDir(action.name)
 
-	networkOutboundFiles := []string{}
 	for _, outboundType := range outboundTypes {
 		networkOutboundFile := filepath.Join(rootPath, outboundType.Type)
 
-		go func(outboundType networkOutboundType, networkOutboundFile string) {
-			ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-			for ; true; <-ticker.C {
-				collectNetworkOutbound(outboundType, networkOutboundFile)
+		f, _ := os.OpenFile(networkOutboundFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		defer f.Close()
+
+		timeout := time.Duration(5 * time.Second)
+		_, err := net.DialTimeout("tcp", outboundType.URL, timeout)
+
+		// only write when connection failed
+		if err != nil {
+			data := &networkOutboundDatum{
+				TimeStamp:           time.Now().Truncate(1 * time.Second),
+				networkOutboundType: outboundType,
+				Connected:           err == nil,
+				Error:               err.Error(),
 			}
-		}(outboundType, networkOutboundFile)
 
-		networkOutboundFiles = append(networkOutboundFiles, networkOutboundFile)
-	}
-
-	return networkOutboundFiles, nil
-}
-
-// Process implements the interface method
-func (action *networkOutboundAction) Process(collectFiles []string) ([]string, error) {
-	rootPath, _ := utils.CreateDiagnosticDir()
-	networkOutboundDiagnosticFile := filepath.Join(rootPath, action.name)
-
-	go func(collectFiles []string, networkOutboundDiagnosticFile string) {
-		// sleep 10 secs before the initial data process
-		time.Sleep(10 * time.Second)
-
-		ticker := time.NewTicker(time.Duration(action.processIntervalInSeconds) * time.Second)
-		for ; true; <-ticker.C {
-			processNetworkOutbound(collectFiles, networkOutboundDiagnosticFile, action.collectIntervalInSeconds)
+			dataBytes, _ := json.Marshal(data)
+			f.WriteString(string(dataBytes) + "\n")
 		}
-	}(collectFiles, networkOutboundDiagnosticFile)
 
-	return []string{networkOutboundDiagnosticFile}, nil
-}
-
-// Export implements the interface method
-func (action *networkOutboundAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
-	if exporter != nil {
-		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+		action.collectFiles = append(action.collectFiles, networkOutboundFile)
 	}
 
 	return nil
 }
 
-func collectNetworkOutbound(outboundType networkOutboundType, networkOutboundFile string) {
-	f, _ := os.OpenFile(networkOutboundFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	defer f.Close()
+// Process implements the interface method
+func (action *networkOutboundAction) Process() error {
+	action.processFiles = []string{}
 
-	timeout := time.Duration(5 * time.Second)
-	_, err := net.DialTimeout("tcp", outboundType.URL, timeout)
+	rootPath, _ := utils.CreateDiagnosticDir()
+	networkOutboundDiagnosticFile := filepath.Join(rootPath, action.name)
 
-	// only write when connection failed
-	if err != nil {
-		data := &networkOutboundDatum{
-			TimeStamp:           time.Now().Truncate(1 * time.Second),
-			networkOutboundType: outboundType,
-			Connected:           err == nil,
-			Error:               err.Error(),
-		}
-
-		dataBytes, _ := json.Marshal(data)
-		f.WriteString(string(dataBytes) + "\n")
-	}
-}
-
-func processNetworkOutbound(files []string, networkOutboundDiagnosticFile string, collectIntervalInSeconds int) error {
 	f, _ := os.OpenFile(networkOutboundDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
 	defer f.Close()
 
-	var outboundDiagnosticData []networkOutboundDiagnosticDatum
+	outboundDiagnosticData := []networkOutboundDiagnosticDatum{}
 
-	for _, file := range files {
+	for _, file := range action.collectFiles {
 		t, _ := os.Open(file)
 		defer t.Close()
 
@@ -185,7 +173,7 @@ func processNetworkOutbound(files []string, networkOutboundDiagnosticFile string
 					outboundDiagnosticData = append(outboundDiagnosticData, dataPoint)
 					setDataPoint(&outboundDatum, &dataPoint)
 				} else {
-					if int(outboundDatum.TimeStamp.Sub(dataPoint.End).Seconds()) > collectIntervalInSeconds {
+					if int(outboundDatum.TimeStamp.Sub(dataPoint.End).Seconds()) > action.collectIntervalInSeconds {
 						outboundDiagnosticData = append(outboundDiagnosticData, dataPoint)
 						setDataPoint(&outboundDatum, &dataPoint)
 					} else {
@@ -203,6 +191,17 @@ func processNetworkOutbound(files []string, networkOutboundDiagnosticFile string
 	for _, dataPoint := range outboundDiagnosticData {
 		dataBytes, _ := json.Marshal(dataPoint)
 		f.WriteString(string(dataBytes) + "\n")
+	}
+
+	action.processFiles = append(action.processFiles, networkOutboundDiagnosticFile)
+
+	return nil
+}
+
+// Export implements the interface method
+func (action *networkOutboundAction) Export() error {
+	if action.exporter != nil {
+		return action.exporter.Export(append(action.collectFiles, action.processFiles...))
 	}
 
 	return nil

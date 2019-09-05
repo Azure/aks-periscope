@@ -2,7 +2,6 @@ package action
 
 import (
 	"path/filepath"
-	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -11,20 +10,22 @@ import (
 type kubeletCmdAction struct {
 	name                     string
 	collectIntervalInSeconds int
-	processIntervalInSeconds int
-	exportIntervalInSeconds  int
+	collectCountForProcess   int
+	collectCountForExport    int
 	exporter                 interfaces.Exporter
+	collectFiles             []string
+	processFiles             []string
 }
 
 var _ interfaces.Action = &kubeletCmdAction{}
 
 // NewKubeletCmdAction is a constructor
-func NewKubeletCmdAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+func NewKubeletCmdAction(collectIntervalInSeconds int, collectCountForProcess int, collectCountForExport int, exporter interfaces.Exporter) interfaces.Action {
 	return &kubeletCmdAction{
 		name:                     "kubeletcmd",
 		collectIntervalInSeconds: collectIntervalInSeconds,
-		processIntervalInSeconds: processIntervalInSeconds,
-		exportIntervalInSeconds:  exportIntervalInSeconds,
+		collectCountForProcess:   collectCountForProcess,
+		collectCountForExport:    collectCountForExport,
 		exporter:                 exporter,
 	}
 }
@@ -34,40 +35,48 @@ func (action *kubeletCmdAction) GetName() string {
 	return action.name
 }
 
+// GetName implements the interface method
+func (action *kubeletCmdAction) GetCollectIntervalInSeconds() int {
+	return action.collectIntervalInSeconds
+}
+
+// GetName implements the interface method
+func (action *kubeletCmdAction) GetCollectCountForProcess() int {
+	return action.collectCountForProcess
+}
+
+// GetName implements the interface method
+func (action *kubeletCmdAction) GetCollectCountForExport() int {
+	return action.collectCountForExport
+}
+
 // Collect implements the interface method
-func (action *kubeletCmdAction) Collect() ([]string, error) {
+func (action *kubeletCmdAction) Collect() error {
+	action.collectFiles = []string{}
+
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 	kubeletcmdFile := filepath.Join(rootPath, action.GetName())
 
-	go func(kubeletcmdFile string) {
-		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-		for ; true; <-ticker.C {
-			collectKubeletCmd(kubeletcmdFile)
-		}
-	}(kubeletcmdFile)
-
-	return []string{kubeletcmdFile}, nil
-}
-
-// Process implements the interface method
-func (action *kubeletCmdAction) Process(collectFiles []string) ([]string, error) {
-	return nil, nil
-}
-
-// Export implements the interface method
-func (action *kubeletCmdAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
-	if exporter != nil {
-		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
-	}
-
-	return nil
-}
-
-func collectKubeletCmd(kubeletcmdFile string) error {
 	output, _ := utils.RunCommandOnHost("ps", "-o", "cmd=", "-C", "kubelet")
 	err := utils.WriteToFile(kubeletcmdFile, output)
 	if err != nil {
 		return err
+	}
+
+	action.collectFiles = append(action.collectFiles, kubeletcmdFile)
+
+	return nil
+}
+
+// Process implements the interface method
+func (action *kubeletCmdAction) Process() error {
+	return nil
+}
+
+// Export implements the interface method
+func (action *kubeletCmdAction) Export() error {
+	if action.exporter != nil {
+		return action.exporter.Export(append(action.collectFiles, action.processFiles...))
 	}
 
 	return nil

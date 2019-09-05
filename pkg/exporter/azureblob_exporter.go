@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -20,7 +19,7 @@ type AzureBlobExporter struct{}
 var _ interfaces.Exporter = &AzureBlobExporter{}
 
 // Export implements the interface method
-func (exporter *AzureBlobExporter) Export(files []string, intervalInSeconds int) error {
+func (exporter *AzureBlobExporter) Export(files []string) error {
 	APIServerFQDN, err := utils.GetAPIServerFQDN()
 	if err != nil {
 		return err
@@ -52,24 +51,6 @@ func (exporter *AzureBlobExporter) Export(files []string, intervalInSeconds int)
 		}
 	}
 
-	go func(ctx context.Context, containerURL azblob.ContainerURL, files []string) error {
-		// sleep 20 secs before the initial data export
-		time.Sleep(20 * time.Second)
-
-		ticker := time.NewTicker(time.Duration(intervalInSeconds) * time.Second)
-		for ; true; <-ticker.C {
-			err := exportData(ctx, containerURL, files)
-			if err != nil {
-				return err
-			}
-		}
-		return nil
-	}(ctx, containerURL, files)
-
-	return nil
-}
-
-func exportData(ctx context.Context, containerURL azblob.ContainerURL, files []string) error {
 	for _, file := range files {
 		blobURL := containerURL.NewBlockBlobURL(strings.Replace(file, "/aks-diagnostic/", "", -1))
 		file, err := os.Open(file)

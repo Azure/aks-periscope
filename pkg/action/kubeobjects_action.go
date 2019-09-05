@@ -2,7 +2,6 @@ package action
 
 import (
 	"path/filepath"
-	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -11,20 +10,22 @@ import (
 type kubeObjectsAction struct {
 	name                     string
 	collectIntervalInSeconds int
-	processIntervalInSeconds int
-	exportIntervalInSeconds  int
+	collectCountForProcess   int
+	collectCountForExport    int
 	exporter                 interfaces.Exporter
+	collectFiles             []string
+	processFiles             []string
 }
 
 var _ interfaces.Action = &kubeObjectsAction{}
 
 // NewKubeObjectsAction is a constructor
-func NewKubeObjectsAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+func NewKubeObjectsAction(collectIntervalInSeconds int, collectCountForProcess int, collectCountForExport int, exporter interfaces.Exporter) interfaces.Action {
 	return &kubeObjectsAction{
 		name:                     "kubeobjects",
 		collectIntervalInSeconds: collectIntervalInSeconds,
-		processIntervalInSeconds: processIntervalInSeconds,
-		exportIntervalInSeconds:  exportIntervalInSeconds,
+		collectCountForProcess:   collectCountForProcess,
+		collectCountForExport:    collectCountForExport,
 		exporter:                 exporter,
 	}
 }
@@ -34,48 +35,53 @@ func (action *kubeObjectsAction) GetName() string {
 	return action.name
 }
 
+// GetName implements the interface method
+func (action *kubeObjectsAction) GetCollectIntervalInSeconds() int {
+	return action.collectIntervalInSeconds
+}
+
+// GetName implements the interface method
+func (action *kubeObjectsAction) GetCollectCountForProcess() int {
+	return action.collectCountForProcess
+}
+
+// GetName implements the interface method
+func (action *kubeObjectsAction) GetCollectCountForExport() int {
+	return action.collectCountForExport
+}
+
 // Collect implements the interface method
-func (action *kubeObjectsAction) Collect() ([]string, error) {
+func (action *kubeObjectsAction) Collect() error {
+	action.collectFiles = []string{}
+
 	nameSpace := "kube-system"
 	kubernetesObjects := []string{"pod", "service"}
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 
-	kubernetesObjectFiles := make([]string, 0)
 	for _, kubernetesObject := range kubernetesObjects {
 		kubernetesObjectFile := filepath.Join(rootPath, kubernetesObject)
 
-		go func(nameSpace string, kubernetesObject string, kubernetesObjectFile string) {
-			ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-			for ; true; <-ticker.C {
-				collectKubeObjects(nameSpace, kubernetesObject, kubernetesObjectFile)
-			}
-		}(nameSpace, kubernetesObject, kubernetesObjectFile)
+		output, _ := utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "-n", nameSpace, "describe", kubernetesObject)
+		err := utils.WriteToFile(kubernetesObjectFile, output)
+		if err != nil {
+			return err
+		}
 
-		kubernetesObjectFiles = append(kubernetesObjectFiles, kubernetesObjectFile)
-	}
-
-	return kubernetesObjectFiles, nil
-}
-
-// Process implements the interface method
-func (action *kubeObjectsAction) Process(collectFiles []string) ([]string, error) {
-	return nil, nil
-}
-
-// Export implements the interface method
-func (action *kubeObjectsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
-	if exporter != nil {
-		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
+		action.collectFiles = append(action.collectFiles, kubernetesObjectFile)
 	}
 
 	return nil
 }
 
-func collectKubeObjects(nameSpace string, kubernetesObject string, kubernetesObjectFile string) error {
-	output, _ := utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "-n", nameSpace, "describe", kubernetesObject)
-	err := utils.WriteToFile(kubernetesObjectFile, output)
-	if err != nil {
-		return err
+// Process implements the interface method
+func (action *kubeObjectsAction) Process() error {
+	return nil
+}
+
+// Export implements the interface method
+func (action *kubeObjectsAction) Export() error {
+	if action.exporter != nil {
+		return action.exporter.Export(append(action.collectFiles, action.processFiles...))
 	}
 
 	return nil

@@ -2,7 +2,6 @@ package action
 
 import (
 	"path/filepath"
-	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -11,20 +10,22 @@ import (
 type provisionLogsAction struct {
 	name                     string
 	collectIntervalInSeconds int
-	processIntervalInSeconds int
-	exportIntervalInSeconds  int
+	collectCountForProcess   int
+	collectCountForExport    int
 	exporter                 interfaces.Exporter
+	collectFiles             []string
+	processFiles             []string
 }
 
 var _ interfaces.Action = &provisionLogsAction{}
 
 // NewProvisionLogsAction is a constructor
-func NewProvisionLogsAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+func NewProvisionLogsAction(collectIntervalInSeconds int, collectCountForProcess int, collectCountForExport int, exporter interfaces.Exporter) interfaces.Action {
 	return &provisionLogsAction{
 		name:                     "provisionlogs",
 		collectIntervalInSeconds: collectIntervalInSeconds,
-		processIntervalInSeconds: processIntervalInSeconds,
-		exportIntervalInSeconds:  exportIntervalInSeconds,
+		collectCountForProcess:   collectCountForProcess,
+		collectCountForExport:    collectCountForExport,
 		exporter:                 exporter,
 	}
 }
@@ -34,40 +35,48 @@ func (action *provisionLogsAction) GetName() string {
 	return action.name
 }
 
+// GetName implements the interface method
+func (action *provisionLogsAction) GetCollectIntervalInSeconds() int {
+	return action.collectIntervalInSeconds
+}
+
+// GetName implements the interface method
+func (action *provisionLogsAction) GetCollectCountForProcess() int {
+	return action.collectCountForProcess
+}
+
+// GetName implements the interface method
+func (action *provisionLogsAction) GetCollectCountForExport() int {
+	return action.collectCountForExport
+}
+
 // Collect implements the interface method
-func (action *provisionLogsAction) Collect() ([]string, error) {
+func (action *provisionLogsAction) Collect() error {
+	action.collectFiles = []string{}
+
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 	provisionLog := filepath.Join(rootPath, action.GetName())
 
-	go func(provisionLog string) {
-		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-		for ; true; <-ticker.C {
-			collectProvisionLogs(provisionLog)
-		}
-	}(provisionLog)
-
-	return []string{provisionLog}, nil
-}
-
-// Process implements the interface method
-func (action *provisionLogsAction) Process(collectFiles []string) ([]string, error) {
-	return nil, nil
-}
-
-// Export implements the interface method
-func (action *provisionLogsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
-	if exporter != nil {
-		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
-	}
-
-	return nil
-}
-
-func collectProvisionLogs(provisionLog string) error {
 	output, _ := utils.RunCommandOnHost("cat", "/var/log/azure/cluster-provision.log")
 	err := utils.WriteToFile(provisionLog, output)
 	if err != nil {
 		return err
+	}
+
+	action.collectFiles = append(action.collectFiles, provisionLog)
+
+	return nil
+}
+
+// Process implements the interface method
+func (action *provisionLogsAction) Process() error {
+	return nil
+}
+
+// Export implements the interface method
+func (action *provisionLogsAction) Export() error {
+	if action.exporter != nil {
+		return action.exporter.Export(append(action.collectFiles, action.processFiles...))
 	}
 
 	return nil

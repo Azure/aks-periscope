@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -21,20 +20,22 @@ type dnsDiagnosticDatum struct {
 type dnsAction struct {
 	name                     string
 	collectIntervalInSeconds int
-	processIntervalInSeconds int
-	exportIntervalInSeconds  int
+	collectCountForProcess   int
+	collectCountForExport    int
 	exporter                 interfaces.Exporter
+	collectFiles             []string
+	processFiles             []string
 }
 
 var _ interfaces.Action = &dnsAction{}
 
 // NewDNSAction is a constructor
-func NewDNSAction(collectIntervalInSeconds int, processIntervalInSeconds int, exportIntervalInSeconds int, exporter interfaces.Exporter) interfaces.Action {
+func NewDNSAction(collectIntervalInSeconds int, collectCountForProcess int, collectCountForExport int, exporter interfaces.Exporter) interfaces.Action {
 	return &dnsAction{
 		name:                     "dns",
 		collectIntervalInSeconds: collectIntervalInSeconds,
-		processIntervalInSeconds: processIntervalInSeconds,
-		exportIntervalInSeconds:  exportIntervalInSeconds,
+		collectCountForProcess:   collectCountForProcess,
+		collectCountForExport:    collectCountForExport,
 		exporter:                 exporter,
 	}
 }
@@ -44,55 +45,36 @@ func (action *dnsAction) GetName() string {
 	return action.name
 }
 
+// GetName implements the interface method
+func (action *dnsAction) GetCollectIntervalInSeconds() int {
+	return action.collectIntervalInSeconds
+}
+
+// GetName implements the interface method
+func (action *dnsAction) GetCollectCountForProcess() int {
+	return action.collectCountForProcess
+}
+
+// GetName implements the interface method
+func (action *dnsAction) GetCollectCountForExport() int {
+	return action.collectCountForExport
+}
+
 // Collect implements the interface method
-func (action *dnsAction) Collect() ([]string, error) {
+func (action *dnsAction) Collect() error {
+	action.collectFiles = []string{}
+
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 	hostDNSFile := filepath.Join(rootPath, "host")
 	containerDNSFile := filepath.Join(rootPath, "container")
 
-	go func(hostDNSFile string, containerDNSFile string) {
-		ticker := time.NewTicker(time.Duration(action.collectIntervalInSeconds) * time.Second)
-		for ; true; <-ticker.C {
-			collectDNS(hostDNSFile, containerDNSFile)
-		}
-	}(hostDNSFile, containerDNSFile)
-
-	return []string{hostDNSFile, containerDNSFile}, nil
-}
-
-// Process implements the interface method
-func (action *dnsAction) Process(collectFiles []string) ([]string, error) {
-	rootPath, _ := utils.CreateDiagnosticDir()
-	dnsDiagnosticFile := filepath.Join(rootPath, action.GetName())
-
-	go func(collectFiles []string, dnsDiagnosticFile string) {
-		// sleep 10 secs before the initial data process
-		time.Sleep(10 * time.Second)
-
-		ticker := time.NewTicker(time.Duration(action.processIntervalInSeconds) * time.Second)
-		for ; true; <-ticker.C {
-			processDNS(collectFiles, dnsDiagnosticFile)
-		}
-	}(collectFiles, dnsDiagnosticFile)
-
-	return []string{dnsDiagnosticFile}, nil
-}
-
-// Export implements the interface method
-func (action *dnsAction) Export(exporter interfaces.Exporter, collectFiles []string, processfiles []string) error {
-	if exporter != nil {
-		return exporter.Export(append(collectFiles, processfiles...), action.exportIntervalInSeconds)
-	}
-
-	return nil
-}
-
-func collectDNS(hostDNSFile string, containerDNSFile string) error {
 	output, _ := utils.RunCommandOnHost("cat", "/etc/resolv.conf")
 	err := utils.WriteToFile(hostDNSFile, output)
 	if err != nil {
 		return err
 	}
+
+	action.collectFiles = append(action.collectFiles, hostDNSFile)
 
 	output, _ = utils.RunCommandOnContainer("cat", "/etc/resolv.conf")
 	err = utils.WriteToFile(containerDNSFile, output)
@@ -100,16 +82,23 @@ func collectDNS(hostDNSFile string, containerDNSFile string) error {
 		return err
 	}
 
+	action.collectFiles = append(action.collectFiles, containerDNSFile)
+
 	return nil
 }
 
-func processDNS(files []string, DNSDiagnosticFile string) error {
-	f, _ := os.OpenFile(DNSDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
+// Process implements the interface method
+func (action *dnsAction) Process() error {
+	action.processFiles = []string{}
+
+	rootPath, _ := utils.CreateDiagnosticDir()
+	dnsDiagnosticFile := filepath.Join(rootPath, action.GetName())
+
+	f, _ := os.OpenFile(dnsDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
 	defer f.Close()
 
-	var dnsDiagnosticData []dnsDiagnosticDatum
-
-	for _, file := range files {
+	dnsDiagnosticData := []dnsDiagnosticDatum{}
+	for _, file := range action.collectFiles {
 		t, _ := os.Open(file)
 		defer t.Close()
 
@@ -148,6 +137,17 @@ func processDNS(files []string, DNSDiagnosticFile string) error {
 	for _, dataPoint := range dnsDiagnosticData {
 		dataBytes, _ := json.Marshal(dataPoint)
 		f.WriteString(string(dataBytes) + "\n")
+	}
+
+	action.processFiles = append(action.processFiles, dnsDiagnosticFile)
+
+	return nil
+}
+
+// Export implements the interface method
+func (action *dnsAction) Export() error {
+	if action.exporter != nil {
+		return action.exporter.Export(append(action.collectFiles, action.processFiles...))
 	}
 
 	return nil
