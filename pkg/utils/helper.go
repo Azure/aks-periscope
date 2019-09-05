@@ -2,7 +2,6 @@ package utils
 
 import (
 	"errors"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -37,13 +36,6 @@ func GetAPIServerFQDN() (string, error) {
 	}
 
 	return "", errors.New("Could not find server definitions in kubeconfig")
-}
-
-// GetAzureBlobCredential get azure blob access info
-func GetAzureBlobCredential() (string, string) {
-	accountName, _ := ioutil.ReadFile("/etc/azure-blob/accountName")
-	sasKey, _ := ioutil.ReadFile("/etc/azure-blob/sasKey")
-	return strings.TrimSuffix(string(accountName), "\n"), strings.TrimSuffix(string(sasKey), "\n")
 }
 
 // RunCommandOnHost runs a command on host system

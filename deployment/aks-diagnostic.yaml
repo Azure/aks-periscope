@@ -20,10 +20,14 @@ spec:
         securityContext:
           privileged: true
         imagePullPolicy: Always
+        envFrom:
+        - configMapRef:
+            name: containerlogs-config
+        - configMapRef:
+            name: kubeobjects-config
+        - secretRef:
+            name: azureblob-secret
         volumeMounts:
-        - mountPath: "/etc/azure-blob"
-          name: azure-blob
-          readOnly: true
         - mountPath: /aks-diagnostic
           name: aks-diagnostic-storage
         resources:
@@ -34,9 +38,6 @@ spec:
             memory: "2000Mi"
             cpu: "1000m"
       volumes:
-      - name: azure-blob
-        secret:
-          secretName: azure-blob
       - name: aks-diagnostic-storage
         hostPath:
           path: /var/log/aks-diagnostic
@@ -45,8 +46,22 @@ spec:
 apiVersion: v1
 kind: Secret
 metadata:
-  name: azure-blob
+  name: azureblob-secret
 type: Opaque
 data:
-  accountName: # <accountName, base64 encoded>
-  sasKey: # <saskey, base64 encoded>
+  AZURE_BLOB_ACCOUNT_NAME: # <accountName, base64 encoded>
+  AZURE_BLOB_SAS_KEY: # <saskey, base64 encoded>
+---
+apiVersion: v1 
+kind: ConfigMap 
+metadata:
+  name: containerlogs-config
+data:
+  DIAGNOSTIC_CONTAINERLOGS_NAMESPACE: kube-system
+---
+apiVersion: v1 
+kind: ConfigMap 
+metadata:
+  name: kubeobjects-config
+data:
+  DIAGNOSTIC_KUBEOBJECTS_NAMESPACE: kube-system

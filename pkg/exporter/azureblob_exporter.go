@@ -29,7 +29,8 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 	ctx := context.Background()
 
 	p := azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{})
-	accountName, sasKey := utils.GetAzureBlobCredential()
+	accountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
+	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
 
 	URL, _ := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s%s", accountName, containerName, sasKey))
 	containerURL := azblob.NewContainerURL(*URL, p)

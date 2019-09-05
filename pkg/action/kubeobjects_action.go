@@ -1,6 +1,7 @@
 package action
 
 import (
+	"os"
 	"path/filepath"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
@@ -54,7 +55,7 @@ func (action *kubeObjectsAction) GetCollectCountForExport() int {
 func (action *kubeObjectsAction) Collect() error {
 	action.collectFiles = []string{}
 
-	nameSpace := "kube-system"
+	nameSpace := os.Getenv("DIAGNOSTIC_KUBEOBJECTS_NAMESPACE")
 	kubernetesObjects := []string{"pod", "service"}
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 

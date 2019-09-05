@@ -1,6 +1,7 @@
 package action
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -55,7 +56,7 @@ func (action *containerLogsAction) GetCollectCountForExport() int {
 func (action *containerLogsAction) Collect() error {
 	action.collectFiles = []string{}
 
-	podNameSpace := "kube-system"
+	podNameSpace := os.Getenv("DIAGNOSTIC_CONTAINERLOGS_NAMESPACE")
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 
 	output, _ := utils.RunCommandOnHost("docker", "ps", "--format", "{{.Names}}")
