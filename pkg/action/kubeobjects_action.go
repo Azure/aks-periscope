@@ -3,6 +3,7 @@ package action
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
 	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
@@ -55,20 +56,24 @@ func (action *kubeObjectsAction) GetCollectCountForExport() int {
 func (action *kubeObjectsAction) Collect() error {
 	action.collectFiles = []string{}
 
-	nameSpace := os.Getenv("DIAGNOSTIC_KUBEOBJECTS_NAMESPACE")
+	nameSpaces := strings.Fields(os.Getenv("DIAGNOSTIC_KUBEOBJECTS_NAMESPACES"))
 	kubernetesObjects := []string{"pod", "service"}
 	rootPath, _ := utils.CreateCollectorDir(action.GetName())
 
-	for _, kubernetesObject := range kubernetesObjects {
-		kubernetesObjectFile := filepath.Join(rootPath, kubernetesObject)
+	for _, nameSpace := range nameSpaces {
+		os.MkdirAll(filepath.Join(rootPath, nameSpace), os.ModePerm)
 
-		output, _ := utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "-n", nameSpace, "describe", kubernetesObject)
-		err := utils.WriteToFile(kubernetesObjectFile, output)
-		if err != nil {
-			return err
+		for _, kubernetesObject := range kubernetesObjects {
+			kubernetesObjectFile := filepath.Join(rootPath, nameSpace, kubernetesObject)
+
+			output, _ := utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "-n", nameSpace, "describe", kubernetesObject)
+			err := utils.WriteToFile(kubernetesObjectFile, output)
+			if err != nil {
+				return err
+			}
+
+			action.collectFiles = append(action.collectFiles, kubernetesObjectFile)
 		}
-
-		action.collectFiles = append(action.collectFiles, kubernetesObjectFile)
 	}
 
 	return nil

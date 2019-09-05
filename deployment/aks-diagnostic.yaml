@@ -57,11 +57,11 @@ kind: ConfigMap
 metadata:
   name: containerlogs-config
 data:
-  DIAGNOSTIC_CONTAINERLOGS_NAMESPACE: kube-system
+  DIAGNOSTIC_CONTAINERLOGS_NAMESPACES: kube-system
 ---
 apiVersion: v1 
 kind: ConfigMap 
 metadata:
   name: kubeobjects-config
 data:
-  DIAGNOSTIC_KUBEOBJECTS_NAMESPACE: kube-system
+  DIAGNOSTIC_KUBEOBJECTS_NAMESPACES: kube-system
