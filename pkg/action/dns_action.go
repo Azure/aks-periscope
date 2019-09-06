@@ -3,6 +3,7 @@ package action
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,19 +65,31 @@ func (action *dnsAction) GetCollectCountForExport() int {
 func (action *dnsAction) Collect() error {
 	action.collectFiles = []string{}
 
-	rootPath, _ := utils.CreateCollectorDir(action.GetName())
+	rootPath, err := utils.CreateCollectorDir(action.GetName())
+	if err != nil {
+		return err
+	}
+
 	hostDNSFile := filepath.Join(rootPath, "host")
 	containerDNSFile := filepath.Join(rootPath, "container")
 
-	output, _ := utils.RunCommandOnHost("cat", "/etc/resolv.conf")
-	err := utils.WriteToFile(hostDNSFile, output)
+	output, err := utils.RunCommandOnHost("cat", "/etc/resolv.conf")
+	if err != nil {
+		return err
+	}
+
+	err = utils.WriteToFile(hostDNSFile, output)
 	if err != nil {
 		return err
 	}
 
 	action.collectFiles = append(action.collectFiles, hostDNSFile)
 
-	output, _ = utils.RunCommandOnContainer("cat", "/etc/resolv.conf")
+	output, err = utils.RunCommandOnContainer("cat", "/etc/resolv.conf")
+	if err != nil {
+		return err
+	}
+
 	err = utils.WriteToFile(containerDNSFile, output)
 	if err != nil {
 		return err
@@ -91,16 +104,26 @@ func (action *dnsAction) Collect() error {
 func (action *dnsAction) Process() error {
 	action.processFiles = []string{}
 
-	rootPath, _ := utils.CreateDiagnosticDir()
+	rootPath, err := utils.CreateDiagnosticDir()
+	if err != nil {
+		return err
+	}
+
 	dnsDiagnosticFile := filepath.Join(rootPath, action.GetName())
 
-	f, _ := os.OpenFile(dnsDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(dnsDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
 	defer f.Close()
+	if err != nil {
+		return fmt.Errorf("Fail to open file %s: %+v", dnsDiagnosticFile, err)
+	}
 
 	dnsDiagnosticData := []dnsDiagnosticDatum{}
 	for _, file := range action.collectFiles {
-		t, _ := os.Open(file)
+		t, err := os.Open(file)
 		defer t.Close()
+		if err != nil {
+			return fmt.Errorf("Fail to open file %s: %+v", file, err)
+		}
 
 		dnsLevel := filepath.Base(file)
 		var dns []string
@@ -135,8 +158,15 @@ func (action *dnsAction) Process() error {
 	}
 
 	for _, dataPoint := range dnsDiagnosticData {
-		dataBytes, _ := json.Marshal(dataPoint)
-		f.WriteString(string(dataBytes) + "\n")
+		dataBytes, err := json.Marshal(dataPoint)
+		if err != nil {
+			return fmt.Errorf("Fail to marshal data: %+v", err)
+		}
+
+		_, err = f.WriteString(string(dataBytes) + "\n")
+		if err != nil {
+			return fmt.Errorf("Fail to write data to file: %+v", err)
+		}
 	}
 
 	action.processFiles = append(action.processFiles, dnsDiagnosticFile)

@@ -3,7 +3,6 @@ package exporter
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 	"os"
 	"strings"
@@ -24,6 +23,7 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 	if err != nil {
 		return err
 	}
+
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
 
 	ctx := context.Background()
@@ -32,10 +32,13 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 	accountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
 	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
 
-	URL, _ := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s%s", accountName, containerName, sasKey))
+	URL, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s%s", accountName, containerName, sasKey))
+	if err != nil {
+		return fmt.Errorf("Fail to build blob container url: %+v", err)
+	}
+
 	containerURL := azblob.NewContainerURL(*URL, p)
 
-	fmt.Printf("Creating a container named %s\n", containerName)
 	_, err = containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
 	if err != nil {
 		storageError, ok := err.(azblob.StorageError)
@@ -43,30 +46,25 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 			switch storageError.ServiceCode() {
 			case azblob.ServiceCodeContainerAlreadyExists:
 			default:
-				log.Fatal(err)
-				return err
+				return fmt.Errorf("Failed to create blob with storage error: %+v", err)
 			}
 		} else {
-			log.Fatal(err)
-			return err
+			return fmt.Errorf("Failed to create blob: %+v", err)
 		}
 	}
 
 	for _, file := range files {
 		blobURL := containerURL.NewBlockBlobURL(strings.Replace(file, "/aks-diagnostic/", "", -1))
-		file, err := os.Open(file)
+		f, err := os.Open(file)
 		if err != nil {
-			log.Fatal(err)
-			return err
+			return fmt.Errorf("Fail to open file %s: %+v", file, err)
 		}
 
-		fmt.Printf("Uploading the file with blob name: %s\n", blobURL.String())
-		_, err = azblob.UploadFileToBlockBlob(ctx, file, blobURL, azblob.UploadToBlockBlobOptions{
+		_, err = azblob.UploadFileToBlockBlob(ctx, f, blobURL, azblob.UploadToBlockBlobOptions{
 			BlockSize:   4 * 1024 * 1024,
 			Parallelism: 16})
 		if err != nil {
-			log.Fatal(err)
-			return err
+			return fmt.Errorf("Failed to upload file %s to blob: %+v", file, err)
 		}
 	}
 

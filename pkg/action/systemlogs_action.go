@@ -55,13 +55,20 @@ func (action *systemLogsAction) Collect() error {
 	action.collectFiles = []string{}
 
 	systemServices := []string{"docker", "kubelet"}
-	rootPath, _ := utils.CreateCollectorDir(action.GetName())
+	rootPath, err := utils.CreateCollectorDir(action.GetName())
+	if err != nil {
+		return err
+	}
 
 	for _, systemService := range systemServices {
 		systemLog := filepath.Join(rootPath, systemService)
 
-		output, _ := utils.RunCommandOnHost("journalctl", "-u", systemService)
-		err := utils.WriteToFile(systemLog, output)
+		output, err := utils.RunCommandOnHost("journalctl", "-u", systemService)
+		if err != nil {
+			return err
+		}
+
+		err = utils.WriteToFile(systemLog, output)
 		if err != nil {
 			return err
 		}

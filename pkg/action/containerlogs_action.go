@@ -1,6 +1,7 @@
 package action
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,14 +58,24 @@ func (action *containerLogsAction) Collect() error {
 	action.collectFiles = []string{}
 
 	nameSpaces := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_NAMESPACES"))
-	rootPath, _ := utils.CreateCollectorDir(action.GetName())
+	rootPath, err := utils.CreateCollectorDir(action.GetName())
+	if err != nil {
+		return err
+	}
 
-	output, _ := utils.RunCommandOnHost("docker", "ps", "--format", "{{.Names}}")
+	output, err := utils.RunCommandOnHost("docker", "ps", "--format", "{{.Names}}")
+	if err != nil {
+		return err
+	}
+
 	containers := strings.Split(output, "\n")
 	containers = containers[:len(containers)-1]
 
 	for _, nameSpace := range nameSpaces {
-		os.MkdirAll(filepath.Join(rootPath, nameSpace), os.ModePerm)
+		err := os.MkdirAll(filepath.Join(rootPath, nameSpace), os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("Fail to create dir %s: %+v", filepath.Join(rootPath, nameSpace), err)
+		}
 
 		containerNames := []string{}
 		for _, container := range containers {
@@ -77,8 +88,12 @@ func (action *containerLogsAction) Collect() error {
 		for _, containerName := range containerNames {
 			containerLog := filepath.Join(rootPath, nameSpace, containerName)
 
-			output, _ := utils.RunCommandOnHost("docker", "logs", containerName)
-			err := utils.WriteToFile(containerLog, output)
+			output, err := utils.RunCommandOnHost("docker", "logs", containerName)
+			if err != nil {
+				return err
+			}
+
+			err = utils.WriteToFile(containerLog, output)
 			if err != nil {
 				return err
 			}

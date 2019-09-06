@@ -2,7 +2,7 @@ package utils
 
 import (
 	"errors"
-	"log"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,9 +10,13 @@ import (
 )
 
 // GetHostName get host name
-func GetHostName() string {
-	hostname, _ := RunCommandOnHost("cat", "/etc/hostname")
-	return strings.TrimSuffix(string(hostname), "\n")
+func GetHostName() (string, error) {
+	hostname, err := RunCommandOnHost("cat", "/etc/hostname")
+	if err != nil {
+		return "", fmt.Errorf("Fail to get host name: %+v", err)
+	}
+
+	return strings.TrimSuffix(string(hostname), "\n"), nil
 }
 
 // GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
@@ -20,8 +24,7 @@ func GetAPIServerFQDN() (string, error) {
 	output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
 
 	if err != nil {
-		log.Println("Can't open kubeconfig file: ", err)
-		return "", err
+		return "", fmt.Errorf("Can't open kubeconfig file: %+v", err)
 	}
 
 	lines := strings.Split(output, "\n")
@@ -47,33 +50,51 @@ func RunCommandOnHost(command string, arg ...string) (string, error) {
 
 	cmd := exec.Command("nsenter", args...)
 	out, err := cmd.CombinedOutput()
-	return string(out), err
+	if err != nil {
+		return "", fmt.Errorf("Fail to run command on host: %+v", err)
+	}
+
+	return string(out), nil
 }
 
 // RunCommandOnContainer runs a command on container system
 func RunCommandOnContainer(command string, arg ...string) (string, error) {
 	cmd := exec.Command(command, arg...)
 	out, err := cmd.CombinedOutput()
-	return string(out), err
+	if err != nil {
+		return "", fmt.Errorf("Fail to run command in container: %+v", err)
+	}
+
+	return string(out), nil
 }
 
 // WriteToFile writes data to a file
 func WriteToFile(fileName string, data string) error {
-	f, _ := os.Create(fileName)
+	f, err := os.Create(fileName)
 	defer f.Close()
+	if err != nil {
+		return fmt.Errorf("Fail to create file %s: %+v", fileName, err)
+	}
 
-	_, err := f.Write([]byte(data))
+	_, err = f.Write([]byte(data))
+	if err != nil {
+		return fmt.Errorf("Fail to write data to file %s: %+v", fileName, err)
+	}
 
-	return err
+	return nil
 }
 
 // CreateCollectorDir creates a working dir for a collector
 func CreateCollectorDir(name string) (string, error) {
-	rootPath := filepath.Join("/aks-diagnostic/", GetHostName(), "metrics", name)
-	err := os.MkdirAll(rootPath, os.ModePerm)
+	hostName, err := GetHostName()
 	if err != nil {
-		log.Fatal(err)
 		return "", err
+	}
+
+	rootPath := filepath.Join("/aks-diagnostic/", hostName, "metrics", name)
+	err = os.MkdirAll(rootPath, os.ModePerm)
+	if err != nil {
+		return "", fmt.Errorf("Fail to create dir %s: %+v", rootPath, err)
 	}
 
 	return rootPath, nil
@@ -81,11 +102,15 @@ func CreateCollectorDir(name string) (string, error) {
 
 // CreateDiagnosticDir creates a working dir for diagnostic
 func CreateDiagnosticDir() (string, error) {
-	rootPath := filepath.Join("/aks-diagnostic/", GetHostName(), "diagnostic")
-	err := os.MkdirAll(rootPath, os.ModePerm)
+	hostName, err := GetHostName()
 	if err != nil {
-		log.Fatal(err)
 		return "", err
+	}
+
+	rootPath := filepath.Join("/aks-diagnostic/", hostName, "diagnostic")
+	err = os.MkdirAll(rootPath, os.ModePerm)
+	if err != nil {
+		return "", fmt.Errorf("Fail to create dir %s: %+v", rootPath, err)
 	}
 
 	return rootPath, nil

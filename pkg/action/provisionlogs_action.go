@@ -54,11 +54,19 @@ func (action *provisionLogsAction) GetCollectCountForExport() int {
 func (action *provisionLogsAction) Collect() error {
 	action.collectFiles = []string{}
 
-	rootPath, _ := utils.CreateCollectorDir(action.GetName())
+	rootPath, err := utils.CreateCollectorDir(action.GetName())
+	if err != nil {
+		return err
+	}
+
 	provisionLog := filepath.Join(rootPath, action.GetName())
 
-	output, _ := utils.RunCommandOnHost("cat", "/var/log/azure/cluster-provision.log")
-	err := utils.WriteToFile(provisionLog, output)
+	output, err := utils.RunCommandOnHost("cat", "/var/log/azure/cluster-provision.log")
+	if err != nil {
+		return err
+	}
+
+	err = utils.WriteToFile(provisionLog, output)
 	if err != nil {
 		return err
 	}

@@ -3,6 +3,7 @@ package action
 import (
 	"bufio"
 	"encoding/json"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -114,16 +115,22 @@ func (action *networkOutboundAction) Collect() error {
 			URL:  "mcr.microsoft.com:80",
 		},
 	)
-	rootPath, _ := utils.CreateCollectorDir(action.name)
+	rootPath, err := utils.CreateCollectorDir(action.name)
+	if err != nil {
+		return err
+	}
 
 	for _, outboundType := range outboundTypes {
 		networkOutboundFile := filepath.Join(rootPath, outboundType.Type)
 
-		f, _ := os.OpenFile(networkOutboundFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		f, err := os.OpenFile(networkOutboundFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		defer f.Close()
+		if err != nil {
+			return fmt.Errorf("Fail to open file %s: %+v", networkOutboundFile, err)
+		}
 
 		timeout := time.Duration(5 * time.Second)
-		_, err := net.DialTimeout("tcp", outboundType.URL, timeout)
+		_, err = net.DialTimeout("tcp", outboundType.URL, timeout)
 
 		// only write when connection failed
 		if err != nil {
@@ -134,8 +141,15 @@ func (action *networkOutboundAction) Collect() error {
 				Error:               err.Error(),
 			}
 
-			dataBytes, _ := json.Marshal(data)
-			f.WriteString(string(dataBytes) + "\n")
+			dataBytes, err := json.Marshal(data)
+			if err != nil {
+				return fmt.Errorf("Fail to marshal data: %+v", err)
+			}
+
+			_, err = f.WriteString(string(dataBytes) + "\n")
+			if err != nil {
+				return fmt.Errorf("Fail to write data to file: %+v", err)
+			}
 		}
 
 		action.collectFiles = append(action.collectFiles, networkOutboundFile)
@@ -148,17 +162,27 @@ func (action *networkOutboundAction) Collect() error {
 func (action *networkOutboundAction) Process() error {
 	action.processFiles = []string{}
 
-	rootPath, _ := utils.CreateDiagnosticDir()
+	rootPath, err := utils.CreateDiagnosticDir()
+	if err != nil {
+		return err
+	}
+
 	networkOutboundDiagnosticFile := filepath.Join(rootPath, action.name)
 
-	f, _ := os.OpenFile(networkOutboundDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(networkOutboundDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
 	defer f.Close()
+	if err != nil {
+		return fmt.Errorf("Fail to open file %s: %+v", networkOutboundDiagnosticFile, err)
+	}
 
 	outboundDiagnosticData := []networkOutboundDiagnosticDatum{}
 
 	for _, file := range action.collectFiles {
-		t, _ := os.Open(file)
+		t, err := os.Open(file)
 		defer t.Close()
+		if err != nil {
+			return fmt.Errorf("Fail to open file %s: %+v", file, err)
+		}
 
 		dataPoint := networkOutboundDiagnosticDatum{}
 		scanner := bufio.NewScanner(t)
@@ -189,8 +213,15 @@ func (action *networkOutboundAction) Process() error {
 	}
 
 	for _, dataPoint := range outboundDiagnosticData {
-		dataBytes, _ := json.Marshal(dataPoint)
-		f.WriteString(string(dataBytes) + "\n")
+		dataBytes, err := json.Marshal(dataPoint)
+		if err != nil {
+			return fmt.Errorf("Fail to marshal data: %+v", err)
+		}
+
+		_, err = f.WriteString(string(dataBytes) + "\n")
+		if err != nil {
+			return fmt.Errorf("Fail to write data to file: %+v", err)
+		}
 	}
 
 	action.processFiles = append(action.processFiles, networkOutboundDiagnosticFile)

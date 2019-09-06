@@ -1,6 +1,7 @@
 package action
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -58,16 +59,26 @@ func (action *kubeObjectsAction) Collect() error {
 
 	nameSpaces := strings.Fields(os.Getenv("DIAGNOSTIC_KUBEOBJECTS_NAMESPACES"))
 	kubernetesObjects := []string{"pod", "service"}
-	rootPath, _ := utils.CreateCollectorDir(action.GetName())
+	rootPath, err := utils.CreateCollectorDir(action.GetName())
+	if err != nil {
+		return err
+	}
 
 	for _, nameSpace := range nameSpaces {
-		os.MkdirAll(filepath.Join(rootPath, nameSpace), os.ModePerm)
+		err := os.MkdirAll(filepath.Join(rootPath, nameSpace), os.ModePerm)
+		if err != nil {
+			return fmt.Errorf("Fail to create dir %s: %+v", filepath.Join(rootPath, nameSpace), err)
+		}
 
 		for _, kubernetesObject := range kubernetesObjects {
 			kubernetesObjectFile := filepath.Join(rootPath, nameSpace, kubernetesObject)
 
-			output, _ := utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "-n", nameSpace, "describe", kubernetesObject)
-			err := utils.WriteToFile(kubernetesObjectFile, output)
+			output, err := utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "-n", nameSpace, "describe", kubernetesObject)
+			if err != nil {
+				return err
+			}
+
+			err = utils.WriteToFile(kubernetesObjectFile, output)
 			if err != nil {
 				return err
 			}

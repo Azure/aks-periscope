@@ -54,11 +54,19 @@ func (action *kubeletCmdAction) GetCollectCountForExport() int {
 func (action *kubeletCmdAction) Collect() error {
 	action.collectFiles = []string{}
 
-	rootPath, _ := utils.CreateCollectorDir(action.GetName())
+	rootPath, err := utils.CreateCollectorDir(action.GetName())
+	if err != nil {
+		return err
+	}
+
 	kubeletcmdFile := filepath.Join(rootPath, action.GetName())
 
-	output, _ := utils.RunCommandOnHost("ps", "-o", "cmd=", "-C", "kubelet")
-	err := utils.WriteToFile(kubeletcmdFile, output)
+	output, err := utils.RunCommandOnHost("ps", "-o", "cmd=", "-C", "kubelet")
+	if err != nil {
+		return err
+	}
+
+	err = utils.WriteToFile(kubeletcmdFile, output)
 	if err != nil {
 		return err
 	}

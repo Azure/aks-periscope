@@ -54,11 +54,19 @@ func (action *iptablesAction) GetCollectCountForExport() int {
 func (action *iptablesAction) Collect() error {
 	action.collectFiles = []string{}
 
-	rootPath, _ := utils.CreateCollectorDir(action.GetName())
+	rootPath, err := utils.CreateCollectorDir(action.GetName())
+	if err != nil {
+		return err
+	}
+
 	iptablesFile := filepath.Join(rootPath, action.GetName())
 
-	output, _ := utils.RunCommandOnHost("iptables", "-t", "nat", "-L")
-	err := utils.WriteToFile(iptablesFile, output)
+	output, err := utils.RunCommandOnHost("iptables", "-t", "nat", "-L")
+	if err != nil {
+		return err
+	}
+
+	err = utils.WriteToFile(iptablesFile, output)
 	if err != nil {
 		return err
 	}
