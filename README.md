@@ -7,15 +7,38 @@ AKS (Azure kubernetes Service) customers needs a tool to diagnose their cluster 
 
 ![Architecture](https://user-images.githubusercontent.com/33297523/64049272-210b5800-cb29-11e9-9182-9b2a7b178c36.png)
 
+# Current Feature Set
+Currently this tool collects the following metrics:
+1. Container logs (by default in the `kube-system` namespace)
+2. Docker and Kubelet system service logs
+3. Network outbound connectivity, include checks for internet, API server, Tunnel, ACR and MCR.
+4. Node IP tables
+5. Node Provision logs
+6. Node and Kubernetes level DNS settings
+7. Describe Kubernetes pods and services (by default in the `kube-system` namespace)
+8. Kubelet command arguments.
+
+It also generates the following diagnostics:
+1. Network outbound connectivity,  reports the down period for a specific connection.
+2. DNS, check if customized DNS is used.
+
+# Data Privacy and Collection
+The AKS diagnostic tool runs on customer's agent pool nodes, and collect VM and container level data. It is important that customer is aware and gives consent before the tool is deployed. Microsoft guidelines can be found in the link below:
+
+https://azure.microsoft.com/en-us/support/legal/support-diagnostic-information-collection/
+
+
 # How to Use
-AKS Diagnostic Tool can be deployed as a daemon set on Kubernetes agent nodes. The steps are:
+AKS Diagnostic Tool is deployed as a daemon set on Kubernetes agent nodes. The steps are:
 
 1. Download the deployment file:
 ```
 deployment/aks-diagnostic.yaml
 ```
 
-By default, the collected logs, metrics and node level diagnostic information will be exported to Azure Blob Service. An Azure Blob Service account and a Shared Access Signature (SAS) token need to be provisioned in advance. These values should be based64 encoded and be set in the in `azure-blob` secret in above aks-diagnostic.yaml.
+By default, the collected logs, metrics and node level diagnostic information will be exported to Azure Blob Service. An Azure Blob Service account and a Shared Access Signature (SAS) token need to be provisioned in advance. These values should be based64 encoded and be set in the `azureblob-secret` in above aks-diagnostic.yaml.
+
+Additionally, to collect container logs and describe Kubenetes objects (pods and services) in namespaces beyond the default `kube-system`, user can configure the `containerlogs-config` and `kubeobjects-config` in above aks-diagnostic.yaml.
 
 2. Deploy the daemon set using kubectl:
 ```
@@ -25,6 +48,10 @@ kubectl apply -f aks-diagnostic.yaml
 3. All collected logs, metrics and node level diagnostic information is stored on host nodes under directory:
 ```
 /var/log/aks-diagnostic
+```
+This directory is also mounted to container as:
+```
+/aks-diagnostic
 ```
 If exported, they will also be stored in Azure Blob Service under a container with its name equals to cluster API server FQDN.
 
