@@ -86,7 +86,8 @@ func (action *containerLogsAction) Collect() error {
 		}
 
 		for _, containerName := range containerNames {
-			containerLog := filepath.Join(rootPath, nameSpace, containerName)
+			parts := strings.Split(containerName, "_")
+			containerLog := filepath.Join(rootPath, nameSpace, parts[2])
 
 			output, err := utils.RunCommandOnHost("docker", "logs", containerName)
 			if err != nil {
