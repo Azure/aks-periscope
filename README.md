@@ -7,6 +7,17 @@ AKS (Azure kubernetes Service) customers needs a tool to diagnose their cluster 
 
 ![Architecture](https://user-images.githubusercontent.com/33297523/64049272-210b5800-cb29-11e9-9182-9b2a7b178c36.png)
 
+
+# Data Privacy and Collection
+The AKS diagnostic tool runs on customer's agent pool nodes, and collect VM and container level data. It is important that customer is aware and gives consent before the tool is deployed. Microsoft guidelines can be found in the link below:
+
+https://azure.microsoft.com/en-us/support/legal/support-diagnostic-information-collection/
+
+
+# Compatibility
+The AKS diagnostic tool currently only work on Linux based agent nodes.
+
+
 # Current Feature Set
 Currently this tool collects the following metrics:
 1. Container logs (by default in the `kube-system` namespace)
@@ -21,11 +32,6 @@ Currently this tool collects the following metrics:
 It also generates the following diagnostics:
 1. Network outbound connectivity,  reports the down period for a specific connection.
 2. DNS, check if customized DNS is used.
-
-# Data Privacy and Collection
-The AKS diagnostic tool runs on customer's agent pool nodes, and collect VM and container level data. It is important that customer is aware and gives consent before the tool is deployed. Microsoft guidelines can be found in the link below:
-
-https://azure.microsoft.com/en-us/support/legal/support-diagnostic-information-collection/
 
 
 # How to Use
