@@ -5,7 +5,7 @@ Quick troubleshooting your AKS cluster.
 # Overview
 AKS (Azure kubernetes Service) customers needs a tool to diagnose their cluster issues which many times are caused by wrong configuration of their environment, such as networking or permission issues. This tool will allow AKS customers to run initial diagnostics and collect logs that helps them identify the underlying problems.
 
-![Architecture](https://user-images.githubusercontent.com/33297523/64049272-210b5800-cb29-11e9-9182-9b2a7b178c36.png)
+![Architecture](https://user-images.githubusercontent.com/33297523/64900285-f5b65c00-d644-11e9-9a52-c4345d1b1861.png)
 
 
 # Data Privacy and Collection
