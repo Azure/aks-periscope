@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
-	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 type containerLogsAction struct {

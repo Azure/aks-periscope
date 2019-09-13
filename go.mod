@@ -1,4 +1,4 @@
-module github.com/Azure/aks-diagnostic-tool
+module github.com/Azure/aks-periscope
 
 require (
 	github.com/Azure/azure-storage-blob-go v0.7.0

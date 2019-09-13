@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Azure/aks-diagnostic-tool/pkg/action"
-	"github.com/Azure/aks-diagnostic-tool/pkg/exporter"
-	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
+	"github.com/Azure/aks-periscope/pkg/action"
+	"github.com/Azure/aks-periscope/pkg/exporter"
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 )
 
 func main() {

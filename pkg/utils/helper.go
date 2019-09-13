@@ -91,7 +91,7 @@ func CreateCollectorDir(name string) (string, error) {
 		return "", err
 	}
 
-	rootPath := filepath.Join("/aks-diagnostic/", hostName, "metrics", name)
+	rootPath := filepath.Join("/aks-periscope/", hostName, "metrics", name)
 	err = os.MkdirAll(rootPath, os.ModePerm)
 	if err != nil {
 		return "", fmt.Errorf("Fail to create dir %s: %+v", rootPath, err)
@@ -107,7 +107,7 @@ func CreateDiagnosticDir() (string, error) {
 		return "", err
 	}
 
-	rootPath := filepath.Join("/aks-diagnostic/", hostName, "diagnostic")
+	rootPath := filepath.Join("/aks-periscope/", hostName, "diagnostic")
 	err = os.MkdirAll(rootPath, os.ModePerm)
 	if err != nil {
 		return "", fmt.Errorf("Fail to create dir %s: %+v", rootPath, err)

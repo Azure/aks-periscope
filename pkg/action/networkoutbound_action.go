@@ -9,8 +9,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
-	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 type networkOutboundType struct {

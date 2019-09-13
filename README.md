@@ -39,25 +39,25 @@ AKS Diagnostic Tool is deployed as a daemon set on Kubernetes agent nodes. The s
 
 1. Download the deployment file:
 ```
-deployment/aks-diagnostic.yaml
+deployment/aks-periscope.yaml
 ```
 
-By default, the collected logs, metrics and node level diagnostic information will be exported to Azure Blob Service. An Azure Blob Service account and a Shared Access Signature (SAS) token need to be provisioned in advance. These values should be based64 encoded and be set in the `azureblob-secret` in above aks-diagnostic.yaml.
+By default, the collected logs, metrics and node level diagnostic information will be exported to Azure Blob Service. An Azure Blob Service account and a Shared Access Signature (SAS) token need to be provisioned in advance. These values should be based64 encoded and be set in the `azureblob-secret` in above aks-periscope.yaml.
 
-Additionally, to collect container logs and describe Kubenetes objects (pods and services) in namespaces beyond the default `kube-system`, user can configure the `containerlogs-config` and `kubeobjects-config` in above aks-diagnostic.yaml.
+Additionally, to collect container logs and describe Kubenetes objects (pods and services) in namespaces beyond the default `kube-system`, user can configure the `containerlogs-config` and `kubeobjects-config` in above aks-periscope.yaml.
 
 2. Deploy the daemon set using kubectl:
 ```
-kubectl apply -f aks-diagnostic.yaml
+kubectl apply -f aks-periscope.yaml
 ```
 
 3. All collected logs, metrics and node level diagnostic information is stored on host nodes under directory:
 ```
-/var/log/aks-diagnostic
+/var/log/aks-periscope
 ```
 This directory is also mounted to container as:
 ```
-/aks-diagnostic
+/aks-periscope
 ```
 If exported, they will also be stored in Azure Blob Service under a container with its name equals to cluster API server FQDN.
 
@@ -77,7 +77,7 @@ pkg/action/containerlogs_action.go
 pkg/exporter/azureblob_exporter.go
 ```
 
-4. Chain the newly implemented action in the main program: `cmd/aks-diagnostic/aks-diagnostic.go`.
+4. Chain the newly implemented action in the main program: `cmd/aks-periscope/aks-periscope.go`.
 
 5. For internal development, the container image is currently stored in aksrepos.azurecr.io. To connect to the ACR repo, a JIT ticket on microsoft tenant is needed, and then login by:
 ```
@@ -85,14 +85,14 @@ az acr login -n aksrepos
 ```
 Then build container image, tag it, and push it to ACR:
 ```
-docker build -f ./builder/Dockerfile -t staging/aks-diagnostic .
-docker tag staging/aks-diagnostic aksrepos.azurecr.io/staging/aks-diagnostic:test
-docker push aksrepos.azurecr.io/staging/aks-diagnostic:test
+docker build -f ./builder/Dockerfile -t staging/aks-periscope .
+docker tag staging/aks-periscope aksrepos.azurecr.io/staging/aks-periscope:test
+docker push aksrepos.azurecr.io/staging/aks-periscope:test
 ```
 
 6. For external development, build container image and push it to a container registry.
 
-7. Modify the deployment file `deployment/aks-diagnostic.yaml` to use the newly built image.
+7. Modify the deployment file `deployment/aks-periscope.yaml` to use the newly built image.
 
 
 # Contributing

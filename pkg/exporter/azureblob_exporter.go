@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Azure/aks-diagnostic-tool/pkg/interfaces"
-	"github.com/Azure/aks-diagnostic-tool/pkg/utils"
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+	"github.com/Azure/aks-periscope/pkg/utils"
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
@@ -54,7 +54,7 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 	}
 
 	for _, file := range files {
-		blobURL := containerURL.NewBlockBlobURL(strings.Replace(file, "/aks-diagnostic/", "", -1))
+		blobURL := containerURL.NewBlockBlobURL(strings.Replace(file, "/aks-periscope/", "", -1))
 		f, err := os.Open(file)
 		if err != nil {
 			return fmt.Errorf("Fail to open file %s: %+v", file, err)
