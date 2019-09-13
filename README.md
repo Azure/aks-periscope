@@ -1,5 +1,5 @@
 
-# AKS Diagnostic Tool
+# AKS Periscope
 Quick troubleshooting your AKS cluster.
 
 # Overview
@@ -9,13 +9,13 @@ AKS (Azure kubernetes Service) customers needs a tool to diagnose their cluster 
 
 
 # Data Privacy and Collection
-The AKS diagnostic tool runs on customer's agent pool nodes, and collect VM and container level data. It is important that customer is aware and gives consent before the tool is deployed. Microsoft guidelines can be found in the link below:
+AKS Periscope runs on customer's agent pool nodes, and collect VM and container level data. It is important that customer is aware and gives consent before the tool is deployed. Microsoft guidelines can be found in the link below:
 
 https://azure.microsoft.com/en-us/support/legal/support-diagnostic-information-collection/
 
 
 # Compatibility
-The AKS diagnostic tool currently only work on Linux based agent nodes.
+AKS Periscope currently only work on Linux based agent nodes.
 
 
 # Current Feature Set
@@ -35,7 +35,7 @@ It also generates the following diagnostics:
 
 
 # How to Use
-AKS Diagnostic Tool is deployed as a daemon set on Kubernetes agent nodes. The steps are:
+AKS Periscope is deployed as a daemon set on Kubernetes agent nodes. The steps are:
 
 1. Download the deployment file:
 ```
@@ -63,7 +63,7 @@ If exported, they will also be stored in Azure Blob Service under a container wi
 
 
 # Programming Guide
-AKS Diagnostic Tool provides a simple framework which supports adding new functionalities. The steps are:
+AKS Periscope provides a simple framework which supports adding new functionalities. The steps are:
 
 1. Clone this repo.
 
