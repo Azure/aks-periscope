@@ -91,7 +91,12 @@ func CreateCollectorDir(name string) (string, error) {
 		return "", err
 	}
 
-	rootPath := filepath.Join("/aks-periscope/", hostName, "metrics", name)
+	creationTimeStamp, err := getCreationTimeStamp()
+	if err != nil {
+		return "", err
+	}
+
+	rootPath := filepath.Join("/aks-periscope", strings.Replace(creationTimeStamp, ":", "-", -1), hostName, "metrics", name)
 	err = os.MkdirAll(rootPath, os.ModePerm)
 	if err != nil {
 		return "", fmt.Errorf("Fail to create dir %s: %+v", rootPath, err)
@@ -107,11 +112,25 @@ func CreateDiagnosticDir() (string, error) {
 		return "", err
 	}
 
-	rootPath := filepath.Join("/aks-periscope/", hostName, "diagnostic")
+	creationTimeStamp, err := getCreationTimeStamp()
+	if err != nil {
+		return "", err
+	}
+
+	rootPath := filepath.Join("/aks-periscope", strings.Replace(creationTimeStamp, ":", "-", -1), hostName, "diagnostic")
 	err = os.MkdirAll(rootPath, os.ModePerm)
 	if err != nil {
 		return "", fmt.Errorf("Fail to create dir %s: %+v", rootPath, err)
 	}
 
 	return rootPath, nil
+}
+
+func getCreationTimeStamp() (string, error) {
+	creationTimeStamp, err := RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "get", "pods", "-l", "app=aks-periscope", "-o", "jsonpath=\"{.items[0].metadata.creationTimestamp}\"")
+	if err != nil {
+		return "", err
+	}
+
+	return creationTimeStamp[1 : len(creationTimeStamp)-1], nil
 }

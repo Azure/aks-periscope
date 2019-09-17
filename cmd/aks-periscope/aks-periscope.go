@@ -10,6 +10,8 @@ import (
 )
 
 func main() {
+	runInContinuousMode := false
+
 	exporter := &exporter.AzureBlobExporter{}
 
 	actions := []interfaces.Action{}
@@ -55,6 +57,10 @@ func main() {
 
 					iTick++
 					isRunning = false
+				}
+
+				if !runInContinuousMode {
+					break
 				}
 			}
 		}(a)
