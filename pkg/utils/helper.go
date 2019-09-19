@@ -127,7 +127,7 @@ func CreateDiagnosticDir() (string, error) {
 }
 
 func getCreationTimeStamp() (string, error) {
-	creationTimeStamp, err := RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "get", "pods", "-l", "app=aks-periscope", "-o", "jsonpath=\"{.items[0].metadata.creationTimestamp}\"")
+	creationTimeStamp, err := RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "get", "pods", "--all-namespaces", "-l", "app=aks-periscope", "-o", "jsonpath=\"{.items[0].metadata.creationTimestamp}\"")
 	if err != nil {
 		return "", err
 	}
