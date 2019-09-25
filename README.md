@@ -1,21 +1,23 @@
 
 # AKS Periscope
-Quick troubleshooting your AKS cluster.
+Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster.
 
 # Overview
-AKS (Azure kubernetes Service) customers needs a tool to diagnose their cluster issues which many times are caused by wrong configuration of their environment, such as networking or permission issues. This tool will allow AKS customers to run initial diagnostics and collect logs that helps them identify the underlying problems.
+Hopefully most of the time, your AKS cluster is running happily and healthy. However, when things do go wrong, AKS customers need a tool to help them diagnose and collect the logs necessary to troubleshoot the issue. It can be difficult to collect the appropriate node and pod logs to figure what's wrong, how to fix the problem, or even to pass on those logs to others to help. 
+
+AKS Periscope allows AKS customers to run initial diagnostics and collect and export the logs (like into an Azure Blob storage account) to help them analyze and identify potential problems or easily share the information to support to help with the troubleshooting process with a simple az aks kollect command. These cluster issues are many times are caused by wrong configuration of their environment, such as networking or permission issues. This tool will allow AKS customers to run initial diagnostics and collect logs and custom analyses that helps them identify the underlying problems.
 
 ![Architecture](https://user-images.githubusercontent.com/33297523/64900285-f5b65c00-d644-11e9-9a52-c4345d1b1861.png)
 
 
 # Data Privacy and Collection
-AKS Periscope runs on customer's agent pool nodes, and collect VM and container level data. It is important that customer is aware and gives consent before the tool is deployed. Microsoft guidelines can be found in the link below:
+AKS Periscope runs on customer's agent pool nodes, and collect VM and container level data. It is important that the customer is aware and gives consent before the tool is deployed/information shared. Microsoft guidelines can be found in the link below:
 
 https://azure.microsoft.com/en-us/support/legal/support-diagnostic-information-collection/
 
 
 # Compatibility
-AKS Periscope currently only work on Linux based agent nodes.
+AKS Periscope currently only work on Linux based agent nodes. Please see https://github.com/PatrickLang/logslurp for Windows based agent nodes. 
 
 
 # Current Feature Set
@@ -29,7 +31,7 @@ Currently this tool collects the following metrics:
 7. Describe Kubernetes pods and services (by default in the `kube-system` namespace)
 8. Kubelet command arguments.
 
-It also generates the following diagnostics:
+It also generates the following diagnostic analyses:
 1. Network outbound connectivity,  reports the down period for a specific connection.
 2. DNS, check if customized DNS is used.
 
