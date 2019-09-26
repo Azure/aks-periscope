@@ -113,7 +113,7 @@ docker push aksrepos.azurecr.io/staging/aks-periscope:test
 
 # Feedback 
 
-Feel free to contact aksperiscope@microsoft.com with any feedback about AKS Periscope. This is currently a work in progress, but look out for more capabilities to come!
+Feel free to contact aksperiscope@microsoft.com or open an issue with any feedback or questions about AKS Periscope. This is currently a work in progress, but look out for more capabilities to come!
 
 # Appendix
 
