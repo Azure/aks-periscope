@@ -111,6 +111,9 @@ docker push aksrepos.azurecr.io/staging/aks-periscope:test
 
 7. Modify the deployment file `deployment/aks-periscope.yaml` to use the newly built image.
 
+# Feedback 
+
+Feel free to contact aksperiscope@microsoft.com with any feedback about AKS Periscope. This is currently a work in progress, but look out for more capabilities to come!
 
 # Appendix
 
