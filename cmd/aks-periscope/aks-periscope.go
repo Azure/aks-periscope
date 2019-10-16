@@ -23,6 +23,7 @@ func main() {
 	actions = append(actions, action.NewDNSAction(300, 5, 10, exporter))
 	actions = append(actions, action.NewKubeObjectsAction(60, 5, 10, exporter))
 	actions = append(actions, action.NewKubeletCmdAction(300, 5, 10, exporter))
+	actions = append(actions, action.NewSystemPerfAction(300, 5, 10, exporter))
 
 	for _, a := range actions {
 		go func(a interfaces.Action) {
