@@ -59,10 +59,15 @@ func (action *systemPerfAction) Collect() error {
 		return err
 	}
 
+	err = utils.CreateKubeConfigFromServiceAccount()
+	if err != nil {
+		return err
+	}
+
 	topNodesFile := filepath.Join(rootPath, "nodes")
 	topPodsFile := filepath.Join(rootPath, "pods")
 
-	output, err := utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "top", "nodes")
+	output, err := utils.RunCommandOnContainer("kubectl", "top", "nodes")
 	if err != nil {
 		return err
 	}
@@ -74,7 +79,7 @@ func (action *systemPerfAction) Collect() error {
 
 	action.collectFiles = append(action.collectFiles, topNodesFile)
 
-	output, err = utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "top", "pods", "--all-namespaces")
+	output, err = utils.RunCommandOnContainer("kubectl", "top", "pods", "--all-namespaces")
 	if err != nil {
 		return err
 	}

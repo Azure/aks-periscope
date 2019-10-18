@@ -126,6 +126,36 @@ func CreateDiagnosticDir() (string, error) {
 	return rootPath, nil
 }
 
+// CreateKubeConfigFromServiceAccount creates kubeconfig based on creds in service account
+func CreateKubeConfigFromServiceAccount() error {
+	token, err := RunCommandOnContainer("cat", "/var/run/secrets/kubernetes.io/serviceaccount/token")
+	if err != nil {
+		return err
+	}
+
+	_, err = RunCommandOnContainer("kubectl", "config", "set-credentials", "aks-periscope-service-account", "--token="+token)
+	if err != nil {
+		return err
+	}
+
+	_, err = RunCommandOnContainer("kubectl", "config", "set-cluster", "aks-periscope-cluster", "--server=https://kubernetes.default.svc.cluster.local:443", "--certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	if err != nil {
+		return err
+	}
+
+	_, err = RunCommandOnContainer("kubectl", "config", "set-context", "aks-periscope-context", "--user=aks-periscope-service-account", "--cluster=aks-periscope-cluster")
+	if err != nil {
+		return err
+	}
+
+	_, err = RunCommandOnContainer("kubectl", "config", "use-context", "aks-periscope-context")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func getCreationTimeStamp() (string, error) {
 	creationTimeStamp, err := RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "get", "pods", "--all-namespaces", "-l", "app=aks-periscope", "-o", "jsonpath=\"{.items[0].metadata.creationTimestamp}\"")
 	if err != nil {

@@ -1,9 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aks-periscope
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aks-periscope-service-account
+  namespace: aks-periscope
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: aks-periscope-role
 rules:
-- apiGroups: ["metrics.k8s.io"]
+- apiGroups: ["","metrics.k8s.io"]
   resources: ["pods", "nodes"]
   verbs: ["get", "watch", "list"]
 ---
@@ -12,9 +23,9 @@ kind: ClusterRoleBinding
 metadata:
   name: aks-periscope-role-binding
 subjects:
-- kind: User
-  name: nodeclient
-  apiGroup: rbac.authorization.k8s.io
+- kind: ServiceAccount
+  name: aks-periscope-service-account
+  namespace: aks-periscope
 roleRef:
   kind: ClusterRole
   name: aks-periscope-role
@@ -24,6 +35,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: aks-periscope
+  namespace: aks-periscope
   labels:
     app: aks-periscope
 spec:
@@ -35,6 +47,7 @@ spec:
       labels:
         app: aks-periscope
     spec:
+      serviceAccountName: aks-periscope-service-account
       hostPID: true
       nodeSelector:
         beta.kubernetes.io/os: linux
@@ -71,6 +84,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: azureblob-secret
+  namespace: aks-periscope
 type: Opaque
 data:
   AZURE_BLOB_ACCOUNT_NAME: # <accountName, base64 encoded>
@@ -80,6 +94,7 @@ apiVersion: v1
 kind: ConfigMap 
 metadata:
   name: containerlogs-config
+  namespace: aks-periscope
 data:
   DIAGNOSTIC_CONTAINERLOGS_NAMESPACES: kube-system
 ---
@@ -87,5 +102,6 @@ apiVersion: v1
 kind: ConfigMap 
 metadata:
   name: kubeobjects-config
+  namespace: aks-periscope
 data:
   DIAGNOSTIC_KUBEOBJECTS_NAMESPACES: kube-system
