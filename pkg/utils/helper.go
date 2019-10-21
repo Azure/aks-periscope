@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -163,4 +164,22 @@ func getCreationTimeStamp() (string, error) {
 	}
 
 	return creationTimeStamp[1 : len(creationTimeStamp)-1], nil
+}
+
+// WriteToCRD writes diagnostic data to CRD
+func WriteToCRD(fileName string, key string) error {
+	jsonBytes, err := ioutil.ReadFile(fileName)
+	if err != nil {
+		return err
+	}
+
+	patchContent := fmt.Sprintf(`{"spec":{%q:%q}}`, key, string(jsonBytes))
+
+	_, err = RunCommandOnContainer("kubectl", "-n", "aks-periscope", "patch", "apd", "aks-periscope-diagnostic", "-p", patchContent, "--type=merge")
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

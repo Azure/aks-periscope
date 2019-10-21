@@ -171,6 +171,11 @@ func (action *dnsAction) Process() error {
 
 	action.processFiles = append(action.processFiles, dnsDiagnosticFile)
 
+	err = utils.WriteToCRD(dnsDiagnosticFile, action.GetName())
+	if err != nil {
+		return fmt.Errorf("Fail to write file %s to CRD: %+v", dnsDiagnosticFile, err)
+	}
+
 	return nil
 }
 

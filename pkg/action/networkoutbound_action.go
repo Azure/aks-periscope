@@ -226,6 +226,11 @@ func (action *networkOutboundAction) Process() error {
 
 	action.processFiles = append(action.processFiles, networkOutboundDiagnosticFile)
 
+	err = utils.WriteToCRD(networkOutboundDiagnosticFile, action.GetName())
+	if err != nil {
+		return fmt.Errorf("Fail to write file %s to CRD: %+v", networkOutboundDiagnosticFile, err)
+	}
+
 	return nil
 }
 
