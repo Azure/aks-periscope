@@ -73,7 +73,7 @@ func (action *kubeObjectsAction) Collect() error {
 		for _, kubernetesObject := range kubernetesObjects {
 			kubernetesObjectFile := filepath.Join(rootPath, nameSpace, kubernetesObject)
 
-			output, err := utils.RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "-n", nameSpace, "describe", kubernetesObject)
+			output, err := utils.RunCommandOnContainer("kubectl", "-n", nameSpace, "describe", kubernetesObject)
 			if err != nil {
 				return err
 			}

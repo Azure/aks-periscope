@@ -158,7 +158,7 @@ func CreateKubeConfigFromServiceAccount() error {
 }
 
 func getCreationTimeStamp() (string, error) {
-	creationTimeStamp, err := RunCommandOnHost("kubectl", "--kubeconfig", "/var/lib/kubelet/kubeconfig", "get", "pods", "--all-namespaces", "-l", "app=aks-periscope", "-o", "jsonpath=\"{.items[0].metadata.creationTimestamp}\"")
+	creationTimeStamp, err := RunCommandOnContainer("kubectl", "get", "pods", "--all-namespaces", "-l", "app=aks-periscope", "-o", "jsonpath=\"{.items[0].metadata.creationTimestamp}\"")
 	if err != nil {
 		return "", err
 	}
