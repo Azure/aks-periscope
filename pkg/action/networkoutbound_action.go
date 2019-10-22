@@ -115,6 +115,12 @@ func (action *networkOutboundAction) Collect() error {
 			URL:  "mcr.microsoft.com:80",
 		},
 	)
+	outboundTypes = append(outboundTypes,
+		networkOutboundType{
+			Type: "NotReachableSite",
+			URL:  "www.notreachable.site:80",
+		},
+	)
 	rootPath, err := utils.CreateCollectorDir(action.name)
 	if err != nil {
 		return err
@@ -212,16 +218,14 @@ func (action *networkOutboundAction) Process() error {
 		}
 	}
 
-	for _, dataPoint := range outboundDiagnosticData {
-		dataBytes, err := json.Marshal(dataPoint)
-		if err != nil {
-			return fmt.Errorf("Fail to marshal data: %+v", err)
-		}
+	dataBytes, err := json.Marshal(outboundDiagnosticData)
+	if err != nil {
+		return fmt.Errorf("Fail to marshal data: %+v", err)
+	}
 
-		_, err = f.WriteString(string(dataBytes) + "\n")
-		if err != nil {
-			return fmt.Errorf("Fail to write data to file: %+v", err)
-		}
+	_, err = f.WriteString(string(dataBytes) + "\n")
+	if err != nil {
+		return fmt.Errorf("Fail to write data to file: %+v", err)
 	}
 
 	action.processFiles = append(action.processFiles, networkOutboundDiagnosticFile)

@@ -157,16 +157,14 @@ func (action *dnsAction) Process() error {
 
 	}
 
-	for _, dataPoint := range dnsDiagnosticData {
-		dataBytes, err := json.Marshal(dataPoint)
-		if err != nil {
-			return fmt.Errorf("Fail to marshal data: %+v", err)
-		}
+	dataBytes, err := json.Marshal(dnsDiagnosticData)
+	if err != nil {
+		return fmt.Errorf("Fail to marshal data: %+v", err)
+	}
 
-		_, err = f.WriteString(string(dataBytes) + "\n")
-		if err != nil {
-			return fmt.Errorf("Fail to write data to file: %+v", err)
-		}
+	_, err = f.WriteString(string(dataBytes))
+	if err != nil {
+		return fmt.Errorf("Fail to write data to file: %+v", err)
 	}
 
 	action.processFiles = append(action.processFiles, dnsDiagnosticFile)
