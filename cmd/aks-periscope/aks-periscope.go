@@ -19,7 +19,7 @@ func main() {
 	actions = append(actions, action.NewSystemLogsAction(60, 5, 10, exporter))
 	actions = append(actions, action.NewNetworkOutboundAction(5, 5, 10, exporter))
 	actions = append(actions, action.NewIPTablesAction(300, 5, 10, exporter))
-	actions = append(actions, action.NewProvisionLogsAction(300, 5, 10, exporter))
+	actions = append(actions, action.NewOnDemandLogsAction(300, 5, 10, exporter))
 	actions = append(actions, action.NewDNSAction(300, 5, 10, exporter))
 	actions = append(actions, action.NewKubeObjectsAction(60, 5, 10, exporter))
 	actions = append(actions, action.NewKubeletCmdAction(300, 5, 10, exporter))

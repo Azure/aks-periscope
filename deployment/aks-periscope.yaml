@@ -78,6 +78,8 @@ spec:
             name: containerlogs-config
         - configMapRef:
             name: kubeobjects-config
+        - configMapRef:
+            name: ondemandlogs-config
         - secretRef:
             name: azureblob-secret
         volumeMounts:
@@ -121,6 +123,14 @@ metadata:
   namespace: aks-periscope
 data:
   DIAGNOSTIC_KUBEOBJECTS_NAMESPACES: kube-system
+---
+apiVersion: v1 
+kind: ConfigMap 
+metadata:
+  name: ondemandlogs-config
+  namespace: aks-periscope
+data:
+  DIAGNOSTIC_ONDEMANDLOGS_LIST: /var/log/azure/cluster-provision.log /var/log/cloud-init.log
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
