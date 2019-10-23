@@ -1,7 +1,6 @@
 package action
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,23 +56,34 @@ func (action *kubeObjectsAction) GetCollectCountForExport() int {
 func (action *kubeObjectsAction) Collect() error {
 	action.collectFiles = []string{}
 
-	nameSpaces := strings.Fields(os.Getenv("DIAGNOSTIC_KUBEOBJECTS_NAMESPACES"))
-	kubernetesObjects := []string{"pod", "service"}
+	kubernetesObjects := strings.Fields(os.Getenv("DIAGNOSTIC_KUBEOBJECTS_LIST"))
 	rootPath, err := utils.CreateCollectorDir(action.GetName())
 	if err != nil {
 		return err
 	}
 
-	for _, nameSpace := range nameSpaces {
-		err := os.MkdirAll(filepath.Join(rootPath, nameSpace), os.ModePerm)
-		if err != nil {
-			return fmt.Errorf("Fail to create dir %s: %+v", filepath.Join(rootPath, nameSpace), err)
+	for _, kubernetesObject := range kubernetesObjects {
+		kubernetesObjectParts := strings.Split(kubernetesObject, "/")
+		nameSpace := kubernetesObjectParts[0]
+		objectType := kubernetesObjectParts[1]
+		objects := []string{}
+		if len(kubernetesObjectParts) == 3 {
+			objects = append(objects, kubernetesObjectParts[2])
 		}
 
-		for _, kubernetesObject := range kubernetesObjects {
-			kubernetesObjectFile := filepath.Join(rootPath, nameSpace, kubernetesObject)
+		if len(objects) == 0 {
+			output, err := utils.RunCommandOnContainer("kubectl", "-n", nameSpace, "get", objectType, "--output=jsonpath={.items..metadata.name}")
+			if err != nil {
+				return err
+			}
 
-			output, err := utils.RunCommandOnContainer("kubectl", "-n", nameSpace, "describe", kubernetesObject)
+			objects = strings.Split(output, " ")
+		}
+
+		for _, object := range objects {
+			kubernetesObjectFile := filepath.Join(rootPath, nameSpace+"_"+objectType+"_"+object)
+
+			output, err := utils.RunCommandOnContainer("kubectl", "-n", nameSpace, "describe", objectType, object)
 			if err != nil {
 				return err
 			}
