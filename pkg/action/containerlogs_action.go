@@ -1,7 +1,6 @@
 package action
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -57,7 +56,7 @@ func (action *containerLogsAction) GetCollectCountForExport() int {
 func (action *containerLogsAction) Collect() error {
 	action.collectFiles = []string{}
 
-	nameSpaces := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_NAMESPACES"))
+	containerLogs := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))
 	rootPath, err := utils.CreateCollectorDir(action.GetName())
 	if err != nil {
 		return err
@@ -71,23 +70,27 @@ func (action *containerLogsAction) Collect() error {
 	containers := strings.Split(output, "\n")
 	containers = containers[:len(containers)-1]
 
-	for _, nameSpace := range nameSpaces {
-		err := os.MkdirAll(filepath.Join(rootPath, nameSpace), os.ModePerm)
-		if err != nil {
-			return fmt.Errorf("Fail to create dir %s: %+v", filepath.Join(rootPath, nameSpace), err)
-		}
-
+	for _, containerLog := range containerLogs {
+		containerLogParts := strings.Split(containerLog, "/")
+		nameSpace := containerLogParts[0]
 		containerNames := []string{}
+
 		for _, container := range containers {
 			parts := strings.Split(container, "_")
-			if parts[1] != "POD" && parts[3] == nameSpace {
-				containerNames = append(containerNames, strings.TrimPrefix(container, "/"))
+			if len(containerLogParts) == 2 {
+				if parts[1] != "POD" && strings.HasPrefix(parts[2], containerLogParts[1]) && parts[3] == nameSpace {
+					containerNames = append(containerNames, strings.TrimPrefix(container, "/"))
+				}
+			} else {
+				if parts[1] != "POD" && parts[3] == nameSpace {
+					containerNames = append(containerNames, strings.TrimPrefix(container, "/"))
+				}
 			}
 		}
 
 		for _, containerName := range containerNames {
 			parts := strings.Split(containerName, "_")
-			containerLog := filepath.Join(rootPath, nameSpace, parts[2])
+			containerLog := filepath.Join(rootPath, nameSpace+"_"+parts[2])
 
 			output, err := utils.RunCommandOnHost("docker", "logs", containerName)
 			if err != nil {

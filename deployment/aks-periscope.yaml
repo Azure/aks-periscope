@@ -114,7 +114,7 @@ metadata:
   name: containerlogs-config
   namespace: aks-periscope
 data:
-  DIAGNOSTIC_CONTAINERLOGS_NAMESPACES: kube-system
+  DIAGNOSTIC_CONTAINERLOGS_LIST: kube-system aks-periscope/aks-periscope
 ---
 apiVersion: v1 
 kind: ConfigMap 
