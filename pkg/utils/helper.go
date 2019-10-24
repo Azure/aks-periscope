@@ -98,7 +98,7 @@ func CreateCollectorDir(name string) (string, error) {
 		return "", err
 	}
 
-	creationTimeStamp, err := getCreationTimeStamp()
+	creationTimeStamp, err := GetCreationTimeStamp()
 	if err != nil {
 		return "", err
 	}
@@ -119,7 +119,7 @@ func CreateDiagnosticDir() (string, error) {
 		return "", err
 	}
 
-	creationTimeStamp, err := getCreationTimeStamp()
+	creationTimeStamp, err := GetCreationTimeStamp()
 	if err != nil {
 		return "", err
 	}
@@ -163,7 +163,7 @@ func CreateKubeConfigFromServiceAccount() error {
 	return nil
 }
 
-func getCreationTimeStamp() (string, error) {
+func GetCreationTimeStamp() (string, error) {
 	creationTimeStamp, err := RunCommandOnContainer("kubectl", "get", "pods", "--all-namespaces", "-l", "app=aks-periscope", "-o", "jsonpath=\"{.items[0].metadata.creationTimestamp}\"")
 	if err != nil {
 		return "", err
