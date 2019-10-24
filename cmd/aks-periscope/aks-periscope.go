@@ -29,6 +29,11 @@ func main() {
 	actions = append(actions, action.NewKubeletCmdAction(300, 5, 10, exporter))
 	actions = append(actions, action.NewSystemPerfAction(300, 5, 10, exporter))
 
+	err := utils.CreateCRD()
+	if err != nil {
+		log.Printf("Failed to create CRD: %+v", err)
+	}
+
 	var waitgroup sync.WaitGroup
 
 	for _, a := range actions {

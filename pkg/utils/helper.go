@@ -163,6 +163,7 @@ func CreateKubeConfigFromServiceAccount() error {
 	return nil
 }
 
+// GetCreationTimeStamp returns a create timestamp
 func GetCreationTimeStamp() (string, error) {
 	creationTimeStamp, err := RunCommandOnContainer("kubectl", "get", "pods", "--all-namespaces", "-l", "app=aks-periscope", "-o", "jsonpath=\"{.items[0].metadata.creationTimestamp}\"")
 	if err != nil {
@@ -179,10 +180,7 @@ func WriteToCRD(fileName string, key string) error {
 		return err
 	}
 
-	crdName, err := ensureCRDExist(hostName)
-	if err != nil {
-		return err
-	}
+	crdName := "aks-periscope-diagnostic" + "-" + hostName
 
 	jsonBytes, err := ioutil.ReadFile(fileName)
 	if err != nil {
@@ -199,20 +197,23 @@ func WriteToCRD(fileName string, key string) error {
 	return nil
 }
 
-func ensureCRDExist(hostName string) (string, error) {
-	crdName := "aks-periscope-diagnostic" + "-" + hostName
-
-	_, err := RunCommandOnContainer("kubectl", "-n", "aks-periscope", "get", "apd", crdName)
+// CreateCRD creates a CRD object
+func CreateCRD() error {
+	hostName, err := GetHostName()
 	if err != nil {
-		writeDiagnosticCRD(crdName)
-
-		_, err := RunCommandOnContainer("kubectl", "apply", "-f", "aks-periscope-diagnostic-crd.yaml")
-		if err != nil {
-			return "", err
-		}
+		return err
 	}
 
-	return crdName, nil
+	crdName := "aks-periscope-diagnostic" + "-" + hostName
+
+	writeDiagnosticCRD(crdName)
+
+	_, err = RunCommandOnContainer("kubectl", "apply", "-f", "aks-periscope-diagnostic-crd.yaml")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func writeDiagnosticCRD(crdName string) error {
