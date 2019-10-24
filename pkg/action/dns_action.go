@@ -13,6 +13,7 @@ import (
 )
 
 type dnsDiagnosticDatum struct {
+	HostName    string   `json:"HostName"`
 	LeveL       string   `json:"Level"`
 	NameServers []string `json:"NameServer"`
 	Custom      bool     `json:"Custom"`
@@ -104,6 +105,7 @@ func (action *dnsAction) Collect() error {
 func (action *dnsAction) Process() error {
 	action.processFiles = []string{}
 
+	hostName, err := utils.GetHostName()
 	rootPath, err := utils.CreateDiagnosticDir()
 	if err != nil {
 		return err
@@ -149,6 +151,7 @@ func (action *dnsAction) Process() error {
 		}
 
 		dataPoint := dnsDiagnosticDatum{
+			HostName:    hostName,
 			LeveL:       dnsLevel,
 			NameServers: dns,
 			Custom:      isCustom,

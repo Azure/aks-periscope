@@ -64,7 +64,7 @@ func (action *onDemandLogsAction) Collect() error {
 
 	for _, onDemandLog := range onDemandLogs {
 		normalizedOnDemandLog := strings.Replace(onDemandLog, "/", "_", -1)
-		if normalizedOnDemandLog[0] == '-' {
+		if normalizedOnDemandLog[0] == '_' {
 			normalizedOnDemandLog = normalizedOnDemandLog[1:]
 		}
 

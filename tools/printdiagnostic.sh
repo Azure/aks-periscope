@@ -2,9 +2,19 @@
 
 echo
 echo 1. DNS Setup
-kubectl -n aks-periscope get apd aks-periscope-diagnostic -o jsonpath="{.spec.dns}" | jq  -r '["Level", "NameServer", "Custom"] as $fields | $fields, (.[] | [(.[$fields[]]|@json)]) | @tsv' | column -t
+echo
+for NODEAPD in $(kubectl -n aks-periscope get apd -o name)
+do
+    kubectl -n aks-periscope get $NODEAPD -o jsonpath="{.spec.dns}" | jq  -r '["HostName", "Level", "NameServer", "Custom"] as $fields | $fields, (.[] | [(.[$fields[]]|@json)]) | @tsv' | column -t
+    echo
+done
 echo
 echo
 echo 2. Network Outbound Check
-kubectl -n aks-periscope get apd aks-periscope-diagnostic -o jsonpath="{.spec.networkoutbound}" | jq  -r '["Type", "Start", "End", "Error"] as $fields | $fields, (.[] | [(.[$fields[]]|@json)]) | @tsv' | column -t
+echo
+for NODEAPD in $(kubectl -n aks-periscope get apd -o name)
+do
+    kubectl -n aks-periscope get $NODEAPD -o jsonpath="{.spec.networkoutbound}" | jq  -r '["HostName", "Type", "Start", "End", "Error"] as $fields | $fields, (.[] | [(.[$fields[]]|@json)]) | @tsv' | column -t
+    echo
+done
 echo

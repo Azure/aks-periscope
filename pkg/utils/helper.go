@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -61,12 +62,17 @@ func RunCommandOnHost(command string, arg ...string) (string, error) {
 // RunCommandOnContainer runs a command on container system
 func RunCommandOnContainer(command string, arg ...string) (string, error) {
 	cmd := exec.Command(command, arg...)
-	out, err := cmd.CombinedOutput()
+
+	var out bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &out
+	cmd.Stderr = &stderr
+	err := cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("Fail to run command in container: %+v", err)
+		return "", fmt.Errorf("Fail to run command in container: %s", fmt.Sprint(err)+": "+stderr.String())
 	}
 
-	return string(out), nil
+	return out.String(), nil
 }
 
 // WriteToFile writes data to a file
@@ -168,6 +174,16 @@ func getCreationTimeStamp() (string, error) {
 
 // WriteToCRD writes diagnostic data to CRD
 func WriteToCRD(fileName string, key string) error {
+	hostName, err := GetHostName()
+	if err != nil {
+		return err
+	}
+
+	crdName, err := ensureCRDExist(hostName)
+	if err != nil {
+		return err
+	}
+
 	jsonBytes, err := ioutil.ReadFile(fileName)
 	if err != nil {
 		return err
@@ -175,8 +191,73 @@ func WriteToCRD(fileName string, key string) error {
 
 	patchContent := fmt.Sprintf(`{"spec":{%q:%q}}`, key, string(jsonBytes))
 
-	_, err = RunCommandOnContainer("kubectl", "-n", "aks-periscope", "patch", "apd", "aks-periscope-diagnostic", "-p", patchContent, "--type=merge")
+	_, err = RunCommandOnContainer("kubectl", "-n", "aks-periscope", "patch", "apd", crdName, "-p", patchContent, "--type=merge")
+	if err != nil {
+		return err
+	}
 
+	return nil
+}
+
+func ensureCRDExist(hostName string) (string, error) {
+	crdName := "aks-periscope-diagnostic" + "-" + hostName
+
+	_, err := RunCommandOnContainer("kubectl", "-n", "aks-periscope", "get", "apd", crdName)
+	if err != nil {
+		writeDiagnosticCRD(crdName)
+
+		_, err := RunCommandOnContainer("kubectl", "apply", "-f", "aks-periscope-diagnostic-crd.yaml")
+		if err != nil {
+			return "", err
+		}
+	}
+
+	return crdName, nil
+}
+
+func writeDiagnosticCRD(crdName string) error {
+	f, err := os.Create("aks-periscope-diagnostic-crd.yaml")
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.WriteString("apiVersion: \"aks-periscope.azure.github.com/v1\"\n")
+	if err != nil {
+		return err
+	}
+
+	_, err = f.WriteString("kind: Diagnostic\n")
+	if err != nil {
+		return err
+	}
+
+	_, err = f.WriteString("metadata:\n")
+	if err != nil {
+		return err
+	}
+
+	_, err = f.WriteString("  name: " + crdName + "\n")
+	if err != nil {
+		return err
+	}
+
+	_, err = f.WriteString("  namespace: aks-periscope\n")
+	if err != nil {
+		return err
+	}
+
+	_, err = f.WriteString("spec:\n")
+	if err != nil {
+		return err
+	}
+
+	_, err = f.WriteString("  dns: \"\"\n")
+	if err != nil {
+		return err
+	}
+
+	_, err = f.WriteString("  networkoutbound: \"\"\n")
 	if err != nil {
 		return err
 	}

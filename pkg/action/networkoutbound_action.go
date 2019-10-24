@@ -26,10 +26,11 @@ type networkOutboundDatum struct {
 }
 
 type networkOutboundDiagnosticDatum struct {
-	Type  string    `json:"Type"`
-	Start time.Time `json:"Start"`
-	End   time.Time `json:"End"`
-	Error string    `json:"Error"`
+	HostName string    `json:"HostName"`
+	Type     string    `json:"Type"`
+	Start    time.Time `json:"Start"`
+	End      time.Time `json:"End"`
+	Error    string    `json:"Error"`
 }
 
 type networkOutboundAction struct {
@@ -168,6 +169,7 @@ func (action *networkOutboundAction) Collect() error {
 func (action *networkOutboundAction) Process() error {
 	action.processFiles = []string{}
 
+	hostName, err := utils.GetHostName()
 	rootPath, err := utils.CreateDiagnosticDir()
 	if err != nil {
 		return err
@@ -190,7 +192,7 @@ func (action *networkOutboundAction) Process() error {
 			return fmt.Errorf("Fail to open file %s: %+v", file, err)
 		}
 
-		dataPoint := networkOutboundDiagnosticDatum{}
+		dataPoint := networkOutboundDiagnosticDatum{HostName: hostName}
 		scanner := bufio.NewScanner(t)
 		for scanner.Scan() {
 			var outboundDatum networkOutboundDatum
