@@ -27,6 +27,8 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 	}
 
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
+	len := strings.Index(containerName, "-hcp-")
+	containerName = containerName[:len]
 
 	ctx := context.Background()
 
