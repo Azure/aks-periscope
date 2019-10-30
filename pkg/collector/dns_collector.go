@@ -31,32 +31,32 @@ func (collector *DNSCollector) Collect() error {
 		return err
 	}
 
-	hostDNSFile := filepath.Join(rootPath, "host")
-	containerDNSFile := filepath.Join(rootPath, "container")
+	virtualMachineDNSFile := filepath.Join(rootPath, "virtualmachine")
+	kubernetesDNSFile := filepath.Join(rootPath, "kubernetes")
 
 	output, err := utils.RunCommandOnHost("cat", "/etc/resolv.conf")
 	if err != nil {
 		return err
 	}
 
-	err = utils.WriteToFile(hostDNSFile, output)
+	err = utils.WriteToFile(virtualMachineDNSFile, output)
 	if err != nil {
 		return err
 	}
 
-	collector.AddToCollectorFiles(hostDNSFile)
+	collector.AddToCollectorFiles(virtualMachineDNSFile)
 
 	output, err = utils.RunCommandOnContainer("cat", "/etc/resolv.conf")
 	if err != nil {
 		return err
 	}
 
-	err = utils.WriteToFile(containerDNSFile, output)
+	err = utils.WriteToFile(kubernetesDNSFile, output)
 	if err != nil {
 		return err
 	}
 
-	collector.AddToCollectorFiles(containerDNSFile)
+	collector.AddToCollectorFiles(kubernetesDNSFile)
 
 	return nil
 }

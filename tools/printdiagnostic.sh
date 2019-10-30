@@ -1,11 +1,11 @@
 #!/bin/bash
 
 echo
-echo 1. DNS Setup
+echo 1. Network Setup
 echo
 for NODEAPD in $(kubectl -n aks-periscope get apd -o name)
 do
-    kubectl -n aks-periscope get $NODEAPD -o jsonpath="{.spec.dns}" | jq  -r '["HostName", "Level", "NameServer", "Custom"] as $fields | $fields, (.[] | [(.[$fields[]]|@json)]) | @tsv' | column -t
+    kubectl -n aks-periscope get $NODEAPD -o jsonpath="{.spec.networkconfig}" | jq  -r '["HostName", "NetworkPlugin", "VirtualMachineDNS", "KubernetesDNS", "MaxPodsPerNode"] as $fields | $fields, (. | [(.[$fields[]]|@json)]) | @tsv' | column -t
     echo
 done
 echo

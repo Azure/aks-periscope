@@ -63,7 +63,7 @@ func main() {
 	waitgroup.Wait()
 
 	diagnosers := []interfaces.Diagnoser{}
-	diagnosers = append(diagnosers, diagnoser.NewDNSDiagnoser(dnsCollector, exporter))
+	diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
 	diagnosers = append(diagnosers, diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, exporter))
 
 	for _, d := range diagnosers {

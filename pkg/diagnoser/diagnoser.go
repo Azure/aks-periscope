@@ -6,15 +6,15 @@ import "github.com/Azure/aks-periscope/pkg/interfaces"
 type Type int
 
 const (
-	// DNS defines DNS Diagnoser Type
-	DNS Type = iota
+	// NetworkConfig defines NetworkConfig Diagnoser Type
+	NetworkConfig Type = iota
 	// NetworkOutbound defines NetworkOutbound Diagnoser Type
 	NetworkOutbound
 )
 
 // Name returns type name
 func (t Type) name() string {
-	return [...]string{"dns", "networkoutbound"}[t]
+	return [...]string{"networkconfig", "networkoutbound"}[t]
 }
 
 // BaseDiagnoser defines Base Diagnoser

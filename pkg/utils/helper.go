@@ -187,7 +187,7 @@ func WriteToCRD(fileName string, key string) error {
 		return err
 	}
 
-	patchContent := fmt.Sprintf(`{"spec":{%q:%q}}`, key, string(jsonBytes))
+	patchContent := fmt.Sprintf("{\"spec\":{%q:%q}}", key, string(jsonBytes))
 
 	_, err = RunCommandOnContainer("kubectl", "-n", "aks-periscope", "patch", "apd", crdName, "-p", patchContent, "--type=merge")
 	if err != nil {
@@ -253,7 +253,7 @@ func writeDiagnosticCRD(crdName string) error {
 		return err
 	}
 
-	_, err = f.WriteString("  dns: \"\"\n")
+	_, err = f.WriteString("  networkconfig: \"\"\n")
 	if err != nil {
 		return err
 	}
