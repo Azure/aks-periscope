@@ -4,81 +4,84 @@ import (
 	"log"
 	"strings"
 	"sync"
-	"time"
 
-	"github.com/Azure/aks-periscope/pkg/action"
+	"github.com/Azure/aks-periscope/pkg/collector"
+	"github.com/Azure/aks-periscope/pkg/diagnoser"
 	"github.com/Azure/aks-periscope/pkg/exporter"
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 func main() {
-	runInContinuousMode := false
 	zipAndExportMode := true
-
 	exporter := &exporter.AzureBlobExporter{}
-
-	actions := []interfaces.Action{}
-	actions = append(actions, action.NewContainerLogsAction(60, 5, 10, exporter))
-	actions = append(actions, action.NewSystemLogsAction(60, 5, 10, exporter))
-	actions = append(actions, action.NewNetworkOutboundAction(5, 5, 10, exporter))
-	actions = append(actions, action.NewIPTablesAction(300, 5, 10, exporter))
-	actions = append(actions, action.NewOnDemandLogsAction(300, 5, 10, exporter))
-	actions = append(actions, action.NewDNSAction(300, 5, 10, exporter))
-	actions = append(actions, action.NewKubeObjectsAction(60, 5, 10, exporter))
-	actions = append(actions, action.NewKubeletCmdAction(300, 5, 10, exporter))
-	actions = append(actions, action.NewSystemPerfAction(300, 5, 10, exporter))
+	var waitgroup sync.WaitGroup
 
 	err := utils.CreateCRD()
 	if err != nil {
 		log.Printf("Failed to create CRD: %+v", err)
 	}
 
-	var waitgroup sync.WaitGroup
+	collectors := []interfaces.Collector{}
+	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
+	collectors = append(collectors, containerLogsCollector)
+	systemLogsCollector := collector.NewSystemLogsCollector(exporter)
+	collectors = append(collectors, systemLogsCollector)
+	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, exporter)
+	collectors = append(collectors, networkOutboundCollector)
+	ipTablesCollector := collector.NewIPTablesCollector(exporter)
+	collectors = append(collectors, ipTablesCollector)
+	onDemandLogsCollector := collector.NewOnDemandLogsCollector(exporter)
+	collectors = append(collectors, onDemandLogsCollector)
+	dnsCollector := collector.NewDNSCollector(exporter)
+	collectors = append(collectors, dnsCollector)
+	kubeObjectsCollector := collector.NewKubeObjectsCollector(exporter)
+	collectors = append(collectors, kubeObjectsCollector)
+	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
+	collectors = append(collectors, kubeletCmdCollector)
+	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
+	collectors = append(collectors, systemPerfCollector)
 
-	for _, a := range actions {
+	for _, c := range collectors {
 		waitgroup.Add(1)
-		go func(a interfaces.Action) {
-			iTick := 0
-			isRunning := false
-			ticker := time.NewTicker(time.Duration(a.GetCollectIntervalInSeconds()) * time.Second)
-			for ; true; <-ticker.C {
-				if !isRunning {
-					isRunning = true
-
-					log.Printf("Action: %s, collect data, iteration: %d\n", a.GetName(), iTick)
-					err := a.Collect()
-					if err != nil {
-						log.Printf("Action: %s, collect data failed at iteration: %d: %+v\n", a.GetName(), iTick, err)
-					}
-
-					if iTick%a.GetCollectCountForProcess() == 0 {
-						log.Printf("Action: %s, process data, iteration: %d\n", a.GetName(), iTick/a.GetCollectCountForProcess())
-						err := a.Process()
-						if err != nil {
-							log.Printf("Action: %s, process data failed at iteration: %d: %+v\n", a.GetName(), iTick/a.GetCollectCountForProcess(), err)
-						}
-					}
-
-					if iTick%a.GetCollectCountForExport() == 0 {
-						log.Printf("Action: %s, export data, iteration: %d\n", a.GetName(), iTick/a.GetCollectCountForExport())
-						err := a.Export()
-						if err != nil {
-							log.Printf("Action: %s, export data failed at iteration: %d: %+v", a.GetName(), iTick/a.GetCollectCountForExport(), err)
-						}
-					}
-
-					iTick++
-					isRunning = false
-				}
-
-				if !runInContinuousMode {
-					break
-				}
+		go func(c interfaces.Collector) {
+			log.Printf("Collector: %s, collect data\n", c.GetName())
+			err := c.Collect()
+			if err != nil {
+				log.Printf("Collector: %s, collect data failed: %+v\n", c.GetName(), err)
 			}
 
+			log.Printf("Collector: %s, export data\n", c.GetName())
+			err = c.Export()
+			if err != nil {
+				log.Printf("Collector: %s, export data failed: %+v\n", c.GetName(), err)
+			}
 			waitgroup.Done()
-		}(a)
+		}(c)
+	}
+
+	waitgroup.Wait()
+
+	diagnosers := []interfaces.Diagnoser{}
+	diagnosers = append(diagnosers, diagnoser.NewDNSDiagnoser(dnsCollector, exporter))
+	diagnosers = append(diagnosers, diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, exporter))
+
+	for _, d := range diagnosers {
+		waitgroup.Add(1)
+		go func(d interfaces.Diagnoser) {
+			log.Printf("Diagnoser: %s, diagnose data\n", d.GetName())
+			err := d.Diagnose()
+			if err != nil {
+				log.Printf("Diagnoser: %s, diagnose data failed: %+v\n", d.GetName(), err)
+			}
+
+			log.Printf("Diagnoser: %s, export data\n", d.GetName())
+			err = d.Export()
+			if err != nil {
+				log.Printf("Diagnoser: %s, export data failed: %+v\n", d.GetName(), err)
+			}
+			waitgroup.Done()
+		}(d)
 	}
 
 	waitgroup.Wait()
