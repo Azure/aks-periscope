@@ -21,8 +21,7 @@ type networkOutboundType struct {
 type NetworkOutboundDatum struct {
 	TimeStamp time.Time `json:"TimeStamp"`
 	networkOutboundType
-	Connected bool   `json:"Connected"`
-	Error     string `json:"Error"`
+	Status string `json:"Status"`
 }
 
 // NetworkOutboundCollector defines a NetworkOutbound Collector struct
@@ -53,38 +52,32 @@ func (collector *NetworkOutboundCollector) Collect() error {
 	outboundTypes := []networkOutboundType{}
 	outboundTypes = append(outboundTypes,
 		networkOutboundType{
-			Type: "InternetConnectivity",
+			Type: "Internet",
 			URL:  "google.com:80",
 		},
 	)
 	outboundTypes = append(outboundTypes,
 		networkOutboundType{
-			Type: "APIServerConnectivity",
+			Type: "AKS API Server",
 			URL:  "kubernetes.default.svc.cluster.local:443",
 		},
 	)
 	outboundTypes = append(outboundTypes,
 		networkOutboundType{
-			Type: "TunnelConnectivity",
+			Type: "AKS Tunnel",
 			URL:  APIServerFQDN + ":9000",
 		},
 	)
 	outboundTypes = append(outboundTypes,
 		networkOutboundType{
-			Type: "ACRConnectivity",
+			Type: "Azure Container Registry",
 			URL:  "azurecr.io:80",
 		},
 	)
 	outboundTypes = append(outboundTypes,
 		networkOutboundType{
-			Type: "MCRConnectivity",
+			Type: "Microsoft Container Registry",
 			URL:  "mcr.microsoft.com:80",
-		},
-	)
-	outboundTypes = append(outboundTypes,
-		networkOutboundType{
-			Type: "NotReachableSite",
-			URL:  "www.notreachable.site:80",
 		},
 	)
 	rootPath, err := utils.CreateCollectorDir(collector.GetName())
@@ -104,24 +97,25 @@ func (collector *NetworkOutboundCollector) Collect() error {
 		timeout := time.Duration(5 * time.Second)
 		_, err = net.DialTimeout("tcp", outboundType.URL, timeout)
 
-		// only write when connection failed
+		status := "Connected"
 		if err != nil {
-			data := &NetworkOutboundDatum{
-				TimeStamp:           time.Now().Truncate(1 * time.Second),
-				networkOutboundType: outboundType,
-				Connected:           err == nil,
-				Error:               err.Error(),
-			}
+			status = "Error: " + err.Error()
+		}
 
-			dataBytes, err := json.Marshal(data)
-			if err != nil {
-				return fmt.Errorf("Fail to marshal data: %+v", err)
-			}
+		data := &NetworkOutboundDatum{
+			TimeStamp:           time.Now().Truncate(1 * time.Second),
+			networkOutboundType: outboundType,
+			Status:              status,
+		}
 
-			_, err = f.WriteString(string(dataBytes) + "\n")
-			if err != nil {
-				return fmt.Errorf("Fail to write data to file: %+v", err)
-			}
+		dataBytes, err := json.Marshal(data)
+		if err != nil {
+			return fmt.Errorf("Fail to marshal data: %+v", err)
+		}
+
+		_, err = f.WriteString(string(dataBytes) + "\n")
+		if err != nil {
+			return fmt.Errorf("Fail to write data to file: %+v", err)
 		}
 
 		collector.AddToCollectorFiles(networkOutboundFile)

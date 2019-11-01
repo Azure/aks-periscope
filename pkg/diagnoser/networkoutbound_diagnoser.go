@@ -18,7 +18,7 @@ type networkOutboundDiagnosticDatum struct {
 	Type     string    `json:"Type"`
 	Start    time.Time `json:"Start"`
 	End      time.Time `json:"End"`
-	Error    string    `json:"Error"`
+	Status   string    `json:"Status"`
 }
 
 // NetworkOutboundDiagnoser defines a NetworkOutbound Diagnoser struct
@@ -74,7 +74,7 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 			if dataPoint.Start.IsZero() {
 				setDataPoint(&outboundDatum, &dataPoint)
 			} else {
-				if outboundDatum.Error != dataPoint.Error {
+				if outboundDatum.Status != dataPoint.Status {
 					outboundDiagnosticData = append(outboundDiagnosticData, dataPoint)
 					setDataPoint(&outboundDatum, &dataPoint)
 				} else {
@@ -117,5 +117,5 @@ func setDataPoint(outboundDatum *collector.NetworkOutboundDatum, dataPoint *netw
 	dataPoint.Type = outboundDatum.Type
 	dataPoint.Start = outboundDatum.TimeStamp
 	dataPoint.End = outboundDatum.TimeStamp
-	dataPoint.Error = outboundDatum.Error
+	dataPoint.Status = outboundDatum.Status
 }
