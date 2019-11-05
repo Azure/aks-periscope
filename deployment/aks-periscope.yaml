@@ -114,7 +114,7 @@ metadata:
   name: containerlogs-config
   namespace: aks-periscope
 data:
-  DIAGNOSTIC_CONTAINERLOGS_LIST: kube-system aks-periscope/aks-periscope
+  DIAGNOSTIC_CONTAINERLOGS_LIST: kube-system
 ---
 apiVersion: v1 
 kind: ConfigMap 
@@ -122,7 +122,7 @@ metadata:
   name: kubeobjects-config
   namespace: aks-periscope
 data:
-  DIAGNOSTIC_KUBEOBJECTS_LIST: kube-system/pod kube-system/service kube-system/deployment/tunnelfront
+  DIAGNOSTIC_KUBEOBJECTS_LIST: kube-system/pod kube-system/service kube-system/deployment
 ---
 apiVersion: v1 
 kind: ConfigMap 

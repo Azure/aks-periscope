@@ -24,11 +24,67 @@ AKS Periscope currently only work on Linux based agent nodes. Please see https:/
 
 
 # Current Feature Set
-Link to [Current Feature Set].
+It collects the following logs and metrics:
+
+1. Container logs (by default all containers in the `kube-system` namespace, can be config to take other namespace/containers).
+2. Docker and Kubelet system service logs.
+3. Network outbound connectivity, include checks for internet, API server, Tunnel, Azure Container Registry and Microsoft Container Registry.
+4. Node IP tables.
+5. All node level logs (by default cluster provision log and cloud init log, can be config to take other logs).
+6. VM and Kubernetes cluster level DNS settings.
+7. Describe Kubernetes objects (by default all pods/services/deployments in the `kube-system` namespace, can be config to take other namespace/objects).
+8. Kubelet command arguments.
+9. System performance (kubectl top nodes and kubectl top pods).
+
+It also generates the following diagnostic signals:
+
+1. Network outbound connectivity, reports the down period for a specific connection.
+2. Network configuration, includes Network Plugin, DNS, and Max Pods per Node settings.
 
 
 # User Guide
-Link to [User Guide].
+
+AKS Periscope can be deployed by using Azure Command-Line tool (CLI). The steps are:
+
+0. If CLI extension aks-preview has been installed previously, uninstall it first.
+```
+az extension remove --name aks-preview
+``` 
+
+1. Install CLI extension aks-preview.
+```
+az extension add --name aks-preview
+``` 
+
+2. Run `az aks kollect` command to collect metrics and diagnostic information, and upload to an Azure storage account.
+
+    1. If a storage account is already setup for the AKS cluster in Diagnostic Settings (https://docs.microsoft.com/en-us/azure/azure-monitor/platform/diagnostic-logs-stream-log-store), simply run the command below, and it automatically uses the existing storage account.
+    ```
+    az aks kollect -g myresourcegroup -n mycluster
+    ```
+
+    2. Specify a storage account and SAS token.
+    ```
+    az aks kollect -g myresourcegroup -n mycluster --storage-account mystorageaccount --sas-token mysastoken
+    ```
+
+    3. Specify a storage account resource ID.
+    ```
+    az aks kollect -g myresourcegroup -n mycluster --storage-account /subscriptions/xxx/resourceGroups/xxx/providers/Microsoft.Storage/storageAccounts/xxx
+    ```
+
+
+All collected logs, metrics and node level diagnostic information is stored on host nodes under directory:
+```
+/var/log/aks-periscope
+```
+This directory is also mounted to container as:
+```
+/aks-periscope
+```
+After export, they will also be stored in Azure Blob Service under a container with its name equals to cluster API server FQDN.
+
+Alternatively, AKS Periscope can be deployed directly with `kubectl`. See instructions in [Appendix].
 
 
 # Programming Guide
@@ -52,6 +108,6 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
-[Current Feature Set]: docs/features.md
-[User Guide]: docs/userguide.md
+
 [Programming Guide]: docs/programmingguide.md
+[Appendix]: docs/appendix.md
