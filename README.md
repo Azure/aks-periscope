@@ -1,6 +1,8 @@
 
-# AKS Periscope
-Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster.
+# AKS Periscope 
+Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster. 
+
+![Icon](https://user-images.githubusercontent.com/33297523/69174241-4075a980-0ab6-11ea-9e33-76afc588e7fb.png)
 
 # Overview
 Hopefully most of the time, your AKS cluster is running happily and healthy. However, when things do go wrong, AKS customers need a tool to help them diagnose and collect the logs necessary to troubleshoot the issue. It can be difficult to collect the appropriate node and pod logs to figure what's wrong, how to fix the problem, or even to pass on those logs to others to help. 
