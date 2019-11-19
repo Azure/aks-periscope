@@ -56,23 +56,55 @@ az extension remove --name aks-preview
 az extension add --name aks-preview
 ``` 
 
-2. Run `az aks kollect` command to collect metrics and diagnostic information, and upload to an Azure storage account.
+2. Run `az aks kollect` command to collect metrics and diagnostic information, and upload to an Azure storage account. Use `az aks kollect -h` to check command details. Some useful examples are also listed below:
 
-    1. If a storage account is already setup for the AKS cluster in Diagnostic Settings (https://docs.microsoft.com/en-us/azure/azure-monitor/platform/diagnostic-logs-stream-log-store), simply run the command below, and it automatically uses the existing storage account.
+    1. Using storage account name and a shared access signature token with write permission
     ```
-    az aks kollect -g myresourcegroup -n mycluster
-    ```
-
-    2. Specify a storage account and SAS token.
-    ```
-    az aks kollect -g myresourcegroup -n mycluster --storage-account mystorageaccount --sas-token mysastoken
-    ```
-
-    3. Specify a storage account resource ID.
-    ```
-    az aks kollect -g myresourcegroup -n mycluster --storage-account /subscriptions/xxx/resourceGroups/xxx/providers/Microsoft.Storage/storageAccounts/xxx
+    az aks kollect
+    -g MyResourceGroup
+    -n MyManagedCluster
+    --storage-account MyStorageAccount
+    --sas-token "MySasToken"
     ```
 
+    2. Using the resource id of a storage account resource you own.
+    ```
+    az aks kollect
+    -g MyResourceGroup
+    -n MyManagedCluster
+    --storage-account "MyStorageAccountResourceId"
+    ```
+
+    3. Using a pre-setup storage account ((https://docs.microsoft.com/en-us/azure/azure-monitor/platform/diagnostic-logs-stream-log-store) in diagnostics settings for your managed cluster.
+    ```
+    az aks kollect
+    -g MyResourceGroup
+    -n MyManagedCluster
+    ```
+
+    4. Customize the container logs to collect. Its value can be either all containers in a namespace, for example, kube-system, or a specific container in a namespace, for example, kube-system/tunnelfront.
+    ```
+    az aks kollect
+    -g MyResourceGroup
+    -n MyManagedCluster
+    --container-logs "mynamespace1/mypod1 myns2"
+    ```
+
+    5. Customize the kubernetes objects to collect. Its value can be either all objects of a type in a namespace, for example, kube-system/pod, or a specific object of a type in a namespace, for example, kube-system/deployment/tunnelfront.
+    ```
+    az aks kollect
+    -g MyResourceGroup
+    -n MyManagedCluster
+    --kube-objects "mynamespace1/service myns2/deployment/deployment1"
+    ```
+
+    6. Customize the node log files to collect.
+    ```
+    az aks kollect
+    -g MyResourceGroup
+    -n MyManagedCluster
+    --node-logs "/var/log/azure-vnet.log /var/log/azure-vnet-ipam.log"
+    ```
 
 All collected logs, metrics and node level diagnostic information is stored on host nodes under directory:
 ```
@@ -82,7 +114,7 @@ This directory is also mounted to container as:
 ```
 /aks-periscope
 ```
-After export, they will also be stored in Azure Blob Service under a container with its name equals to cluster API server FQDN.
+After export, they will also be stored in Azure Blob Service under a container with its name equals to cluster API server FQDN. A zip file is also created for easy download.
 
 Alternatively, AKS Periscope can be deployed directly with `kubectl`. See instructions in [Appendix].
 
