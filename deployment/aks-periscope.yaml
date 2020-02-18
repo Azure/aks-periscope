@@ -139,20 +139,20 @@ metadata:
 spec:
   group: aks-periscope.azure.github.com
   versions:
-    - name: v1
-      served: true
-      storage: true
-      schema:
-        openAPIV3Schema:
+  - name: v1
+    served: true
+    storage: true
+  validation:
+    openAPIV3Schema:
+      type: object
+      properties:
+        spec:
           type: object
           properties:
-            spec:
-              type: object
-              properties:
-                dns:
-                  type: string
-                networkoutbound:
-                  type: string
+            dns:
+              type: string
+            networkoutbound:
+              type: string
   scope: Namespaced
   names:
     plural: diagnostics
