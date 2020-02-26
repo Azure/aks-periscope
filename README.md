@@ -22,7 +22,7 @@ https://azure.microsoft.com/en-us/support/legal/support-diagnostic-information-c
 
 
 # Compatibility
-AKS Periscope currently only work on Linux based agent nodes. Please see https://github.com/PatrickLang/logslurp for Windows based agent nodes. 
+AKS Periscope currently only work on Linux based agent nodes. Please use the script https://github.com/Azure/aks-engine/blob/master/scripts/collect-windows-logs.ps1 for Windows based agent nodes. 
 
 
 # Current Feature Set
