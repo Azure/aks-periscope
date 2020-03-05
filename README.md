@@ -122,7 +122,7 @@ Alternatively, AKS Periscope can be deployed directly with `kubectl`. See instru
 
 
 # Programming Guide
-Link to [Programming Guide].
+To Be Updated.
 
 
 # Feedback 
