@@ -14,6 +14,10 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
+const (
+	maxContainerNameLength = 63
+)
+
 // AzureBlobExporter defines an Azure Blob Exporter
 type AzureBlobExporter struct{}
 
@@ -28,6 +32,9 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
 	len := strings.Index(containerName, "-hcp-")
+	if len == -1 {
+		len = maxContainerNameLength
+	}
 	containerName = containerName[:len]
 
 	ctx := context.Background()
