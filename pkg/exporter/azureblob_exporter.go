@@ -35,7 +35,7 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 	if len == -1 {
 		len = maxContainerNameLength
 	}
-	containerName = containerName[:len]
+	containerName = strings.TrimRight(containerName[:len], "-")
 
 	ctx := context.Background()
 
