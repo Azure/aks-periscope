@@ -1,6 +1,8 @@
 package collector
 
-import "github.com/Azure/aks-periscope/pkg/interfaces"
+import (
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+)
 
 // Type defines Collector Type
 type Type int

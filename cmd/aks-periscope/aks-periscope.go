@@ -14,13 +14,18 @@ import (
 
 func main() {
 	zipAndExportMode := true
-	exporter := &exporter.AzureBlobExporter{}
-	var waitgroup sync.WaitGroup
 
 	err := utils.CreateCRD()
 	if err != nil {
-		log.Printf("Failed to create CRD: %+v", err)
+		log.Fatalf("Failed to create CRD: %+v", err)
 	}
+
+	exporter, err := exporter.NewAzureBlobExporter()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var waitgroup sync.WaitGroup
 
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)

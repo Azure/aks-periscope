@@ -1,6 +1,8 @@
 package diagnoser
 
-import "github.com/Azure/aks-periscope/pkg/interfaces"
+import (
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+)
 
 // Type defines Diagnoser Type
 type Type int

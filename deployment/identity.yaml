@@ -1,0 +1,16 @@
+apiVersion: "aadpodidentity.k8s.io/v1"
+kind: AzureIdentity
+metadata:
+  name: aks-periscope
+spec:
+  type: 0 # Set type: 0 for user-assigned MSI or type: 1 for Service Principal.
+  resourceID: dummy
+  clientID: dummy
+---
+apiVersion: "aadpodidentity.k8s.io/v1"
+kind: AzureIdentityBinding
+metadata:
+  name: aks-periscope-binding
+spec:
+  azureIdentity: aks-periscope
+  selector: aks-periscope

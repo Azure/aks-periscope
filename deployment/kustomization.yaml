@@ -1,0 +1,43 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: aks-periscope
+
+resources:
+# - identity.yaml # Remove this template if using SAS Token
+- aks-periscope.yaml
+
+# secretGenerator:
+# - name: azureblob-secret
+#   literals:
+#   - AZURE_BLOB_ACCOUNT_NAME= # (Required) <accountName, base64 encoded>
+#   - AZURE_BLOB_SAS_KEY= # Required only if using SAS Key <saskey, base64 encoded>
+
+# patches:
+# # Remove this patch if using SAS Token
+# - target:
+#     group: apps
+#     kind: DaemonSet
+#     name: aks-periscope
+#     version: v1
+#   patch: |-
+#     - op: add
+#       path: '/spec/template/metadata/labels/aadpodidbinding'
+#       value: aks-periscope
+# # Remove this patch if using SAS Token
+# - target:
+#     group: aadpodidentity.k8s.io
+#     kind: AzureIdentity
+#     name: aks-periscope
+#     version: v1
+#   patch: |-
+#     - op: replace
+#       path: '/spec/resourceID'
+#       value: <IDENTITY_RESOURCE_ID>
+#     - op: replace
+#       path: '/spec/clientID'
+#       value: <IDENTITY_CLIENT_ID>
+
+images:
+  - name: aks-periscope
+    newName: aksrepos.azurecr.io/staging/aks-periscope:v0.3
