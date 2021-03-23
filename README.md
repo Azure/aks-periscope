@@ -142,7 +142,7 @@ docker push <some_docker_repo_name>/<aks-periscope-user-selected-test-name>
 
 This section intend to add some tip for debugging logs for the aks-periscope. This will help beginner to locally debug the pod logs.
 
-Scenario: User A, uses **expired** `sas-token` and converts into `base64` to be used in the deployment file.
+Scenario, where `user A` uses **expired** `sas-token` and converts into `base64` to be used in the deployment file.
 
 In the sceanrio above, the `kubectl apply -f deployment-file.yaml` will show no error but the output which will look like the one below.
 
@@ -163,12 +163,12 @@ customresourcedefinition.apiextensions.k8s.io/diagnostics.aks-periscope.azure.gi
 
 In order to debug the logs of `pods` of the `aks-periscope` namespace deployed in users cluster.
 
-Following command will come handy:
+The following command will come handy:
 
-   * To get hte pods in `aks-periscope` namespace.
-        `kubectl get pods -n aks-periscope`
+   * To get the pods in `aks-periscope` namespace.
+       * `kubectl get pods -n aks-periscope`
    * To check the logs in of the each deployed pod, this command will come handy:
-        `kubectl logs <name-of-pod> -n aks-periscope`
+       * `kubectl logs <name-of-pod> -n aks-periscope`
 
 # Feedback 
 Feel free to contact aksperiscope@microsoft.com or open an issue with any feedback or questions about AKS Periscope. This is currently a work in progress, but look out for more capabilities to come!
