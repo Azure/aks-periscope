@@ -122,8 +122,21 @@ Alternatively, AKS Periscope can be deployed directly with `kubectl`. See instru
 
 
 # Programming Guide
-To Be Updated.
 
+To locally build from this project from the root of this repository:
+
+```
+CGO_ENABLED=0 GOOS=linux go build -mod=vendor github.com/Azure/aks-periscope/cmd/aks-periscope
+```
+
+**Tip**: In order to test local changes, user can build the local image via `Dockerfile` and then then push it to your local hub. That way user sould be able to reference this test image in the `deployment\aks-periscope.yaml` `containers` property `image` attribute reference to your published test published docker image. 
+
+For example:
+
+```
+docker build -f ./builder/Dockerfile -t <some_docker_repo_name>/<aks-periscope-user-selected-test-name> .
+docker push <some_docker_repo_name>/<aks-periscope-user-selected-test-name> 
+```
 
 # Feedback 
 Feel free to contact aksperiscope@microsoft.com or open an issue with any feedback or questions about AKS Periscope. This is currently a work in progress, but look out for more capabilities to come!
