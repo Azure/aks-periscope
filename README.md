@@ -144,7 +144,7 @@ This section intend to add some tip for debugging logs for the aks-periscope. Th
 
 Scenario, where `user A` uses **expired** `sas-token` and converts into `base64` to be used in the deployment file.
 
-In the sceanrio above, the `kubectl apply -f deployment-file.yaml` will show no error but the output which will look like the one below.
+In the scenario above, the `kubectl apply -f deployment-file.yaml` will show no error but the output which will look like the one below.
 
 ```
 ❯ kubectl apply -f deployment/aks-periscope.yaml
