@@ -57,10 +57,9 @@ jobs:
           docker info
         name: 'Install Docker'
 
-      - run: ./azurepipeline/start.sh 
-        name: 'Start KIND'
+      - name: 'Start KIND'
+        run: ./azurepipeline/start.sh
         continue-on-error: true
-        working-directory: $(sourceDirectory)
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -74,5 +73,3 @@ jobs:
           bash -f ./azurepipeline/stop.sh
         name: 'Stop KIND'
         continue-on-error: true
-        working-directory: $(sourceDirectory)
-          
