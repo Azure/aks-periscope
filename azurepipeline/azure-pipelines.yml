@@ -1,0 +1,99 @@
+# Go
+# Build your Go project.
+# Add steps that test, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/go
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  GOBIN:  '$(GOPATH)/bin' # Go binaries path
+  GOROOT: '/usr/local/go1.11' # Go installation path
+  GOPATH: '$(system.defaultWorkingDirectory)/gopath' # Go workspace path
+  modulePath: '$(GOPATH)/src/github.com/$(build.repository.name)' # Path to the module's code
+  GO111MODULE: 'on'
+  GOFLAGS: '-mod=vendor'
+
+# steps:
+# - script: |
+#     mkdir -p '$(GOBIN)'
+#     mkdir -p '$(GOPATH)/pkg'
+#     mkdir -p '$(modulePath)'
+#     shopt -s extglob
+#     shopt -s dotglob
+#     mv !(gopath) '$(modulePath)'
+#     echo '##vso[task.prependpath]$(GOBIN)'
+#     echo '##vso[task.prependpath]$(GOROOT)/bin'
+#   displayName: 'Set up the Go workspace'
+
+# - script: |
+#     go version
+#     go build -mod=vendor cmd/aks-periscope/aks-periscope.go
+#   workingDirectory: '$(modulePath)'
+#   displayName: 'Get dependencies, then build'
+
+stages:
+- stage: IntegrationTest
+  displayName: Setup the environment
+  jobs:
+  - job: 'IntegrationTestExecution'
+    displayName: 'Integration Test Execution'
+    pool:
+      vmImage: ubuntu-18.04
+    steps:
+    - bash: |
+        sudo apt update
+        sudo apt --fix-broken install -y
+        sudo apt install python3-pip -y
+        pip3 install setuptools
+        pip3 install pylint coverage
+      displayName: 'Install OS Packages'
+
+    - bash: |
+        sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
+        curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+        sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
+        sudo apt update
+        sudo apt install docker-ce -y
+        sudo systemctl status docker
+        sudo usermod -a -G docker ${USER}
+        docker info
+      displayName: 'Install Docker'
+
+    - script: bash -f ./start.sh 
+      displayName: 'Start KIND'
+      continueOnError: 'true'
+      workingDirectory: $(sourceDirectory)
+
+    - script: |
+        mkdir -p '$(GOBIN)'
+        mkdir -p '$(GOPATH)/pkg'
+        mkdir -p '$(modulePath)'
+        shopt -s extglob
+        shopt -s dotglob
+        mv !(gopath) '$(modulePath)'
+        echo '##vso[task.prependpath]$(GOBIN)'
+        echo '##vso[task.prependpath]$(GOROOT)/bin'
+      displayName: 'Set up the Go workspace'
+
+    - script: |
+        go version
+        go build -mod=vendor cmd/aks-periscope/aks-periscope.go
+      workingDirectory: '$(modulePath)'
+      displayName: 'Get dependencies, then build'
+    
+    - bash: |
+        bash -f ./stop.sh
+      displayName: 'Stop KIND'
+      continueOnError: 'true'
+      workingDirectory: $(sourceDirectory)
+    
+    - task: PublishTestResults@1
+      inputs:
+        testResultsFiles: '$(sourceDirectory)/test-reports/TEST-*.xml'
+        testRunTitle: 'Integration Test'
+      displayName: 'Publish Test Results'
+
