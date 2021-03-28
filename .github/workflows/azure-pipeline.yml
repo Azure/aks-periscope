@@ -58,7 +58,7 @@ jobs:
         name: 'Install Docker'
 
       - name: 'Start KIND'
-        run: ./azurepipeline/start.sh
+        run: bash -f ./azurepipeline/start.sh
         continue-on-error: true
 
       - name: Set up Go
@@ -69,7 +69,6 @@ jobs:
       - name: Build project
         run: go build -v ./cmd/aks-periscope/aks-periscope.go
 
-      - run: |
-          bash -f ./azurepipeline/stop.sh
-        name: 'Stop KIND'
+      - name: 'Stop KIND'
+        run: bash -f ./azurepipeline/stop.sh
         continue-on-error: true
