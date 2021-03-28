@@ -57,7 +57,7 @@ jobs:
           docker info
         name: 'Install Docker'
 
-      - run: bash -f ./azurepipeline/start.sh 
+      - run: ./azurepipeline/start.sh 
         name: 'Start KIND'
         continue-on-error: true
         working-directory: $(sourceDirectory)
