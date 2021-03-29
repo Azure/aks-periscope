@@ -57,7 +57,9 @@ jobs:
         run: go build -v ./cmd/aks-periscope/aks-periscope.go
 
       - name: Run integration test
-        run: go build -v ./tests/aksperiscopeintegration_test.go
+        run: | 
+          go mod vendor
+          go build -v ./tests/aksperiscopeintegration_test.go
 
       - name: 'Stop KIND'
         run: bash -f ./azurepipeline/stop.sh
