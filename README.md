@@ -1,4 +1,4 @@
-[![CI](https://github.com/Tatsinnit/aks-periscope/actions/workflows/azure-pipeline.yml/badge.svg?branch=feature%2Fenable-unit-testing)](https://github.com/Tatsinnit/aks-periscope/actions/workflows/azure-pipeline.yml)
+[![CI](https://github.com/Azure/aks-periscope/actions/workflows/azure-pipeline.yml/badge.svg?branch=master)](https://github.com/Azure/aks-periscope/actions/workflows/azure-pipeline.yml)
 
 # AKS Periscope 
 Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster. 

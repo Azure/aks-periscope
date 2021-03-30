@@ -4,8 +4,11 @@ name: CI
 
 # Controls when the action will run. 
 on:
-  # Triggers the workflow on push or pull request events
-  ["push", "pull_request"]
+  # Triggers the workflow on push or pull request for master branch
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
@@ -40,7 +43,7 @@ jobs:
           docker info
         
 
-      - name: Start KIND
+      - name: Start kind
         run: bash -f ./azurepipeline/start.sh
         continue-on-error: true
 
@@ -53,9 +56,8 @@ jobs:
         run: go build -v ./cmd/aks-periscope/aks-periscope.go
 
       - name: Run integration test
-        run: |
-          go test -v -mod=mod ./tests/aksperiscopeintegration_test.go
+        run: go test -v -mod=mod ./tests/aksperiscopeintegration_test.go
 
-      - name: Stop KIND
+      - name: Stop kind
         run: bash -f ./azurepipeline/stop.sh
         continue-on-error: true
