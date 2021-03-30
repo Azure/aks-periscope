@@ -54,7 +54,7 @@ jobs:
 
       - name: Run integration test
         run: |
-          go build -v -mod=mod ./tests/aksperiscopeintegration_test.go
+          go test -v -mod=mod ./tests/aksperiscopeintegration_test.go
 
       - name: Stop KIND
         run: bash -f ./azurepipeline/stop.sh
