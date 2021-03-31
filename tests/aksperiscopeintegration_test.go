@@ -16,6 +16,14 @@ func TestEndToEndIntegrationSuccessCase(t *testing.T) {
 		return checkifpodsrunning(t)
 	}, "60s", "2s").Should(BeTrue())
 
+	/*
+			More integration test expansiont Ideas:
+			Further work: ToExpand:
+		 		* Another good integration test could be the lcoation the logs get collected before zipping and prior to storage call.
+				* /var/logs/aks-periscope/* - is the location I think.
+				* funct : zipAndExport has more details.
+	*/
+
 }
 
 func TestEndToEndIntegrationUnsuccessFulCase(t *testing.T) {
