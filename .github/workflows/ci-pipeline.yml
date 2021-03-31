@@ -29,23 +29,10 @@ jobs:
           sudo apt install python3-pip -y
           pip3 install setuptools
           pip3 install pylint coverage
-        
-
-      - name: 'Install Docker'
-        run: |
-          sudo apt install apt-transport-https ca-certificates curl software-properties-common -y
-          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-          sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu bionic stable"
-          sudo apt update
-          sudo apt install docker-ce -y
-          sudo systemctl status docker
-          sudo usermod -a -G docker ${USER}
-          docker info
-        
-
+ 
       - name: Start kind
         run: bash -f ./azurepipeline/start.sh
-        continue-on-error: true
+        continue-on-error: false
 
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -60,4 +47,4 @@ jobs:
 
       - name: Stop kind
         run: bash -f ./azurepipeline/stop.sh
-        continue-on-error: true
+        continue-on-error: false
