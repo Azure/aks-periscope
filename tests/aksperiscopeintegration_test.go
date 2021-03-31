@@ -10,6 +10,12 @@ import (
 
 func TestEndToEndIntegrationSuccessCase(t *testing.T) {
 	runperiscopedeploycommand(t, false)
+	g := NewGomegaWithT(t)
+
+	g.Eventually(func() bool {
+		return checkifpodsrunning(t)
+	}, "60s", "2s").Should(BeTrue())
+
 }
 
 func TestEndToEndIntegrationUnsuccessFulCase(t *testing.T) {
@@ -32,4 +38,32 @@ func runperiscopedeploycommand(t *testing.T, validate bool) {
 		g.Expect(err).ToNot(HaveOccurred())
 		t.Logf("successful output: %v\n", output)
 	}
+}
+
+func checkifpodsrunning(t *testing.T) bool {
+	g := NewGomegaWithT(t)
+
+	output, err := utils.RunCommandOnContainer("kubectl", "get", "pods", "-n", "aks-periscope")
+	firstpod := strings.Split(output, "\n")
+
+	firstpodname := strings.Fields(firstpod[1])[0]
+	firstpodstate := strings.Fields(firstpod[1])[2]
+
+	t.Logf(" Outcome is %v ===> %v", firstpodname, firstpodstate)
+
+	if err != nil {
+		g.Expect(err).ToNot(HaveOccurred())
+		t.Logf("unsuccessful error: %v\n", err)
+	}
+
+	if output != "" {
+		g.Expect(err).ToNot(HaveOccurred())
+		t.Logf("successful output: %v\n", output)
+	}
+
+	if firstpodstate == "Running" {
+		return true
+	}
+
+	return false
 }
