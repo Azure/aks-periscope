@@ -19,7 +19,12 @@ echo -n "string-to-encode" | base64
 
 Additionally, to collect container logs and describe Kubenetes objects (pods and services) in namespaces beyond the default `kube-system`, user can configure the `containerlogs-config` and `kubeobjects-config` in above aks-periscope.yaml.
 
-2. Deploy the daemon set using kubectl:
+2. If Periscope has been previously deployed to the cluster, it will need to be manually removed first or the "kubectl apply" command below will succeed, but Periscope will silently fail to run:
+```
+kubectl delete -f aks-periscope.yaml
+```
+
+3. Deploy the daemon set using kubectl:
 ```
 kubectl apply -f aks-periscope.yaml
 ```
