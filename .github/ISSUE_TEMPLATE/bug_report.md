@@ -1,19 +1,11 @@
----
-name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
-
----
 
 **Describe the bug**
 A clear and concise description of what the bug is.
 
 **To Reproduce**
-Steps to reproduce the behavior:
+Steps to reproduce the behavior: (for example)
 1. Go to '...'
-2. Click on '....'
+2. Click on or Deploy on '....'
 3. Enter details and run '....'
 4. See error
 
