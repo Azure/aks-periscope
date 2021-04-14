@@ -22,7 +22,7 @@ func main() {
 		log.Fatalf("Failed to create CRD: %v", err)
 	}
 
-	clusterType := os.Getenv("CLUSTER_TYPE")
+	collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))
 
 	// Copies self-signed cert information to container if application is running on Azure Stack Cloud.
 	// We need the cert in order to communicate with the storage account.
@@ -43,24 +43,25 @@ func main() {
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
 	helmCollector := collector.NewHelmCollector(exporter)
+	osmCollector := collector.NewOsmCollector(exporter)
 
-	if strings.EqualFold(clusterType, "connectedCluster") {
-		collectors = append(collectors, containerLogsCollector)
-		collectors = append(collectors, dnsCollector)
+	collectors = append(collectors, containerLogsCollector)
+	collectors = append(collectors, dnsCollector)
+	collectors = append(collectors, kubeObjectsCollector)
+	collectors = append(collectors, networkOutboundCollector)
+
+	if contains(collectorList, "connectedCluster") {
 		collectors = append(collectors, helmCollector)
-		collectors = append(collectors, kubeObjectsCollector)
-		collectors = append(collectors, networkOutboundCollector)
-
 	} else {
-		collectors = append(collectors, containerLogsCollector)
-		collectors = append(collectors, dnsCollector)
-		collectors = append(collectors, kubeObjectsCollector)
-		collectors = append(collectors, networkOutboundCollector)
 		collectors = append(collectors, systemLogsCollector)
 		collectors = append(collectors, ipTablesCollector)
 		collectors = append(collectors, nodeLogsCollector)
 		collectors = append(collectors, kubeletCmdCollector)
 		collectors = append(collectors, systemPerfCollector)
+	}
+
+	if contains(collectorList, "OSM") {
+		collectors = append(collectors, osmCollector)
 	}
 
 	collectorGrp := new(sync.WaitGroup)
@@ -157,4 +158,13 @@ func zipAndExport(exporter interfaces.Exporter) error {
 	// TODO: remove this //nolint comment once the select{} has been removed
 	//nolint:govet
 	return nil
+}
+
+func contains(flagsList []string, flag string) bool {
+	for _, f := range flagsList {
+		if strings.EqualFold(f, flag) {
+			return true
+		}
+	}
+	return false
 }

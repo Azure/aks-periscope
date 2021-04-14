@@ -1,6 +1,11 @@
 package collector
 
-import "github.com/Azure/aks-periscope/pkg/interfaces"
+import (
+	"path/filepath"
+
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+	"github.com/Azure/aks-periscope/pkg/utils"
+)
 
 // Type defines Collector Type
 type Type int
@@ -22,6 +27,8 @@ const (
 	NetworkOutbound
 	// NodeLogs defines NodeLogs Collector Type
 	NodeLogs
+	// Osm defines Open Service Mesh Collector Type
+	Osm
 	// SystemLogs defines SystemLogs Collector Type
 	SystemLogs
 	// SystemPerf defines SystemPerf Collector Type
@@ -30,7 +37,7 @@ const (
 
 // Name returns type name
 func (t Type) name() string {
-	return [...]string{"dns", "containerlogs", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "systemlogs", "systemperf"}[t]
+	return [...]string{"dns", "containerlogs", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "osm", "systemlogs", "systemperf"}[t]
 }
 
 // BaseCollector defines Base Collector
@@ -66,6 +73,31 @@ func (b *BaseCollector) Export() error {
 	if b.exporter != nil {
 		return b.exporter.Export(b.collectorFiles)
 	}
+
+	return nil
+}
+
+// CollectKubectlOutputToCollectorFiles collects output of a given kubectl command to a file.
+// Returns kubectl's stderr output if stdout output is empty.
+func (b *BaseCollector) CollectKubectlOutputToCollectorFiles(rootPath string, fileName string, kubeCmds []string) error {
+	outputStreams, err := utils.RunCommandOnContainerWithOutputStreams("kubectl", kubeCmds...)
+	if err != nil {
+		return err
+	}
+
+	// If kubectl stdout output is empty, i.e., there is no resource of this type within the cluster
+	// the absence of this resource is logged in the file with the relevant message from stderr (Ex: "No resource found...").
+	output := outputStreams.Stdout
+	if len(output) == 0 {
+		output = outputStreams.Stderr
+	}
+
+	resourceFile := filepath.Join(rootPath, fileName)
+	if err = utils.WriteToFile(resourceFile, output); err != nil {
+		return err
+	}
+
+	b.AddToCollectorFiles(resourceFile)
 
 	return nil
 }
