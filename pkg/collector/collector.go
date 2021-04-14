@@ -20,6 +20,8 @@ const (
 	NetworkOutbound
 	// NodeLogs defines NodeLogs Collector Type
 	NodeLogs
+	// OsmLogs defines OsmLogs Collector Type
+	OsmLogs
 	// SystemLogs defines SystemLogs Collector Type
 	SystemLogs
 	// SystemPerf defines SystemPerf Collector Type
@@ -28,7 +30,7 @@ const (
 
 // Name returns type name
 func (t Type) name() string {
-	return [...]string{"dns", "containerlogs", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "systemlogs", "systemperf"}[t]
+	return [...]string{"dns", "containerlogs", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "osmlogs", "systemlogs", "systemperf"}[t]
 }
 
 // BaseCollector defines Base Collector
