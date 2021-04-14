@@ -41,6 +41,8 @@ func main() {
 	collectors = append(collectors, kubeletCmdCollector)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
 	collectors = append(collectors, systemPerfCollector)
+	osmLogsCollector := collector.NewOsmLogsCollector(exporter)
+	collectors = append(collectors, osmLogsCollector)
 
 	for _, c := range collectors {
 		waitgroup.Add(1)
