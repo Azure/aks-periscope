@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"strings"
 	"sync"
 
@@ -22,25 +23,35 @@ func main() {
 		log.Printf("Failed to create CRD: %+v", err)
 	}
 
+	clusterType := os.Getenv("CLUSTER_TYPE")
+	log.Printf("Cluster Type: %s", clusterType)
+	log.Printf(clusterType) 
+
+	storageAccount := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
+	log.Printf("Storage Account: %s", storageAccount)
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
 	collectors = append(collectors, containerLogsCollector)
-	systemLogsCollector := collector.NewSystemLogsCollector(exporter)
-	collectors = append(collectors, systemLogsCollector)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, exporter)
 	collectors = append(collectors, networkOutboundCollector)
-	ipTablesCollector := collector.NewIPTablesCollector(exporter)
-	collectors = append(collectors, ipTablesCollector)
-	nodeLogsCollector := collector.NewNodeLogsCollector(exporter)
-	collectors = append(collectors, nodeLogsCollector)
 	dnsCollector := collector.NewDNSCollector(exporter)
 	collectors = append(collectors, dnsCollector)
 	kubeObjectsCollector := collector.NewKubeObjectsCollector(exporter)
 	collectors = append(collectors, kubeObjectsCollector)
+
+	systemLogsCollector := collector.NewSystemLogsCollector(exporter)
+	ipTablesCollector := collector.NewIPTablesCollector(exporter)
+	nodeLogsCollector := collector.NewNodeLogsCollector(exporter)
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
-	collectors = append(collectors, kubeletCmdCollector)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
-	collectors = append(collectors, systemPerfCollector)
+
+	if clusterType != "connectedcluster" {
+		collectors = append(collectors, systemLogsCollector)
+		collectors = append(collectors, ipTablesCollector)
+		collectors = append(collectors, nodeLogsCollector)
+		collectors = append(collectors, kubeletCmdCollector)
+		collectors = append(collectors, systemPerfCollector)
+	}
 
 	for _, c := range collectors {
 		waitgroup.Add(1)
@@ -63,8 +74,11 @@ func main() {
 	waitgroup.Wait()
 
 	diagnosers := []interfaces.Diagnoser{}
-	diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
 	diagnosers = append(diagnosers, diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, exporter))
+
+	if clusterType != "connectedcluster" {
+		diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
+	}
 
 	for _, d := range diagnosers {
 		waitgroup.Add(1)
