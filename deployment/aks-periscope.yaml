@@ -14,10 +14,10 @@ kind: ClusterRole
 metadata:
   name: aks-periscope-role
 rules:
-- apiGroups: ["","metrics.k8s.io"]
-  resources: ["pods", "nodes"]
+- apiGroups: ["","metrics.k8s.io", "apiextensions.k8s.io"]
+  resources: ["pods", "nodes", "customresourcedefinitions"]
   verbs: ["get", "watch", "list"]
-- apiGroups: ["aks-periscope.azure.github.com"]
+- apiGroups: ["aks-periscope.azure.github.com", ]
   resources: ["diagnostics"]
   verbs: ["get", "watch", "list", "create", "patch"]
 ---
@@ -114,7 +114,7 @@ metadata:
   name: containerlogs-config
   namespace: aks-periscope
 data:
-  DIAGNOSTIC_CONTAINERLOGS_LIST: kube-system
+  DIAGNOSTIC_CONTAINERLOGS_LIST: azure-arc
 ---
 apiVersion: v1 
 kind: ConfigMap 
@@ -122,7 +122,7 @@ metadata:
   name: kubeobjects-config
   namespace: aks-periscope
 data:
-  DIAGNOSTIC_KUBEOBJECTS_LIST: kube-system/pod kube-system/service kube-system/deployment
+  DIAGNOSTIC_KUBEOBJECTS_LIST: azure-arc/pod azure-arc/service azure-arc/deployment
 ---
 apiVersion: v1 
 kind: ConfigMap 
@@ -131,6 +131,14 @@ metadata:
   namespace: aks-periscope
 data:
   DIAGNOSTIC_NODELOGS_LIST: /var/log/azure/cluster-provision.log /var/log/cloud-init.log
+---
+apiVersion: v1 
+kind: ConfigMap 
+metadata:
+  name: clustertype-config
+  namespace: azure-k8-periscope
+data:
+  CLUSTER_TYPE: # <cluster type, options: ConnectedCluster, ManagedCluster, ArcAppliances, etc.>
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
