@@ -62,43 +62,46 @@ func (collector *OsmLogsCollector) Collect() error {
 
 	collector.AddToCollectorFiles(allResourceConfigsFile)
 
-	// * Get metadata of all namespaces in all OSMs
-	meshList, err := getMeshList()
+	// * Collect information for various resources across all meshes in the cluster
+	meshList, err := getResourceList("deployments", "app=osm-controller", "-o=jsonpath={..meshName}")
 	if err != nil {
 		return err
 	}
 
 	for _, meshName := range meshList {
-		meshName = strings.Trim(meshName, "\"")
-		namespacesInMesh, err := utils.RunCommandOnContainer("kubectl", "get", "namespaces", "--selector", "openservicemesh.io/monitored-by="+meshName, "-o=jsonpath={..name}")
+		namespaceInMesh, err := getResourceList("namespaces", "openservicemesh.io/monitored-by="+meshName, "-o=jsonpath={..name}")
 		if err != nil {
 			return err
 		}
+		collectNamespaceMetadata(collector, namespaceInMesh, rootPath, meshName)
+	}
 
-		// Create a metadata file for each namespace in that mesh
-		for _, namespace := range strings.Split(namespacesInMesh, " ") {
-			namespace = strings.Trim(namespace, "\"")
-			namespaceMetadataFile := filepath.Join(rootPath, meshName+"_"+namespace+"_"+"metadata")
-			namespaceMetadata, err := utils.RunCommandOnContainer("kubectl", "get", "namespaces", namespace, "-o=jsonpath={..metadata}")
-			if err != nil {
-				return err
-			}
-			err = utils.WriteToFile(namespaceMetadataFile, namespaceMetadata)
-			if err != nil {
-				return err
-			}
-			collector.AddToCollectorFiles(namespaceMetadataFile)
+	return nil
+}
+
+// * Collects metadata for each ns in a given mesh
+func collectNamespaceMetadata(collector *OsmLogsCollector, namespaces []string, rootPath, meshName string) error {
+	for _, namespace := range namespaces {
+		namespaceMetadataFile := filepath.Join(rootPath, meshName+"_"+namespace+"_"+"metadata")
+		namespaceMetadata, err := utils.RunCommandOnContainer("kubectl", "get", "namespaces", namespace, "-o=jsonpath={..metadata}")
+		if err != nil {
+			return err
 		}
+		err = utils.WriteToFile(namespaceMetadataFile, namespaceMetadata)
+		if err != nil {
+			return err
+		}
+		collector.AddToCollectorFiles(namespaceMetadataFile)
 	}
 
 	return nil
 }
 
 // Helper function to get all meshes in the cluster
-func getMeshList() ([]string, error) {
-	meshList, err := utils.RunCommandOnContainer("kubectl", "get", "deployments", "--all-namespaces", "--selector", "app=osm-controller", "-o=jsonpath={..meshName}")
+func getResourceList(resource, label, outputFormat string) ([]string, error) {
+	resourceList, err := utils.RunCommandOnContainer("kubectl", "get", resource, "--all-namespaces", "--selector", label, outputFormat)
 	if err != nil {
 		return nil, err
 	}
-	return strings.Split(meshList, " "), nil
+	return strings.Split(strings.Trim(resourceList, "\""), " "), nil
 }
