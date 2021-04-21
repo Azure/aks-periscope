@@ -25,7 +25,6 @@ func main() {
 
 	clusterType := os.Getenv("CLUSTER_TYPE")
 	log.Printf("Cluster Type: %s", clusterType)
-	log.Printf(clusterType)
 
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
