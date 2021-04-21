@@ -23,8 +23,9 @@ func main() {
 		log.Printf("Failed to create CRD: %+v", err)
 	}
 
-	clusterType := strings.ToLower(os.Getenv("CLUSTER_TYPE"))
+	clusterType := os.Getenv("CLUSTER_TYPE")
 	log.Printf("Cluster Type: %s", clusterType)
+	log.Printf(clusterType)
 
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
