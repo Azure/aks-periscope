@@ -27,7 +27,7 @@ func main() {
 	log.Printf("Cluster Type: %s", clusterType)
 	log.Printf(clusterType) 
 
-	storageAccount := os;Getenv("AZURE_BLOB_ACCOUNT_NAME")
+	storageAccount := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
 	log.Printf("Storage Account: %s", storageAccount)
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
