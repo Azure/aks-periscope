@@ -24,6 +24,7 @@ func main() {
 	}
 
 	clusterType := strings.ToLower(os.Getenv("CLUSTER_TYPE"))
+	log.Printf("Cluster Type: ", clusterType)
 
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
