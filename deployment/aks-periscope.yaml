@@ -80,6 +80,8 @@ spec:
             name: kubeobjects-config
         - configMapRef:
             name: nodelogs-config
+        - configMapRef:
+            name: clustertype-config
         - secretRef:
             name: azureblob-secret
         volumeMounts:
