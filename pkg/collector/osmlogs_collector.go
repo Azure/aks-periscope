@@ -83,7 +83,7 @@ func (collector *OsmLogsCollector) Collect() error {
 func collectNamespaceMetadata(collector *OsmLogsCollector, namespaces []string, rootPath, meshName string) error {
 	for _, namespace := range namespaces {
 		namespaceMetadataFile := filepath.Join(rootPath, meshName+"_"+namespace+"_"+"metadata")
-		namespaceMetadata, err := utils.RunCommandOnContainer("kubectl", "get", "namespaces", namespace, "-o=jsonpath={..metadata}")
+		namespaceMetadata, err := utils.RunCommandOnContainer("kubectl", "get", "namespaces", namespace, "-o=jsonpath={..metadata}", "-o", "json")
 		if err != nil {
 			return err
 		}
