@@ -24,28 +24,31 @@ func main() {
 	}
 
 	clusterType := os.Getenv("CLUSTER_TYPE")
-	log.Printf("Cluster Type: %s", clusterType)
-	log.Printf(clusterType) 
 
-	storageAccount := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
-	log.Printf("Storage Account: %s", storageAccount)
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
-	collectors = append(collectors, containerLogsCollector)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, exporter)
-	collectors = append(collectors, networkOutboundCollector)
 	dnsCollector := collector.NewDNSCollector(exporter)
-	collectors = append(collectors, dnsCollector)
 	kubeObjectsCollector := collector.NewKubeObjectsCollector(exporter)
-	collectors = append(collectors, kubeObjectsCollector)
-
 	systemLogsCollector := collector.NewSystemLogsCollector(exporter)
 	ipTablesCollector := collector.NewIPTablesCollector(exporter)
 	nodeLogsCollector := collector.NewNodeLogsCollector(exporter)
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
+	helmCollector := collector.NewHelmCollector(exporter)
 
-	if clusterType != "connectedcluster" {
+	if strings.EqualFold(clusterType, "connectedCluster") {
+		collectors = append(collectors, containerLogsCollector)
+		collectors = append(collectors, dnsCollector)
+		collectors = append(collectors, helmCollector)
+		collectors = append(collectors, kubeObjectsCollector)
+		collectors = append(collectors, networkOutboundCollector)
+
+	} else {
+		collectors = append(collectors, containerLogsCollector)
+		collectors = append(collectors, dnsCollector)
+		collectors = append(collectors, kubeObjectsCollector)
+		collectors = append(collectors, networkOutboundCollector)
 		collectors = append(collectors, systemLogsCollector)
 		collectors = append(collectors, ipTablesCollector)
 		collectors = append(collectors, nodeLogsCollector)
@@ -74,11 +77,8 @@ func main() {
 	waitgroup.Wait()
 
 	diagnosers := []interfaces.Diagnoser{}
+	diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
 	diagnosers = append(diagnosers, diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, exporter))
-
-	if clusterType != "connectedcluster" {
-		diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
-	}
 
 	for _, d := range diagnosers {
 		waitgroup.Add(1)
