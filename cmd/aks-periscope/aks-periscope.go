@@ -24,8 +24,6 @@ func main() {
 	}
 
 	clusterType := os.Getenv("CLUSTER_TYPE")
-	log.Printf("Cluster Type: %s", clusterType)
-	log.Printf(clusterType) 
 
 	storageAccount := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
 	log.Printf("Storage Account: %s", storageAccount)
