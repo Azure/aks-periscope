@@ -69,18 +69,19 @@ func (collector *OsmLogsCollector) Collect() error {
 	}
 
 	for _, meshName := range meshList {
-		namespaceInMesh, err := getResourceList("namespaces", "openservicemesh.io/monitored-by="+meshName, "-o=jsonpath={..name}")
+		namespacesInMesh, err := getResourceList("namespaces", "openservicemesh.io/monitored-by="+meshName, "-o=jsonpath={..name}")
 		if err != nil {
 			return err
 		}
-		collectNamespaceMetadata(collector, namespaceInMesh, rootPath, meshName)
+		collectNamespacesMetadata(collector, namespacesInMesh, rootPath, meshName)
+		collectNamespacesServices(collector, namespacesInMesh, rootPath, meshName)
 	}
 
 	return nil
 }
 
 // * Collects metadata for each ns in a given mesh
-func collectNamespaceMetadata(collector *OsmLogsCollector, namespaces []string, rootPath, meshName string) error {
+func collectNamespacesMetadata(collector *OsmLogsCollector, namespaces []string, rootPath, meshName string) error {
 	for _, namespace := range namespaces {
 		namespaceMetadataFile := filepath.Join(rootPath, meshName+"_"+namespace+"_"+"metadata")
 		namespaceMetadata, err := utils.RunCommandOnContainer("kubectl", "get", "namespaces", namespace, "-o=jsonpath={..metadata}")
@@ -92,6 +93,24 @@ func collectNamespaceMetadata(collector *OsmLogsCollector, namespaces []string, 
 			return err
 		}
 		collector.AddToCollectorFiles(namespaceMetadataFile)
+	}
+
+	return nil
+}
+
+// Collects services for each ns in a given mesh
+func collectNamespacesServices(collector *OsmLogsCollector, namespaces []string, rootPath, meshName string) error {
+	for _, namespace := range namespaces {
+		namespaceServicesFile := filepath.Join(rootPath, meshName+"_"+namespace+"_"+"services")
+		namespaceServices, err := utils.RunCommandOnContainer("kubectl", "get", "services", "-n", namespace)
+		if err != nil {
+			return err
+		}
+		err = utils.WriteToFile(namespaceServicesFile, namespaceServices)
+		if err != nil {
+			return err
+		}
+		collector.AddToCollectorFiles(namespaceServicesFile)
 	}
 
 	return nil
