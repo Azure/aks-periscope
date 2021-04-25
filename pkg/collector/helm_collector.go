@@ -31,7 +31,7 @@ func (collector *HelmCollector) Collect() error {
 		return err
 	}
 	helmListFile := filepath.Join(rootPath, collector.GetName())
-	output, err := utils.RunCommandOnContainer("helm", "list", "--all-namespaces")
+	output, err := utils.RunCommandOnContainer("helm", "list", "-n", "azure-arc")
 	if err != nil {
 		return err
 	}
