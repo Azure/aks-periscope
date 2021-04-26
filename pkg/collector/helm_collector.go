@@ -31,7 +31,7 @@ func (collector *HelmCollector) Collect() error {
 		return err
 	}
 	helmListFile := filepath.Join(rootPath, collector.GetName())
-	output, err := utils.RunCommandOnContainer("helm", "list", "-n", "azure-arc")
+	output, err := utils.RunCommandOnContainer("helm", "list", "--all-namespaces")
 	if err != nil {
 		return err
 	}
@@ -42,16 +42,5 @@ func (collector *HelmCollector) Collect() error {
 
 	collector.AddToCollectorFiles(helmListFile)
 
-	helmHistoryFile := filepath.Join(rootPath, collector.GetName())
-	output, err = utils.RunCommandOnContainer("helm", "history", "azure-arc")
-	if err != nil {
-		return err
-	}
-	err = utils.WriteToFile(helmHistoryFile, output)
-	if err != nil {
-		return err
-	}
-
-	collector.AddToCollectorFiles(helmHistoryFile)
 	return nil
 }
