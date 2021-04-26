@@ -42,26 +42,8 @@ func (collector *HelmCollector) Collect() error {
 
 	collector.AddToCollectorFiles(helmListFile)
 
-	output, err = utils.RunCommandOnContainer("helm", "repo", "add", "kured", "https://weaveworks.github.io/kured/")
-	if err != nil {
-		return err
-	}
-	testLog := filepath.Join(rootPath, "helm_repos")
-	output, err = utils.RunCommandOnContainer("helm", "search", "repo")
-	if err != nil {
-		return err
-	}
-	err = utils.WriteToFile(testLog, output)
-	if err != nil {
-		return err
-	}
-	collector.AddToCollectorFiles(testLog)
-	output, err = utils.RunCommandOnContainer("helm", "upgrade", "--install", "azure-arc", "kured/kured")
-	if err != nil {
-		return err
-	}
 	helmHistoryFile := filepath.Join(rootPath, collector.GetName())
-	output, err = utils.RunCommandOnContainer("helm", "history", "azure-arc")
+	output, err = utils.RunCommandOnHost("helm", "history", "azure-arc")
 	if err != nil {
 		return err
 	}
