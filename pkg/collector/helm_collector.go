@@ -42,7 +42,7 @@ func (collector *HelmCollector) Collect() error {
 
 	collector.AddToCollectorFiles(helmListFile)
 
-	output, err = utils.RunCommandOnContainer("helm", "repo", "add", "stable", "https://charts.helm.sh/stable")
+	output, err = utils.RunCommandOnContainer("helm", "repo", "add", "kured", "https://weaveworks.github.io/kured/")
 	if err != nil {
 		return err
 	}
