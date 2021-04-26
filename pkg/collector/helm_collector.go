@@ -42,7 +42,7 @@ func (collector *HelmCollector) Collect() error {
 
 	collector.AddToCollectorFiles(helmListFile)
 
-	output, err = utils.RunCommandOnContainer("helm", "repo", "add", "stable", "https://kubernetes-charts.storage.googleapis.com/")
+	output, err = utils.RunCommandOnContainer("helm", "repo", "add", "stable", "https://charts.helm.sh/stable")
 	if err != nil {
 		return err
 	}
