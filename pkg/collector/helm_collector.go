@@ -43,7 +43,7 @@ func (collector *HelmCollector) Collect() error {
 	collector.AddToCollectorFiles(helmListFile)
 
 	helmHistoryFile := filepath.Join(rootPath, collector.GetName())
-	output, err = utils.RunCommandOnContainer("helm", "history", "azure-arc", "-n", "default")
+	output, err = utils.RunCommandOnContainer("helm", "history", "-n", "default", "azure-arc")
 	if err != nil {
 		return err
 	}
