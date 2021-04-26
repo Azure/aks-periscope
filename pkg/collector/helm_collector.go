@@ -51,6 +51,10 @@ func (collector *HelmCollector) Collect() error {
 	if err != nil {
 		return err
 	}
+	err = utils.WriteToFile(testLog, output)
+	if err != nil {
+		return err
+	}
 	collector.AddToCollectorFiles(testLog)
 	output, err = utils.RunCommandOnContainer("helm", "upgrade", "--install", "azure-arc", "kured/kured")
 	if err != nil {
