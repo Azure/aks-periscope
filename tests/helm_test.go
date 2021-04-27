@@ -17,7 +17,7 @@ func TestHelm(t *testing.T) {
 	helmCollector := collector.NewHelmCollector(exporter)
 	err := helmCollector.Collect()
 	if err != nil {
-		fmt.Printf("Error: %s", err)
+		t.Errorf("Error: %s", err)
 	}
 
 }
