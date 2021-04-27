@@ -13,9 +13,6 @@ RUN curl -fsSl -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master
 RUN chmod +x get_helm.sh 
 RUN ./get_helm.sh
 
-WORKDIR /tests
-RUN CGO_ENABLED=0 GOOS=linux go test ./...
-
 RUN mkdir /app
 WORKDIR /app
 COPY --from=builder /app/aks-periscope .
