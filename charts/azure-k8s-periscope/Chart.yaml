@@ -1,0 +1,8 @@
+apiVersion: v1
+appVersion: "1.0"
+description: A Helm chart for azure-k8s-periscope
+home: https://github.com/Azure/aks-periscope/charts/azure-k8s-periscope
+name: azure-k8s-periscope
+sources:
+- https:https://github.com/Azure/aks-periscope/charts/azure-k8s-periscope
+version: 0.3.0
