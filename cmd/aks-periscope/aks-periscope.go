@@ -44,6 +44,8 @@ func main() {
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
 
 	helmCollector := collector.NewHelmCollector(exporter)
+	customResourceCollector := collector.NewCustomResourceCollector(exporter)
+
 	if clusterType != "connectedcluster" {
 		collectors = append(collectors, systemLogsCollector)
 		collectors = append(collectors, ipTablesCollector)
@@ -52,6 +54,7 @@ func main() {
 		collectors = append(collectors, systemPerfCollector)
 	} else {
 		collectors = append(collectors, helmCollector)
+		collectors = append(collectors, customResourceCollector)
 	}
 
 	for _, c := range collectors {
