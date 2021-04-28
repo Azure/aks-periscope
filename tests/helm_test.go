@@ -1,23 +1,24 @@
-// +build integration
-
 package tests
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/Azure/aks-periscope/pkg/collector"
-	"github.com/Azure/aks-periscope/pkg/exporter"
+	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 func TestHelm(t *testing.T) {
-	fmt.Printf("I am here")
-	exporter := &exporter.AzureBlobExporter{}
-	//collectors := []interfaces.Collector{}
-	helmCollector := collector.NewHelmCollector(exporter)
-	err := helmCollector.Collect()
+
+	output, err := utils.RunCommandOnContainer("helm", "list", "--all-namespaces")
 	if err != nil {
 		t.Errorf("Error: %s", err)
+	} else {
+		fmt.Printf(output)
 	}
-
+	output, err = utils.RunCommandOnContainer("helm", "history", "-n", "default", "azure-arc")
+	if err != nil {
+		t.Errorf("Error: %s", err)
+	} else {
+		fmt.Printf(output)
+	}
 }
