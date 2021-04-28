@@ -12,7 +12,7 @@ type HelmCollector struct {
 	BaseCollector
 }
 
-var _ interfaces.Collector = &IPTablesCollector{}
+var _ interfaces.Collector = &HelmCollector{}
 
 // NewHelmCollector is a constructor
 func NewHelmCollector(exporter interfaces.Exporter) *HelmCollector {
