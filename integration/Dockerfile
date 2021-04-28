@@ -2,7 +2,7 @@ FROM golang AS builder
 RUN mkdir /app
 ADD . /app
 WORKDIR /app
-RUN CGO_ENABLED=0 GOOS=linux go build -mod=vendor github.com/Azure/aks-periscope/cmd/aks-periscope
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -mod=vendor github.com/Azure/aks-periscope/cmd/aks-periscope
 
 FROM alpine
 RUN apk --no-cache add ca-certificates
@@ -14,4 +14,4 @@ RUN chmod +x get_helm.sh
 RUN ./get_helm.sh
 
 WORKDIR /tests
-CMD CGO_ENABLED=0 GOOS=linux go test ./...
+CMD CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go test ./...
