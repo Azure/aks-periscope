@@ -21,8 +21,9 @@ func (exporter *LocalMachineExporter) Export(files []string) error {
 	for _, file := range files {
 
 		err := os.Rename(file, "C:/Users/sophiezhao/.azure/cliextensions/connectedk8s"+file)
+
 		if err != nil {
-			return fmt.Errorf("fail to write file to directory")
+			return fmt.Errorf("Error: %s", err)
 		}
 	}
 	return nil
