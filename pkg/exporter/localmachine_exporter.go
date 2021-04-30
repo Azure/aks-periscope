@@ -1,8 +1,7 @@
 package exporter
 
 import (
-	"fmt"
-	"os"
+	"log"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 )
@@ -19,12 +18,12 @@ var _ interfaces.Exporter = &LocalMachineExporter{}
 // Export implements the interface method
 func (exporter *LocalMachineExporter) Export(files []string) error {
 	for _, file := range files {
-
-		err := os.Rename(file, "C:/Users/sophiezhao/.azure/cliextensions/connectedk8s"+file)
-
-		if err != nil {
-			return fmt.Errorf("Error: %s", err)
-		}
+		log.Printf("Filename: %s", file)
+		//err := os.Rename(file, "C:/Users/sophiezhao/.azure/cliextensions/connectedk8s"+file)
+		//os.makedirs(os.path.dirname(target), exist_ok=True)
+		//if err != nil {
+		//return fmt.Errorf("Error: %s", err)
+		//}
 	}
 	return nil
 }
