@@ -2,7 +2,6 @@ package exporter
 
 import (
 	"archive/zip"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -41,7 +40,7 @@ func (exporter *LocalMachineExporter) Export(files []string) error {
 
 	for _, f := range lsts {
 
-		fmt.Println(f.Name())
+		log.Printf(f.Name())
 	}
 	output := "done.zip"
 
