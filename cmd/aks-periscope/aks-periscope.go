@@ -15,7 +15,8 @@ import (
 
 func main() {
 	zipAndExportMode := true
-	exporter := &exporter.AzureBlobExporter{}
+	exporter := &exporter.LocalMachineExporter{}
+	//exporter := &exporter.AzureBlobExporter{}
 	var waitgroup sync.WaitGroup
 
 	err := utils.CreateCRD()
