@@ -20,7 +20,7 @@ var _ interfaces.Exporter = &LocalMachineExporter{}
 
 // Export implements the interface method
 func (exporter *LocalMachineExporter) Export(files []string) error {
-	log.Printf("system dir: ", os.Getenv("windir"))
+	log.Printf("system dir: %s", os.Getenv("windir"))
 
 	output := "done.zip"
 	err := ZipFiles(output, files)
