@@ -34,7 +34,7 @@ func NewConfigValidatorDiagnoser(customResourceCollector *collector.CustomResour
 	}
 }
 func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
-	hostName, err := utils.GetHostName()
+	//hostName, err := utils.GetHostName()
 	rootPath, err := utils.CreateDiagnosticDir()
 	if err != nil {
 		return err
@@ -46,7 +46,7 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 		return fmt.Errorf("Fail to open file %s: %+v", configValidatorDiagnosticFile, err)
 	}
 
-	configValidatorDiagnosticData := configValidatorDiagnosticDatum{HostName: hostName}
+	//configValidatorDiagnosticData := configValidatorDiagnosticDatum{HostName: hostName}
 
 	diagnoser.AddToDiagnoserFiles(configValidatorDiagnosticFile)
 
