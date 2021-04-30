@@ -2,7 +2,9 @@ package exporter
 
 import (
 	"archive/zip"
+	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 
@@ -20,8 +22,27 @@ var _ interfaces.Exporter = &LocalMachineExporter{}
 
 // Export implements the interface method
 func (exporter *LocalMachineExporter) Export(files []string) error {
+	err := os.Mkdir("/Users/temp", 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
 	home, err := os.UserHomeDir()
-	log.Printf("Home: %s", home)
+	if err != nil {
+
+		log.Fatal(err)
+	}
+
+	lsts, err := ioutil.ReadDir(home)
+
+	if err != nil {
+
+		log.Fatal(err)
+	}
+
+	for _, f := range lsts {
+
+		fmt.Println(f.Name())
+	}
 	output := "done.zip"
 
 	if err = ZipFiles(output, files); err != nil {
