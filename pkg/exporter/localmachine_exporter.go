@@ -21,10 +21,6 @@ var _ interfaces.Exporter = &LocalMachineExporter{}
 
 // Export implements the interface method
 func (exporter *LocalMachineExporter) Export(files []string) error {
-	err := os.Mkdir("/Users/temp", 0755)
-	if err != nil {
-		log.Fatal(err)
-	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 
