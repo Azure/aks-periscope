@@ -12,6 +12,8 @@ const (
 	ContainerLogs
 	//CustomResource defines CustomResource Collector Type
 	CustomResource
+	//CustomResource defines CustomResource Collector Type
+	CustomResourceV2
 	//Exec defines Exec Collector Type
 	Exec
 	//Helm defines Helm Collector Type
@@ -34,7 +36,7 @@ const (
 
 // Name returns type name
 func (t Type) name() string {
-	return [...]string{"dns", "containerlogs", "customresource", "exec", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "systemlogs", "systemperf"}[t]
+	return [...]string{"dns", "containerlogs", "customresource", "customresourcev2", "exec", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "systemlogs", "systemperf"}[t]
 }
 
 // BaseCollector defines Base Collector

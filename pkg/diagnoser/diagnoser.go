@@ -6,15 +6,17 @@ import "github.com/Azure/aks-periscope/pkg/interfaces"
 type Type int
 
 const (
+	//ConfigValidator defines ConfigValidator Diagnoser Type
+	ConfigValidator Type = iota
 	// NetworkConfig defines NetworkConfig Diagnoser Type
-	NetworkConfig Type = iota
+	NetworkConfig
 	// NetworkOutbound defines NetworkOutbound Diagnoser Type
 	NetworkOutbound
 )
 
 // Name returns type name
 func (t Type) name() string {
-	return [...]string{"networkconfig", "networkoutbound"}[t]
+	return [...]string{"configvalidator", "networkconfig", "networkoutbound"}[t]
 }
 
 // BaseDiagnoser defines Base Diagnoser
