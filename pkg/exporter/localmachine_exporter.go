@@ -21,13 +21,8 @@ var _ interfaces.Exporter = &LocalMachineExporter{}
 
 // Export implements the interface method
 func (exporter *LocalMachineExporter) Export(files []string) error {
-	home, err := os.UserHomeDir()
-	if err != nil {
 
-		log.Fatal(err)
-	}
-
-	lsts, err := ioutil.ReadDir(home)
+	lsts, err := ioutil.ReadDir("./")
 
 	if err != nil {
 
