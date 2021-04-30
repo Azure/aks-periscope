@@ -3,7 +3,6 @@ package exporter
 import (
 	"archive/zip"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -21,26 +20,9 @@ var _ interfaces.Exporter = &LocalMachineExporter{}
 
 // Export implements the interface method
 func (exporter *LocalMachineExporter) Export(files []string) error {
-	mydir, err := os.Getwd()
-	if err != nil {
-		log.Printf("Error: %s", err)
-	}
-	log.Printf(mydir)
-
-	lsts, err := ioutil.ReadDir("./")
-
-	if err != nil {
-
-		log.Fatal(err)
-	}
-
-	for _, f := range lsts {
-
-		log.Printf(f.Name())
-	}
 	output := "done.zip"
 
-	if err = ZipFiles(output, files); err != nil {
+	if err := ZipFiles(output, files); err != nil {
 		panic(err)
 	}
 	log.Printf("Zipped File: %s", output)
@@ -59,6 +41,7 @@ func ZipFiles(filename string, files []string) error {
 
 	// Add files to zip
 	for _, file := range files {
+		log.Printf("Filename: %s", file)
 		if err = AddFileToZip(zipWriter, file); err != nil {
 			return err
 		}
