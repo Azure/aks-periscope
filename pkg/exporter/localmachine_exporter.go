@@ -1,7 +1,10 @@
 package exporter
 
 import (
+	"archive/zip"
+	"io"
 	"log"
+	"os"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 )
@@ -17,13 +20,67 @@ var _ interfaces.Exporter = &LocalMachineExporter{}
 
 // Export implements the interface method
 func (exporter *LocalMachineExporter) Export(files []string) error {
+	home, err := os.UserHomeDir()
+	log.Printf("Home: %s", home)
+	output := "done.zip"
+
+	if err = ZipFiles(output, files); err != nil {
+		panic(err)
+	}
+	log.Printf("Zipped File: %s", output)
+	return nil
+}
+func ZipFiles(filename string, files []string) error {
+
+	newZipFile, err := os.Create(filename)
+	if err != nil {
+		return err
+	}
+	defer newZipFile.Close()
+
+	zipWriter := zip.NewWriter(newZipFile)
+	defer zipWriter.Close()
+
+	// Add files to zip
 	for _, file := range files {
-		log.Printf("Filename: %s", file)
-		//err := os.Rename(file, "C:/Users/sophiezhao/.azure/cliextensions/connectedk8s"+file)
-		//os.makedirs(os.path.dirname(target), exist_ok=True)
-		//if err != nil {
-		//return fmt.Errorf("Error: %s", err)
-		//}
+		if err = AddFileToZip(zipWriter, file); err != nil {
+			return err
+		}
 	}
 	return nil
+}
+
+func AddFileToZip(zipWriter *zip.Writer, filename string) error {
+
+	fileToZip, err := os.Open(filename)
+	if err != nil {
+		return err
+	}
+	defer fileToZip.Close()
+
+	// Get the file information
+	info, err := fileToZip.Stat()
+	if err != nil {
+		return err
+	}
+
+	header, err := zip.FileInfoHeader(info)
+	if err != nil {
+		return err
+	}
+
+	// Using FileInfoHeader() above only uses the basename of the file. If we want
+	// to preserve the folder structure we can overwrite this with the full path.
+	header.Name = filename
+
+	// Change to deflate to gain better compression
+	// see http://golang.org/pkg/archive/zip/#pkg-constants
+	header.Method = zip.Deflate
+
+	writer, err := zipWriter.CreateHeader(header)
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(writer, fileToZip)
+	return err
 }
