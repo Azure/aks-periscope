@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,7 +14,6 @@ import (
 // GetHostName get host name
 func GetHostName() (string, error) {
 	hostname, err := RunCommandOnHost("cat", "/etc/hostname")
-	log.Printf("Hostname: %s", hostname)
 	if err != nil {
 		return "", fmt.Errorf("Fail to get host name: %+v", err)
 	}
