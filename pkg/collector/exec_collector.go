@@ -42,7 +42,7 @@ func (collector *ExecCollector) Collect() error {
 
 		for _, pod := range pods {
 			execLog := filepath.Join(rootPath, namespace+"_"+pod)
-			output, err := utils.RunCommandOnContainer("kubectl", "-n", namespace, "exec", pod, "--", "curl", "example.com")
+			output, err := utils.RunCommandOnContainer("kubectl", "-n", namespace, "exec", pod, "--", "curl", "https://partner.dp.kubernetesconfiguration-test.azure.com")
 			if err != nil {
 				if strings.Contains(err.Error(), "126") {
 					continue
