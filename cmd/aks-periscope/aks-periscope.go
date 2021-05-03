@@ -15,8 +15,8 @@ import (
 
 func main() {
 	zipAndExportMode := true
-	exporter := &exporter.LocalMachineExporter{}
-	//exporter := &exporter.AzureBlobExporter{}
+	//exporter := &exporter.LocalMachineExporter{}
+	exporter := &exporter.AzureBlobExporter{}
 	var waitgroup sync.WaitGroup
 
 	err := utils.CreateCRD()
@@ -44,18 +44,20 @@ func main() {
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
 
+	execCollector := collector.NewExecCollector(exporter)
 	helmCollector := collector.NewHelmCollector(exporter)
 	customResourceCollector := collector.NewCustomResourceCollector(exporter)
 
-	if clusterType != "connectedcluster" {
+	if clusterType == "connectedcluster" {
+		collectors = append(collectors, helmCollector)
+		collectors = append(collectors, execCollector)
+		collectors = append(collectors, customResourceCollector)
+	} else {
 		collectors = append(collectors, systemLogsCollector)
 		collectors = append(collectors, ipTablesCollector)
 		collectors = append(collectors, nodeLogsCollector)
 		collectors = append(collectors, kubeletCmdCollector)
 		collectors = append(collectors, systemPerfCollector)
-	} else {
-		collectors = append(collectors, helmCollector)
-		collectors = append(collectors, customResourceCollector)
 	}
 
 	for _, c := range collectors {
