@@ -50,7 +50,7 @@ func main() {
 
 	if clusterType == "connectedcluster" {
 		collectors = append(collectors, helmCollector)
-		//collectors = append(collectors, execCollector)
+		collectors = append(collectors, execCollector)
 		collectors = append(collectors, customResourceCollector)
 	} else {
 		collectors = append(collectors, systemLogsCollector)
