@@ -44,6 +44,9 @@ func (collector *ExecCollector) Collect() error {
 			execLog := filepath.Join(rootPath, namespace+"_"+pod)
 			output, err := utils.RunCommandOnContainer("kubectl", "-n", namespace, "exec", pod, "--", "curl", "example.com")
 			if err != nil {
+				if strings.Contains(err.Error(), "126") {
+					continue
+				}
 				return err
 			}
 			err = utils.WriteToFile(execLog, output)
