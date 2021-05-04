@@ -69,9 +69,10 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 				dataPoint.CRDName = crd[len(crd)-1]
 				break
 			}
-			configValidatorDiagnosticData = append(configValidatorDiagnosticData, dataPoint)
 
 		}
+		configValidatorDiagnosticData = append(configValidatorDiagnosticData, dataPoint)
+
 	}
 
 	dataBytes, err := json.Marshal(configValidatorDiagnosticData)
