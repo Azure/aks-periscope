@@ -52,6 +52,7 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 
 	configValidatorDiagnosticData := []configValidatorDiagnosticDatum{}
 	for _, file := range diagnoser.customResourceCollector.GetCollectorFiles() {
+		filename := strings.Split(file, "_")
 		t, err := os.Open(file)
 		defer t.Close()
 		if err != nil {
@@ -66,7 +67,7 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 				s[0] = strings.Trim(s[0], " ")
 				crd := strings.Split(s[0], " ")
 				log.Printf("CRD: %s", crd)
-				dataPoint.CRDName = crd[len(crd)-1]
+				dataPoint.CRDName = filename[0] + "_" + crd[len(crd)-1]
 				break
 			}
 
