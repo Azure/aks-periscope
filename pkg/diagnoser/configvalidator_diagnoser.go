@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,6 +63,7 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 		for scanner.Scan() {
 			s := strings.Split(scanner.Text(), "\n")
 			if strings.Contains(s[0], "Name:") {
+				log.Printf(s[0])
 				crd := strings.Split(s[0], " ")
 				dataPoint.CRDName = crd[1]
 			}
