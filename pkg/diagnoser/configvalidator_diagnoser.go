@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -52,7 +51,7 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 
 	configValidatorDiagnosticData := []configValidatorDiagnosticDatum{}
 	for _, file := range diagnoser.customResourceCollector.GetCollectorFiles() {
-		filename := strings.Split(file, "_")
+		filename := strings.Split(file, "/")
 		t, err := os.Open(file)
 		defer t.Close()
 		if err != nil {
@@ -66,8 +65,8 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 			if strings.Contains(s[0], "Name:") {
 				s[0] = strings.Trim(s[0], " ")
 				crd := strings.Split(s[0], " ")
-				log.Printf("CRD: %s", crd)
-				dataPoint.CRDName = filename[0] + "_" + crd[len(crd)-1]
+				directories := strings.Split(filename[len(filename)-1], "_")
+				dataPoint.CRDName = directories[0] + "_" + crd[len(crd)-1]
 				break
 			}
 

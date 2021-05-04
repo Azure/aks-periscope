@@ -59,13 +59,13 @@ func main() {
 	for _, c := range collectors {
 		waitgroup.Add(1)
 		go func(c interfaces.Collector) {
-			//log.Printf("Collector: %s, collect data\n", c.GetName())
+			log.Printf("Collector: %s, collect data\n", c.GetName())
 			err := c.Collect()
 			if err != nil {
 				log.Printf("Collector: %s, collect data failed: %+v\n", c.GetName(), err)
 			}
 
-			//log.Printf("Collector: %s, export data\n", c.GetName())
+			log.Printf("Collector: %s, export data\n", c.GetName())
 			err = c.Export()
 			if err != nil {
 				log.Printf("Collector: %s, export data failed: %+v\n", c.GetName(), err)
