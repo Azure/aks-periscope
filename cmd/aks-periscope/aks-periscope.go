@@ -85,6 +85,8 @@ func main() {
 
 	if clusterType != "connectedcluster" {
 		diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
+	} else {
+		diagnosers = append(diagnosers, diagnoser.NewConfigValidatorDiagnoser(customResourceCollector, exporter))
 	}
 
 	for _, d := range diagnosers {
