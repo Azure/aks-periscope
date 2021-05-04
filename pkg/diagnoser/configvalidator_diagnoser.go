@@ -63,7 +63,6 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 		for scanner.Scan() {
 			s := strings.Split(scanner.Text(), " ")
 			if strings.Contains(s[0], "Name:") {
-				s[0] = strings.Trim(s[0], " ")
 				crd := strings.Split(s[0], " ")
 				log.Printf("CRD: %s", crd)
 				dataPoint.CRDName = crd[1]
