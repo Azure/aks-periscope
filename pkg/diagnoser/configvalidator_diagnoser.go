@@ -1,9 +1,12 @@
 package diagnoser
 
 import (
+	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/collector"
 	"github.com/Azure/aks-periscope/pkg/interfaces"
@@ -34,7 +37,7 @@ func NewConfigValidatorDiagnoser(customResourceCollector *collector.CustomResour
 	}
 }
 func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
-	//hostName, err := utils.GetHostName()
+	hostName, err := utils.GetHostName()
 	rootPath, err := utils.CreateDiagnosticDir()
 	if err != nil {
 		return err
@@ -46,8 +49,36 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 		return fmt.Errorf("Fail to open file %s: %+v", configValidatorDiagnosticFile, err)
 	}
 
-	//configValidatorDiagnosticData := configValidatorDiagnosticDatum{HostName: hostName}
+	configValidatorDiagnosticData := []configValidatorDiagnosticDatum{}
+	for _, file := range diagnoser.customResourceCollector.GetCollectorFiles() {
+		t, err := os.Open(file)
+		defer t.Close()
+		if err != nil {
+			return fmt.Errorf("Fail to open file %s: %+v", file, err)
+		}
 
+		dataPoint := configValidatorDiagnosticDatum{HostName: hostName}
+		scanner := bufio.NewScanner(t)
+		for scanner.Scan() {
+			s := strings.Split(scanner.Text(), "\n")
+			if strings.Contains(s[0], "Name:") {
+				crd := strings.Split(s[0], " ")
+				dataPoint.CRDName = crd[1]
+			}
+			configValidatorDiagnosticData = append(configValidatorDiagnosticData, dataPoint)
+
+		}
+	}
+
+	dataBytes, err := json.Marshal(configValidatorDiagnosticData)
+	if err != nil {
+		return fmt.Errorf("Fail to marshal data: %+v", err)
+	}
+
+	_, err = f.WriteString(string(dataBytes))
+	if err != nil {
+		return fmt.Errorf("Fail to write data to file: %+v", err)
+	}
 	diagnoser.AddToDiagnoserFiles(configValidatorDiagnosticFile)
 
 	err = utils.WriteToCRD(configValidatorDiagnosticFile, diagnoser.GetName())
