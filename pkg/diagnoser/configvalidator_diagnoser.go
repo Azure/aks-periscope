@@ -62,9 +62,9 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 		scanner := bufio.NewScanner(t)
 		for scanner.Scan() {
 			s := strings.Split(scanner.Text(), "\n")
+			log.Printf("File: %s", s)
 			if strings.Contains(s[0], "Name:") {
 				crd := strings.Split(s[0], " ")
-				log.Printf("CRD: %s", crd)
 				dataPoint.CRDName = crd[1]
 			}
 			configValidatorDiagnosticData = append(configValidatorDiagnosticData, dataPoint)
