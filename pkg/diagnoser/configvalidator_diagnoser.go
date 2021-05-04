@@ -15,8 +15,10 @@ import (
 )
 
 type configValidatorDiagnosticDatum struct {
-	HostName string `json:"HostName"`
-	CRDName  string `json:CRDName`
+	HostName    string `json:"HostName"`
+	CRDName     string `json:CRDName`
+	CRCondition string `json:CRCondition`
+	CRMessage   string `json:CRMessage`
 }
 
 // CustomValidatorDiagnoser defines a CustomValidator Diagnoser struct
@@ -65,12 +67,20 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 		for scanner.Scan() {
 			s := strings.Split(scanner.Text(), "\n")
 			log.Printf(s[0])
+			s[0] = strings.Trim(s[0], " ")
+
 			if !isNameSet && strings.Contains(s[0], "Name:") {
-				s[0] = strings.Trim(s[0], " ")
 				crd := strings.Split(s[0], " ")
 				directories := strings.Split(filename[len(filename)-1], "_")
 				dataPoint.CRDName = directories[0] + "_" + crd[len(crd)-1]
 				isNameSet = true
+			} else if strings.Contains(s[0], "Type:") {
+				condition := strings.Split(s[0], " ")
+				dataPoint.CRCondition = condition[len(condition)-1]
+			} else if strings.Contains(s[0], "Kind:") {
+				message := strings.Split(s[0], " ")
+				dataPoint.CRMessage = message[len(message)-1]
+
 			}
 
 		}
