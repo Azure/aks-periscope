@@ -61,7 +61,7 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 		dataPoint := configValidatorDiagnosticDatum{HostName: hostName}
 		scanner := bufio.NewScanner(t)
 		for scanner.Scan() {
-			s := strings.Split(scanner.Text(), " ")
+			s := strings.Split(scanner.Text(), "\n")
 			if strings.Contains(s[0], "Name:") {
 				crd := strings.Split(s[0], " ")
 				log.Printf("CRD: %s", crd)
