@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
 	"strings"
@@ -116,7 +117,7 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 					return fmt.Errorf("Fail to read file %s: %+v", file, err)
 				}
 
-				//log.Printf("\tappend blob file: %s, start position: %d, end position: %d\n", file, start, start+lengthToWrite)
+				log.Printf("\tappend blob file: %s, start position: %d, end position: %d\n", file, start, start+lengthToWrite)
 				_, err = appendBlobURL.AppendBlock(ctx, bytes.NewReader(b), azblob.AppendBlobAccessConditions{}, nil)
 				if err != nil {
 					return fmt.Errorf("Fail to append file %s to blob: %+v", file, err)
