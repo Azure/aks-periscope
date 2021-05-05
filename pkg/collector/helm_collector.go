@@ -30,11 +30,13 @@ func (collector *HelmCollector) Collect() error {
 	if err != nil {
 		return err
 	}
+
 	helmListFile := filepath.Join(rootPath, "helm_list")
 	output, err := utils.RunCommandOnContainer("helm", "list", "--all-namespaces")
 	if err != nil {
 		return err
 	}
+
 	err = utils.WriteToFile(helmListFile, output)
 	if err != nil {
 		return err
@@ -47,6 +49,7 @@ func (collector *HelmCollector) Collect() error {
 	if err != nil {
 		return err
 	}
+
 	err = utils.WriteToFile(helmHistoryFile, output)
 	if err != nil {
 		return err
