@@ -145,6 +145,14 @@ metadata:
 data:
   DIAGNOSTIC_NODELOGS_LIST: /var/log/azure/cluster-provision.log /var/log/cloud-init.log
 ---
+apiVersion: v1 
+kind: ConfigMap 
+metadata:
+  name: clustertype-config
+  namespace: azure-k8-periscope
+data:
+  CLUSTER_TYPE: # <cluster type, options: ConnectedCluster, ManagedCluster, ArcAppliances, etc.>
+---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:

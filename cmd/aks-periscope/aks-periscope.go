@@ -43,11 +43,15 @@ func main() {
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
 
+<<<<<<< HEAD
 	helmCollector := collector.NewHelmCollector(exporter)
 
 	if clusterType == "connectedcluster" {
 		collectors = append(collectors, helmCollector)
 	} else {
+=======
+	if clusterType != "connectedcluster" {
+>>>>>>> d180a5d (remove secrets)
 		collectors = append(collectors, systemLogsCollector)
 		collectors = append(collectors, ipTablesCollector)
 		collectors = append(collectors, nodeLogsCollector)

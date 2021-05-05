@@ -30,7 +30,11 @@ const (
 
 // Name returns type name
 func (t Type) name() string {
+<<<<<<< HEAD
 	return [...]string{"dns", "containerlogs", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "systemlogs", "systemperf"}[t]
+=======
+	return [...]string{"dns", "containerlogs", "customresource", "exec", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "systemlogs", "systemperf"}[t]
+>>>>>>> d180a5d (remove secrets)
 }
 
 // BaseCollector defines Base Collector
