@@ -73,7 +73,7 @@ spec:
         beta.kubernetes.io/os: linux
       containers:
       - name: aks-periscope
-        image: periscopedev.azurecr.io/sophiezhao:latest
+        image: aksrepos.azurecr.io/staging/aks-periscope:v0.2
         securityContext:
           privileged: true
         imagePullPolicy: Always
@@ -139,11 +139,7 @@ metadata:
   name: kubeobjects-config
   namespace: azure-k8-periscope
 data:
-<<<<<<< HEAD
   DIAGNOSTIC_KUBEOBJECTS_LIST: azure-arc/pod azure-arc/service azure-arc/deployment azure-arc/crd azure-arc/configmap 
-=======
-  DIAGNOSTIC_KUBEOBJECTS_LIST: azure-arc/pod azure-arc/service azure-arc/deployment
->>>>>>> 5f4fed4 (introduce arcmode)
 ---
 apiVersion: v1 
 kind: ConfigMap 
