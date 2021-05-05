@@ -10,6 +10,13 @@ const (
 	DNS Type = iota
 	// ContainerLogs defines ContainerLogs Collector Type
 	ContainerLogs
+<<<<<<< HEAD
+=======
+	//CustomResource defines CustomResource Collector Type
+	CustomResource
+	//Exec defines Exec Collector Type
+	Exec
+>>>>>>> 5f4fed4 (introduce arcmode)
 	//Helm defines Helm Collector Type
 	Helm
 	// IPTables defines IPTables Collector Type
@@ -31,10 +38,14 @@ const (
 // Name returns type name
 func (t Type) name() string {
 <<<<<<< HEAD
+<<<<<<< HEAD
 	return [...]string{"dns", "containerlogs", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "systemlogs", "systemperf"}[t]
 =======
 	return [...]string{"dns", "containerlogs", "customresource", "exec", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "systemlogs", "systemperf"}[t]
 >>>>>>> d180a5d (remove secrets)
+=======
+	return [...]string{"dns", "containerlogs", "customresource", "exec", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "systemlogs", "systemperf"}[t]
+>>>>>>> 5f4fed4 (introduce arcmode)
 }
 
 // BaseCollector defines Base Collector

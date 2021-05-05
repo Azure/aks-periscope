@@ -23,10 +23,8 @@ func main() {
 		log.Printf("Failed to create CRD: %+v", err)
 	}
 
-	clusterType := os.Getenv("CLUSTER_TYPE")
+	clusterType := strings.ToLower(os.Getenv("CLUSTER_TYPE"))
 
-	storageAccount := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
-	log.Printf("Storage Account: %s", storageAccount)
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
 	collectors = append(collectors, containerLogsCollector)
@@ -43,15 +41,11 @@ func main() {
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
 
-<<<<<<< HEAD
 	helmCollector := collector.NewHelmCollector(exporter)
 
 	if clusterType == "connectedcluster" {
 		collectors = append(collectors, helmCollector)
 	} else {
-=======
-	if clusterType != "connectedcluster" {
->>>>>>> d180a5d (remove secrets)
 		collectors = append(collectors, systemLogsCollector)
 		collectors = append(collectors, ipTablesCollector)
 		collectors = append(collectors, nodeLogsCollector)

@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: aks-periscope
+  name: azure-k8-periscope
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: aks-periscope-service-account
-  namespace: aks-periscope
+  namespace: azure-k8-periscope
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -15,7 +15,11 @@ metadata:
   name: aks-periscope-role
 rules:
 - apiGroups: ["","metrics.k8s.io", "apiextensions.k8s.io"]
+<<<<<<< HEAD
   resources: ["pods", "nodes", "customresourcedefinitions", "secrets"]
+=======
+  resources: ["pods", "nodes", "customresourcedefinitions"]
+>>>>>>> 5f4fed4 (introduce arcmode)
   verbs: ["get", "watch", "list"]
 - apiGroups: ["aks-periscope.azure.github.com", ]
   resources: ["diagnostics"]
@@ -28,7 +32,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: aks-periscope-service-account
-  namespace: aks-periscope
+  namespace: azure-k8-periscope
 roleRef:
   kind: ClusterRole
   name: aks-periscope-role
@@ -41,7 +45,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: aks-periscope-service-account
-  namespace: aks-periscope
+  namespace: azure-k8-periscope
 roleRef:
   kind: ClusterRole
   name: view
@@ -50,18 +54,18 @@ roleRef:
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: aks-periscope
-  namespace: aks-periscope
+  name: azure-k8-periscope
+  namespace: azure-k8-periscope
   labels:
-    app: aks-periscope
+    app: azure-k8-periscope
 spec:
   selector:
     matchLabels:
-      app: aks-periscope
+      app: azure-k8-periscope
   template:
     metadata:
       labels:
-        app: aks-periscope
+        app: azure-k8-periscope
     spec:
       serviceAccountName: aks-periscope-service-account
       hostPID: true
@@ -106,7 +110,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: azureblob-secret
-  namespace: aks-periscope
+  namespace: azure-k8-periscope
 type: Opaque
 data:
   AZURE_BLOB_ACCOUNT_NAME: # <accountName, base64 encoded>
@@ -117,7 +121,7 @@ apiVersion: v1
 kind: ConfigMap 
 metadata:
   name: containerlogs-config
-  namespace: aks-periscope
+  namespace: azure-k8-periscope
 data:
   DIAGNOSTIC_CONTAINERLOGS_LIST: azure-arc
 ---
@@ -133,15 +137,19 @@ apiVersion: v1
 kind: ConfigMap 
 metadata:
   name: kubeobjects-config
-  namespace: aks-periscope
+  namespace: azure-k8-periscope
 data:
+<<<<<<< HEAD
   DIAGNOSTIC_KUBEOBJECTS_LIST: azure-arc/pod azure-arc/service azure-arc/deployment azure-arc/crd azure-arc/configmap 
+=======
+  DIAGNOSTIC_KUBEOBJECTS_LIST: azure-arc/pod azure-arc/service azure-arc/deployment
+>>>>>>> 5f4fed4 (introduce arcmode)
 ---
 apiVersion: v1 
 kind: ConfigMap 
 metadata:
   name: nodelogs-config
-  namespace: aks-periscope
+  namespace: azure-k8-periscope
 data:
   DIAGNOSTIC_NODELOGS_LIST: /var/log/azure/cluster-provision.log /var/log/cloud-init.log
 ---

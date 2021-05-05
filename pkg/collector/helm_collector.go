@@ -2,6 +2,7 @@ package collector
 
 import (
 <<<<<<< HEAD
+<<<<<<< HEAD
 	"path/filepath"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
@@ -9,6 +10,9 @@ import (
 =======
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 >>>>>>> d180a5d (remove secrets)
+=======
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+>>>>>>> 5f4fed4 (introduce arcmode)
 )
 
 // HelmCollector defines a Helm Collector struct
@@ -17,10 +21,14 @@ type HelmCollector struct {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 var _ interfaces.Collector = &HelmCollector{}
 =======
 var _ interfaces.Collector = &IPTablesCollector{}
 >>>>>>> d180a5d (remove secrets)
+=======
+var _ interfaces.Collector = &IPTablesCollector{}
+>>>>>>> 5f4fed4 (introduce arcmode)
 
 // NewHelmCollector is a constructor
 func NewHelmCollector(exporter interfaces.Exporter) *HelmCollector {
@@ -34,6 +42,7 @@ func NewHelmCollector(exporter interfaces.Exporter) *HelmCollector {
 
 // Collect implements the interface method
 func (collector *HelmCollector) Collect() error {
+<<<<<<< HEAD
 <<<<<<< HEAD
 	rootPath, err := utils.CreateCollectorDir(collector.GetName())
 	if err != nil {
@@ -67,5 +76,7 @@ func (collector *HelmCollector) Collect() error {
 	collector.AddToCollectorFiles(helmHistoryFile)
 =======
 >>>>>>> d180a5d (remove secrets)
+=======
+>>>>>>> 5f4fed4 (introduce arcmode)
 	return nil
 }
