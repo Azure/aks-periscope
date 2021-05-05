@@ -55,6 +55,7 @@ func main() {
 		collectors = append(collectors, systemPerfCollector)
 	} else {
 		collectors = append(collectors, helmCollector)
+		collectors = append(collectors, customResourceCollector)
 	}
 
 	for _, c := range collectors {
