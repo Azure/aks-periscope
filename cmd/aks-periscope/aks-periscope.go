@@ -43,7 +43,6 @@ func main() {
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
 
-	execCollector := collector.NewExecCollector(exporter)
 	helmCollector := collector.NewHelmCollector(exporter)
 
 	if clusterType == "connectedcluster" {
@@ -81,8 +80,6 @@ func main() {
 
 	if clusterType != "connectedcluster" {
 		diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
-	} else {
-		diagnosers = append(diagnosers, diagnoser.NewConfigValidatorDiagnoser(customResourceCollector, exporter))
 	}
 
 	for _, d := range diagnosers {

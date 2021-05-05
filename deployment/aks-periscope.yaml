@@ -69,7 +69,7 @@ spec:
         beta.kubernetes.io/os: linux
       containers:
       - name: aks-periscope
-        image: aksrepos.azurecr.io/staging/aks-periscope:v0.2
+        image: periscopedev.azurecr.io/sophiezhao:latest
         securityContext:
           privileged: true
         imagePullPolicy: Always
@@ -84,8 +84,6 @@ spec:
             name: kubeobjects-config
         - configMapRef:
             name: nodelogs-config
-        - configMapRef:
-            name: clustertype-config
         - secretRef:
             name: azureblob-secret
         volumeMounts:
@@ -113,6 +111,7 @@ type: Opaque
 data:
   AZURE_BLOB_ACCOUNT_NAME: # <accountName, base64 encoded>
   AZURE_BLOB_SAS_KEY: # <saskey, base64 encoded>
+ 
 ---
 apiVersion: v1 
 kind: ConfigMap 
@@ -141,18 +140,18 @@ data:
 apiVersion: v1 
 kind: ConfigMap 
 metadata:
-  name: nodelogs-config
+  name: kubeobjects-config
   namespace: aks-periscope
 data:
-  DIAGNOSTIC_NODELOGS_LIST: /var/log/azure/cluster-provision.log /var/log/cloud-init.log
+  DIAGNOSTIC_KUBEOBJECTS_LIST: azure-arc/pod azure-arc/service azure-arc/deployment azure-arc/crd azure-arc/configmap 
 ---
 apiVersion: v1 
 kind: ConfigMap 
 metadata:
-  name: clustertype-config
+  name: nodelogs-config
   namespace: aks-periscope
 data:
-  CLUSTER_TYPE: connectedcluster
+  DIAGNOSTIC_NODELOGS_LIST: /var/log/azure/cluster-provision.log /var/log/cloud-init.log
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
