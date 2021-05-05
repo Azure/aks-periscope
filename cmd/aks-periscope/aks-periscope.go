@@ -96,6 +96,7 @@ func main() {
 			if err != nil {
 				log.Printf("Diagnoser: %s, export data failed: %+v\n", d.GetName(), err)
 			}
+
 			waitgroup.Done()
 		}(d)
 	}

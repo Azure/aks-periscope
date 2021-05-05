@@ -10,7 +10,7 @@ const (
 	DNS Type = iota
 	// ContainerLogs defines ContainerLogs Collector Type
 	ContainerLogs
-	//CustomResource defines CustomResource Collector Type
+	//Helm defines Helm Collector Type
 	Helm
 	// IPTables defines IPTables Collector Type
 	IPTables
