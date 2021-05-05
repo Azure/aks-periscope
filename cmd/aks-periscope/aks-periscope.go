@@ -43,19 +43,22 @@ func main() {
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
 
+	execCollector := collector.NewExecCollector(exporter)
 	helmCollector := collector.NewHelmCollector(exporter)
 
 	if clusterType == "connectedcluster" {
 		collectors = append(collectors, helmCollector)
+<<<<<<< HEAD
+=======
+		collectors = append(collectors, execCollector)
+		collectors = append(collectors, customResourceCollector)
+>>>>>>> 28a0fb2 (add exec collector)
 	} else {
 		collectors = append(collectors, systemLogsCollector)
 		collectors = append(collectors, ipTablesCollector)
 		collectors = append(collectors, nodeLogsCollector)
 		collectors = append(collectors, kubeletCmdCollector)
 		collectors = append(collectors, systemPerfCollector)
-	} else {
-		collectors = append(collectors, helmCollector)
-		collectors = append(collectors, customResourceCollector)
 	}
 
 	for _, c := range collectors {
