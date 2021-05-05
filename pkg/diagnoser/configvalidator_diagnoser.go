@@ -85,11 +85,11 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 			}
 
 		}
-		output, err := utils.RunCommandOnContainer("kubectl", "get", "configmap", "kubeobjects-config", "-n", "aks-periscope", "-o", "yaml")
-		s := strings.Split(output, "\n")
-		log.Printf("Yaml Lines: %s", s)
+		output, err := utils.RunCommandOnContainer("kubectl", "get", "configmap", "kubeobjects-config", "-n", "aks-periscope", "--output=jsonpath={.items.data}")
+		log.Printf(output)
+
 		output, err = utils.RunCommandOnContainer("kubectl", "get", "configmap", "containerlogs-config", "-n", "aks-periscope", "-o", "yaml")
-		s = strings.Split(output, "\n")
+		//yaml_lines = strings.Split(output, "\n")
 		configValidatorDiagnosticData = append(configValidatorDiagnosticData, dataPoint)
 
 	}
