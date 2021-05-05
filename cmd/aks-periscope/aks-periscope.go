@@ -48,11 +48,6 @@ func main() {
 
 	if clusterType == "connectedcluster" {
 		collectors = append(collectors, helmCollector)
-<<<<<<< HEAD
-=======
-		collectors = append(collectors, execCollector)
-		collectors = append(collectors, customResourceCollector)
->>>>>>> 28a0fb2 (add exec collector)
 	} else {
 		collectors = append(collectors, systemLogsCollector)
 		collectors = append(collectors, ipTablesCollector)

@@ -16,5 +16,4 @@ RUN ./get_helm.sh
 RUN mkdir /app
 WORKDIR /app
 COPY --from=builder /app/aks-periscope .
-EXPOSE 8080
 CMD ["./aks-periscope"]
