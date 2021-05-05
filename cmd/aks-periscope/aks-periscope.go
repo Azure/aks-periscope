@@ -53,6 +53,8 @@ func main() {
 		collectors = append(collectors, nodeLogsCollector)
 		collectors = append(collectors, kubeletCmdCollector)
 		collectors = append(collectors, systemPerfCollector)
+	} else {
+		collectors = append(collectors, helmCollector)
 	}
 
 	for _, c := range collectors {
