@@ -15,10 +15,12 @@ import (
 )
 
 type configValidatorDiagnosticDatum struct {
-	HostName    string `json:"HostName"`
-	CRDName     string `json:CRDName`
-	CRCondition string `json:CRCondition`
-	CRMessage   string `json:CRMessage`
+	HostName             string `json:"HostName"`
+	CRDName              string `json:CRDName`
+	CRCondition          string `json:CRCondition`
+	CRMessage            string `json:CRMessage`
+	KubeObjectConfigData string `json:KubeObjectConfigData`
+	KubeObjectConfigTime string `json:KubeConfigTime`
 }
 
 // CustomValidatorDiagnoser defines a CustomValidator Diagnoser struct
@@ -66,7 +68,6 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 		isNameSet := false
 		for scanner.Scan() {
 			s := strings.Split(scanner.Text(), "\n")
-			log.Printf(s[0])
 			s[0] = strings.Trim(s[0], " ")
 
 			if !isNameSet && strings.Contains(s[0], "Name:") {
@@ -84,6 +85,11 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 			}
 
 		}
+		output, err := utils.RunCommandOnContainer("kubectl", "get", "configmap", "kubeobjects-config", "-n", "aks-periscope", "-o", "yaml")
+		s := strings.Split(output, "\n")
+		log.Printf("Yaml Lines: %s", s)
+		output, err = utils.RunCommandOnContainer("kubectl", "get", "configmap", "containerlogs-config", "-n", "aks-periscope", "-o", "yaml")
+		s = strings.Split(output, "\n")
 		configValidatorDiagnosticData = append(configValidatorDiagnosticData, dataPoint)
 
 	}
