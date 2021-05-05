@@ -15,7 +15,6 @@ import (
 
 func main() {
 	zipAndExportMode := true
-	//exporter := &exporter.LocalMachineExporter{}
 	exporter := &exporter.AzureBlobExporter{}
 	var waitgroup sync.WaitGroup
 
@@ -44,14 +43,10 @@ func main() {
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
 
-	execCollector := collector.NewExecCollector(exporter)
 	helmCollector := collector.NewHelmCollector(exporter)
-	customResourceCollector := collector.NewCustomResourceCollector(exporter)
 
 	if clusterType == "connectedcluster" {
 		collectors = append(collectors, helmCollector)
-		collectors = append(collectors, execCollector)
-		collectors = append(collectors, customResourceCollector)
 	} else {
 		collectors = append(collectors, systemLogsCollector)
 		collectors = append(collectors, ipTablesCollector)
@@ -85,8 +80,6 @@ func main() {
 
 	if clusterType != "connectedcluster" {
 		diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
-	} else {
-		diagnosers = append(diagnosers, diagnoser.NewConfigValidatorDiagnoser(customResourceCollector, exporter))
 	}
 
 	for _, d := range diagnosers {
