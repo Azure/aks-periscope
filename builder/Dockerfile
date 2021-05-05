@@ -12,7 +12,6 @@ RUN chmod +x /usr/local/bin/kubectl
 RUN curl -fsSl -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 
 RUN chmod +x get_helm.sh 
 RUN ./get_helm.sh
-
 RUN mkdir /app
 WORKDIR /app
 COPY --from=builder /app/aks-periscope .
