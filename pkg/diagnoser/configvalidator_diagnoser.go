@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,12 +84,15 @@ func (diagnoser *ConfigValidatorDiagnoser) Diagnose() error {
 			}
 
 		}
-		output, err := utils.RunCommandOnContainer("kubectl", "get", "configmap", "kubeobjects-config", "-n", "aks-periscope", "--output=jsonpath={.items.data}")
-		log.Printf(output)
-
-		output, err = utils.RunCommandOnContainer("kubectl", "get", "configmap", "containerlogs-config", "-n", "aks-periscope", "-o", "yaml")
-		//yaml_lines = strings.Split(output, "\n")
-		configValidatorDiagnosticData = append(configValidatorDiagnosticData, dataPoint)
+		output, err := utils.RunCommandOnContainer("kubectl", "get", "configmap", "kubeobjects-config", "-n", "aks-periscope", "--output=jsonpath={.data}")
+		if err != nil {
+			return err
+		}
+		dataPoint.KubeObjectConfigData = output
+		output, err = utils.RunCommandOnContainer("kubectl", "get", "configmap", "kubeobjects-config", "-n", "aks-periscope", "--output=jsonpath={.creationTimestamp}")
+		if err != nil {
+			return err
+		}
 
 	}
 
