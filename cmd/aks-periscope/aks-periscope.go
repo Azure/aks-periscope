@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 	"strings"
 	"sync"
 
@@ -22,25 +23,35 @@ func main() {
 		log.Printf("Failed to create CRD: %+v", err)
 	}
 
-	collectors := []interfaces.Collector{}
+	//create map of all possible collectors by name, discrete vars for each collector as some are diagnoser dependecies
+	allCollectorsByName := make(map[string]interfaces.Collector)
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
-	collectors = append(collectors, containerLogsCollector)
+	allCollectorsByName["containerlogs"] = containerLogsCollector
 	systemLogsCollector := collector.NewSystemLogsCollector(exporter)
-	collectors = append(collectors, systemLogsCollector)
+	allCollectorsByName["systemlogs"] = systemLogsCollector
 	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, exporter)
-	collectors = append(collectors, networkOutboundCollector)
+	allCollectorsByName["networkoutbound"] = networkOutboundCollector
 	ipTablesCollector := collector.NewIPTablesCollector(exporter)
-	collectors = append(collectors, ipTablesCollector)
+	allCollectorsByName["iptables"] = ipTablesCollector
 	nodeLogsCollector := collector.NewNodeLogsCollector(exporter)
-	collectors = append(collectors, nodeLogsCollector)
+	allCollectorsByName["nodelogs"] = nodeLogsCollector
 	dnsCollector := collector.NewDNSCollector(exporter)
-	collectors = append(collectors, dnsCollector)
+	allCollectorsByName["dns"] = dnsCollector
 	kubeObjectsCollector := collector.NewKubeObjectsCollector(exporter)
-	collectors = append(collectors, kubeObjectsCollector)
+	allCollectorsByName["kubeobjects"] = kubeObjectsCollector
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
-	collectors = append(collectors, kubeletCmdCollector)
+	allCollectorsByName["kubeletcmd"] = kubeletCmdCollector
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
-	collectors = append(collectors, systemPerfCollector)
+	allCollectorsByName["systemperf"] = systemPerfCollector
+
+	//read list of collectors that are enabled
+	enabledCollectorNames := strings.Fields(os.Getenv("collectors-config"))
+
+	//gather those collectors which are enabled by selecting from allCollectorsByName
+	collectors := []interfaces.Collector{}
+	for _, collector := range enabledCollectorNames {
+		collectors = append(collectors, allCollectorsByName[collector])
+	}
 
 	for _, c := range collectors {
 		waitgroup.Add(1)
@@ -62,9 +73,19 @@ func main() {
 
 	waitgroup.Wait()
 
+	//create map of all possible diagnosers by name
+	allDiagnosersByName := make(map[string]interfaces.Diagnoser)
+	allDiagnosersByName["networkconfig"] = diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter)
+	allDiagnosersByName["networkoutbound"] = diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, exporter)
+
+	//read list of diagnosers that are enabled
+	enabledDiagnoserNames := strings.Fields(os.Getenv("diagnosers-config"))
+
+	//gather those diagnosers which are enabled by selecting from allDiagnosersByName
 	diagnosers := []interfaces.Diagnoser{}
-	diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
-	diagnosers = append(diagnosers, diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, exporter))
+	for _, diagnoser := range enabledDiagnoserNames {
+		diagnosers = append(diagnosers, allDiagnosersByName[diagnoser])
+	}
 
 	for _, d := range diagnosers {
 		waitgroup.Add(1)
