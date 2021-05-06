@@ -15,7 +15,7 @@ metadata:
   name: aks-periscope-role
 rules:
 - apiGroups: ["","metrics.k8s.io"]
-  resources: ["pods", "nodes""]
+  resources: ["pods", "nodes"]
   verbs: ["get", "watch", "list"]
 - apiGroups: ["aks-periscope.azure.github.com"]
   resources: ["diagnostics"]
