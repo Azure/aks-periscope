@@ -45,7 +45,7 @@ func main() {
 	allCollectorsByName["systemperf"] = systemPerfCollector
 
 	//read list of collectors that are enabled
-	enabledCollectorNames := strings.Fields(os.Getenv("collectors-config"))
+	enabledCollectorNames := strings.Fields(os.Getenv("ENABLED_COLLECTORS"))
 
 	//gather those collectors which are enabled by selecting from allCollectorsByName
 	collectors := []interfaces.Collector{}
@@ -79,7 +79,7 @@ func main() {
 	allDiagnosersByName["networkoutbound"] = diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, exporter)
 
 	//read list of diagnosers that are enabled
-	enabledDiagnoserNames := strings.Fields(os.Getenv("diagnosers-config"))
+	enabledDiagnoserNames := strings.Fields(os.Getenv("ENABLED_DIAGNOSERS"))
 
 	//gather those diagnosers which are enabled by selecting from allDiagnosersByName
 	diagnosers := []interfaces.Diagnoser{}
