@@ -15,13 +15,15 @@ import (
 )
 
 func main() {
-	var waitgroup sync.WaitGroup
 
 	err := utils.CreateCRD()
 	if err != nil {
 		log.Printf("Failed to create CRD: %+v", err)
 	}
+
 	collectors, diagnosers, exporters := initializeComponents()
+
+	var waitgroup sync.WaitGroup
 
 	runCollectors(collectors, &waitgroup)
 	waitgroup.Wait()
@@ -29,12 +31,13 @@ func main() {
 	runDiagnosers(diagnosers, &waitgroup)
 	waitgroup.Wait()
 
-	log.Print("Zip and export result files")
+	log.Print("Zip result files")
 	outputs, err := zipOutputDirectory()
 	if err != nil {
 		log.Printf("Failed to zip result files: %+v", err)
 	}
 
+	log.Print("Run exporters for result files")
 	err = runExporters(exporters, outputs)
 	if err != nil {
 		log.Printf("Failed to export result files: %+v", err)
@@ -78,6 +81,7 @@ func initializeComponents()([]interfaces.Collector, []interfaces.Diagnoser, []in
 	})
 
 	//diagnosers
+	//NOTE currently the collector instances are shared between the collector itself and things which use it as a dependency
 	networkConfigDiagnoser := diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, selectedExporters)
 	networkOutboundDiagnoser := diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, selectedExporters)
 	selectedDiagnosers := selectDiagnosers(
