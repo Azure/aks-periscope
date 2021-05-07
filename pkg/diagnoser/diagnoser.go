@@ -1,6 +1,9 @@
 package diagnoser
 
-import "github.com/Azure/aks-periscope/pkg/interfaces"
+import (
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+	"github.com/hashicorp/go-multierror"
+)
 
 // Type defines Diagnoser Type
 type Type int
@@ -9,7 +12,7 @@ const (
 	// NetworkConfig defines NetworkConfig Diagnoser Type
 	NetworkConfig Type = iota
 	// NetworkOutbound defines NetworkOutbound Diagnoser Type
-	NetworkOutbound
+	NetworkOutbound Type = iota
 )
 
 // Name returns type name
@@ -21,7 +24,7 @@ func (t Type) name() string {
 type BaseDiagnoser struct {
 	diagnoserType  Type
 	diagnoserFiles []string
-	exporter       interfaces.Exporter
+	exporters       []interfaces.Exporter
 }
 
 // GetName gets diagnoser name
@@ -36,9 +39,13 @@ func (b *BaseDiagnoser) AddToDiagnoserFiles(file string) {
 
 // Export implements the interface method
 func (b *BaseDiagnoser) Export() error {
-	if b.exporter != nil {
-		return b.exporter.Export(b.diagnoserFiles)
+	var result error
+	for _, exporter := range b.exporters {
+		if exporter != nil {
+			if err := exporter.Export(b.diagnoserFiles); err != nil {
+				result = multierror.Append(result, err)
+			}
+		}
 	}
-
-	return nil
+	return result
 }

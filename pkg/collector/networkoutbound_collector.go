@@ -32,12 +32,12 @@ type NetworkOutboundCollector struct {
 var _ interfaces.Collector = &NetworkOutboundCollector{}
 
 // NewNetworkOutboundCollector is a constructor
-func NewNetworkOutboundCollector(collectIntervalInSeconds int, exporter interfaces.Exporter) *NetworkOutboundCollector {
+func NewNetworkOutboundCollector(collectIntervalInSeconds int, exporters []interfaces.Exporter) *NetworkOutboundCollector {
 	return &NetworkOutboundCollector{
 		BaseCollector: BaseCollector{
 			collectorType:            NetworkOutbound,
 			collectIntervalInSeconds: collectIntervalInSeconds,
-			exporter:                 exporter,
+			exporters:                 exporters,
 		},
 	}
 }

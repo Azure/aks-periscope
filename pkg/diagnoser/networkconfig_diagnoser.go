@@ -33,11 +33,11 @@ type NetworkConfigDiagnoser struct {
 var _ interfaces.Diagnoser = &NetworkConfigDiagnoser{}
 
 // NewNetworkConfigDiagnoser is a constructor
-func NewNetworkConfigDiagnoser(dnsCollector *collector.DNSCollector, kubeletCmdCollector *collector.KubeletCmdCollector, exporter interfaces.Exporter) *NetworkConfigDiagnoser {
+func NewNetworkConfigDiagnoser(dnsCollector *collector.DNSCollector, kubeletCmdCollector *collector.KubeletCmdCollector, exporters []interfaces.Exporter) *NetworkConfigDiagnoser {
 	return &NetworkConfigDiagnoser{
 		BaseDiagnoser: BaseDiagnoser{
 			diagnoserType: NetworkConfig,
-			exporter:      exporter,
+			exporters:      exporters,
 		},
 		dnsCollector:        dnsCollector,
 		kubeletCmdCollector: kubeletCmdCollector,

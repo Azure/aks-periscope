@@ -1,6 +1,9 @@
 package collector
 
-import "github.com/Azure/aks-periscope/pkg/interfaces"
+import (
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+	"github.com/hashicorp/go-multierror"
+)
 
 // Type defines Collector Type
 type Type int
@@ -36,7 +39,7 @@ type BaseCollector struct {
 	collectorType            Type
 	collectIntervalInSeconds int
 	collectorFiles           []string
-	exporter                 interfaces.Exporter
+	exporters                 []interfaces.Exporter
 }
 
 // GetName gets collector name
@@ -61,9 +64,13 @@ func (b *BaseCollector) AddToCollectorFiles(file string) {
 
 // Export implements the interface method
 func (b *BaseCollector) Export() error {
-	if b.exporter != nil {
-		return b.exporter.Export(b.collectorFiles)
+	var result error
+	for _, exporter := range b.exporters {
+		if exporter != nil {
+			if err := exporter.Export(b.collectorFiles); err != nil {
+				result = multierror.Append(result, err)
+			}
+		}
 	}
-
-	return nil
+	return result
 }

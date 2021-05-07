@@ -84,6 +84,8 @@ spec:
             name: collectors-config
         - configMapRef:
             name: diagnosers-config
+        - configMapRef:
+            name: exporters-config
         - secretRef:
             name: azureblob-secret
         volumeMounts:
@@ -151,6 +153,14 @@ metadata:
   namespace: aks-periscope
 data:
   ENABLED_DIAGNOSERS: networkconfig networkoutbound
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: exporters-config
+  namespace: aks-periscope
+data:
+  ENABLED_EXPORTERS: azureblob
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition

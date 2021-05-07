@@ -19,9 +19,20 @@ const (
 )
 
 // AzureBlobExporter defines an Azure Blob Exporter
-type AzureBlobExporter struct{}
+type AzureBlobExporter struct{
+	BaseExporter
+}
 
 var _ interfaces.Exporter = &AzureBlobExporter{}
+
+// NewAzureBlobExporter is a constructor
+func NewAzureBlobExporter() *AzureBlobExporter {
+	return &AzureBlobExporter{
+		BaseExporter: BaseExporter{
+			exporterType: AzureBlob,
+		},
+	}
+}
 
 // Export implements the interface method
 func (exporter *AzureBlobExporter) Export(files []string) error {

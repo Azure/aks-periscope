@@ -15,11 +15,11 @@ type KubeletCmdCollector struct {
 var _ interfaces.Collector = &KubeletCmdCollector{}
 
 // NewKubeletCmdCollector is a constructor
-func NewKubeletCmdCollector(exporter interfaces.Exporter) *KubeletCmdCollector {
+func NewKubeletCmdCollector(exporters []interfaces.Exporter) *KubeletCmdCollector {
 	return &KubeletCmdCollector{
 		BaseCollector: BaseCollector{
 			collectorType: KubeletCmd,
-			exporter:      exporter,
+			exporters:      exporters,
 		},
 	}
 }

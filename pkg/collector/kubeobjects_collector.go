@@ -17,11 +17,11 @@ type KubeObjectsCollector struct {
 var _ interfaces.Collector = &KubeObjectsCollector{}
 
 // NewKubeObjectsCollector is a constructor
-func NewKubeObjectsCollector(exporter interfaces.Exporter) *KubeObjectsCollector {
+func NewKubeObjectsCollector(exporters []interfaces.Exporter) *KubeObjectsCollector {
 	return &KubeObjectsCollector{
 		BaseCollector: BaseCollector{
 			collectorType: KubeObjects,
-			exporter:      exporter,
+			exporters:      exporters,
 		},
 	}
 }
