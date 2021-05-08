@@ -32,13 +32,13 @@ func main() {
 	waitgroup.Wait()
 
 	log.Print("Zip result files")
-	outputs, err := zipOutputDirectory()
+	zippedOutputs, err := zipOutputDirectory()
 	if err != nil {
 		log.Printf("Failed to zip result files: %+v", err)
 	}
 
 	log.Print("Run exporters for result files")
-	err = runExporters(exporters, outputs)
+	err = runExporters(exporters, zippedOutputs)
 	if err != nil {
 		log.Printf("Failed to export result files: %+v", err)
 	}
