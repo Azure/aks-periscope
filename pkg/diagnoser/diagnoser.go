@@ -24,7 +24,7 @@ func (t Type) name() string {
 type BaseDiagnoser struct {
 	diagnoserType  Type
 	diagnoserFiles []string
-	exporters       []interfaces.Exporter
+	exporters      []interfaces.Exporter
 }
 
 // GetName gets diagnoser name

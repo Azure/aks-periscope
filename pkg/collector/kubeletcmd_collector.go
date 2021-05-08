@@ -19,7 +19,7 @@ func NewKubeletCmdCollector(exporters []interfaces.Exporter) *KubeletCmdCollecto
 	return &KubeletCmdCollector{
 		BaseCollector: BaseCollector{
 			collectorType: KubeletCmd,
-			exporters:      exporters,
+			exporters:     exporters,
 		},
 	}
 }

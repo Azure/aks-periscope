@@ -37,7 +37,7 @@ func NewNetworkConfigDiagnoser(dnsCollector *collector.DNSCollector, kubeletCmdC
 	return &NetworkConfigDiagnoser{
 		BaseDiagnoser: BaseDiagnoser{
 			diagnoserType: NetworkConfig,
-			exporters:      exporters,
+			exporters:     exporters,
 		},
 		dnsCollector:        dnsCollector,
 		kubeletCmdCollector: kubeletCmdCollector,

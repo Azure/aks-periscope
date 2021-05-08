@@ -19,7 +19,7 @@ const (
 )
 
 // AzureBlobExporter defines an Azure Blob Exporter
-type AzureBlobExporter struct{
+type AzureBlobExporter struct {
 	BaseExporter
 }
 

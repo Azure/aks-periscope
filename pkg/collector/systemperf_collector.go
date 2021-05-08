@@ -19,7 +19,7 @@ func NewSystemPerfCollector(exporters []interfaces.Exporter) *SystemPerfCollecto
 	return &SystemPerfCollector{
 		BaseCollector: BaseCollector{
 			collectorType: SystemPerf,
-			exporters:      exporters,
+			exporters:     exporters,
 		},
 	}
 }

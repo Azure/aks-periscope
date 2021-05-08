@@ -21,7 +21,7 @@ func NewContainerLogsCollector(exporters []interfaces.Exporter) *ContainerLogsCo
 	return &ContainerLogsCollector{
 		BaseCollector: BaseCollector{
 			collectorType: ContainerLogs,
-			exporters:      exporters,
+			exporters:     exporters,
 		},
 	}
 }

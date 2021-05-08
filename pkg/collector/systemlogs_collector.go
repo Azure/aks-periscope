@@ -19,7 +19,7 @@ func NewSystemLogsCollector(exporters []interfaces.Exporter) *SystemLogsCollecto
 	return &SystemLogsCollector{
 		BaseCollector: BaseCollector{
 			collectorType: SystemLogs,
-			exporters:      exporters,
+			exporters:     exporters,
 		},
 	}
 }

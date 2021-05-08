@@ -21,7 +21,7 @@ func NewKubeObjectsCollector(exporters []interfaces.Exporter) *KubeObjectsCollec
 	return &KubeObjectsCollector{
 		BaseCollector: BaseCollector{
 			collectorType: KubeObjects,
-			exporters:      exporters,
+			exporters:     exporters,
 		},
 	}
 }

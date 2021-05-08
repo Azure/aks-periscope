@@ -19,7 +19,7 @@ func NewDNSCollector(exporters []interfaces.Exporter) *DNSCollector {
 	return &DNSCollector{
 		BaseCollector: BaseCollector{
 			collectorType: DNS,
-			exporters:      exporters,
+			exporters:     exporters,
 		},
 	}
 }

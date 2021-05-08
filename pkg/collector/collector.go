@@ -39,7 +39,7 @@ type BaseCollector struct {
 	collectorType            Type
 	collectIntervalInSeconds int
 	collectorFiles           []string
-	exporters                 []interfaces.Exporter
+	exporters                []interfaces.Exporter
 }
 
 // GetName gets collector name

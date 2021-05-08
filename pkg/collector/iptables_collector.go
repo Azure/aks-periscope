@@ -19,7 +19,7 @@ func NewIPTablesCollector(exporters []interfaces.Exporter) *IPTablesCollector {
 	return &IPTablesCollector{
 		BaseCollector: BaseCollector{
 			collectorType: IPTables,
-			exporters:      exporters,
+			exporters:     exporters,
 		},
 	}
 }

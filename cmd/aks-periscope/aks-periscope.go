@@ -47,14 +47,14 @@ func main() {
 }
 
 // initializeComponents initializes and returns collectors, diagnosers and exporters
-func initializeComponents()([]interfaces.Collector, []interfaces.Diagnoser, []interfaces.Exporter){
+func initializeComponents() ([]interfaces.Collector, []interfaces.Diagnoser, []interfaces.Exporter) {
 
 	//exporters
-    azureBlobExporter := exporter.NewAzureBlobExporter()
+	azureBlobExporter := exporter.NewAzureBlobExporter()
 	selectedExporters := selectExporters(
 		map[string]interfaces.Exporter{
 			azureBlobExporter.GetName(): azureBlobExporter,
-	})
+		})
 
 	//collectors
 	containerLogsCollector := collector.NewContainerLogsCollector(selectedExporters)
@@ -68,17 +68,17 @@ func initializeComponents()([]interfaces.Collector, []interfaces.Diagnoser, []in
 	systemPerfCollector := collector.NewSystemPerfCollector(selectedExporters)
 
 	selectedCollectors := selectCollectors(
-		map[string]interfaces.Collector {
-			containerLogsCollector.GetName(): containerLogsCollector,
-			systemLogsCollector.GetName(): systemLogsCollector,
+		map[string]interfaces.Collector{
+			containerLogsCollector.GetName():   containerLogsCollector,
+			systemLogsCollector.GetName():      systemLogsCollector,
 			networkOutboundCollector.GetName(): networkOutboundCollector,
-			ipTablesCollector.GetName(): ipTablesCollector,
-			nodeLogsCollector.GetName(): nodeLogsCollector,
-			dnsCollector.GetName(): dnsCollector,
-			kubeObjectsCollector.GetName(): kubeObjectsCollector,
-			kubeletCmdCollector.GetName(): kubeletCmdCollector,
-			systemPerfCollector.GetName(): systemPerfCollector,
-	})
+			ipTablesCollector.GetName():        ipTablesCollector,
+			nodeLogsCollector.GetName():        nodeLogsCollector,
+			dnsCollector.GetName():             dnsCollector,
+			kubeObjectsCollector.GetName():     kubeObjectsCollector,
+			kubeletCmdCollector.GetName():      kubeletCmdCollector,
+			systemPerfCollector.GetName():      systemPerfCollector,
+		})
 
 	//diagnosers
 	//NOTE currently the collector instances are shared between the collector itself and things which use it as a dependency
@@ -86,9 +86,9 @@ func initializeComponents()([]interfaces.Collector, []interfaces.Diagnoser, []in
 	networkOutboundDiagnoser := diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, selectedExporters)
 	selectedDiagnosers := selectDiagnosers(
 		map[string]interfaces.Diagnoser{
-			networkConfigDiagnoser.GetName(): networkConfigDiagnoser,
+			networkConfigDiagnoser.GetName():   networkConfigDiagnoser,
 			networkOutboundDiagnoser.GetName(): networkOutboundDiagnoser,
-	})
+		})
 
 	return selectedCollectors, selectedDiagnosers, selectedExporters
 }
@@ -136,7 +136,7 @@ func selectExporters(allExporters map[string]interfaces.Exporter) []interfaces.E
 }
 
 // runCollectors run the collectors
-func runCollectors(collectors []interfaces.Collector, waitgroup *sync.WaitGroup){
+func runCollectors(collectors []interfaces.Collector, waitgroup *sync.WaitGroup) {
 	for _, c := range collectors {
 		waitgroup.Add(1)
 		go func(c interfaces.Collector) {
@@ -157,7 +157,7 @@ func runCollectors(collectors []interfaces.Collector, waitgroup *sync.WaitGroup)
 }
 
 // runDiagnosers run the diagnosers
-func runDiagnosers(diagnosers []interfaces.Diagnoser, waitgroup *sync.WaitGroup){
+func runDiagnosers(diagnosers []interfaces.Diagnoser, waitgroup *sync.WaitGroup) {
 	for _, d := range diagnosers {
 		waitgroup.Add(1)
 		go func(d interfaces.Diagnoser) {

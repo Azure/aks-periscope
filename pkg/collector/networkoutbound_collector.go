@@ -37,7 +37,7 @@ func NewNetworkOutboundCollector(collectIntervalInSeconds int, exporters []inter
 		BaseCollector: BaseCollector{
 			collectorType:            NetworkOutbound,
 			collectIntervalInSeconds: collectIntervalInSeconds,
-			exporters:                 exporters,
+			exporters:                exporters,
 		},
 	}
 }

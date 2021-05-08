@@ -34,7 +34,7 @@ func NewNetworkOutboundDiagnoser(networkOutboundCollector *collector.NetworkOutb
 	return &NetworkOutboundDiagnoser{
 		BaseDiagnoser: BaseDiagnoser{
 			diagnoserType: NetworkOutbound,
-			exporters:      exporters,
+			exporters:     exporters,
 		},
 		networkOutboundCollector: networkOutboundCollector,
 	}

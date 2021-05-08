@@ -21,7 +21,7 @@ func NewNodeLogsCollector(exporters []interfaces.Exporter) *NodeLogsCollector {
 	return &NodeLogsCollector{
 		BaseCollector: BaseCollector{
 			collectorType: NodeLogs,
-			exporters:      exporters,
+			exporters:     exporters,
 		},
 	}
 }

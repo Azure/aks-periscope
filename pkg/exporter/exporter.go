@@ -15,7 +15,7 @@ func (t Type) name() string {
 
 // BaseExporter defines Base Exporter
 type BaseExporter struct {
-	exporterType            Type
+	exporterType Type
 }
 
 // GetName gets exporter name
