@@ -136,6 +136,30 @@ data:
   DIAGNOSTIC_KUBEOBJECTS_LIST: kube-system/pod kube-system/service kube-system/deployment
   {{- end }}
 ---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collectors-config
+  namespace: aks-periscope
+data:
+  ENABLED_COLLECTORS: dns containerlogs iptables kubeletcmd kubeobjects networkoutbound nodelogs systemlogs systemperf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: diagnosers-config
+  namespace: aks-periscope
+data:
+  ENABLED_DIAGNOSERS: networkconfig networkoutbound
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: exporters-config
+  namespace: aks-periscope
+data:
+  ENABLED_EXPORTERS: azureblob
+---
 apiVersion: v1 
 kind: ConfigMap 
 metadata:
