@@ -1,15 +1,15 @@
 package main
 
 import (
-	"log"
-	"strings"
-	"sync"
-
 	"github.com/Azure/aks-periscope/pkg/collector"
 	"github.com/Azure/aks-periscope/pkg/diagnoser"
 	"github.com/Azure/aks-periscope/pkg/exporter"
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
+	"log"
+	"os"
+	"strings"
+	"sync"
 )
 
 func main() {
@@ -22,25 +22,33 @@ func main() {
 		log.Printf("Failed to create CRD: %+v", err)
 	}
 
+	clusterType := os.Getenv("CLUSTER_TYPE")
+
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
 	collectors = append(collectors, containerLogsCollector)
-	systemLogsCollector := collector.NewSystemLogsCollector(exporter)
-	collectors = append(collectors, systemLogsCollector)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, exporter)
 	collectors = append(collectors, networkOutboundCollector)
-	ipTablesCollector := collector.NewIPTablesCollector(exporter)
-	collectors = append(collectors, ipTablesCollector)
-	nodeLogsCollector := collector.NewNodeLogsCollector(exporter)
-	collectors = append(collectors, nodeLogsCollector)
 	dnsCollector := collector.NewDNSCollector(exporter)
 	collectors = append(collectors, dnsCollector)
 	kubeObjectsCollector := collector.NewKubeObjectsCollector(exporter)
 	collectors = append(collectors, kubeObjectsCollector)
+	systemLogsCollector := collector.NewSystemLogsCollector(exporter)
+	ipTablesCollector := collector.NewIPTablesCollector(exporter)
+	nodeLogsCollector := collector.NewNodeLogsCollector(exporter)
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
-	collectors = append(collectors, kubeletCmdCollector)
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
-	collectors = append(collectors, systemPerfCollector)
+	helmCollector := collector.NewHelmCollector(exporter)
+
+	if clusterType == "connectedCluster" {
+		collectors = append(collectors, helmCollector)
+	} else {
+		collectors = append(collectors, systemLogsCollector)
+		collectors = append(collectors, ipTablesCollector)
+		collectors = append(collectors, nodeLogsCollector)
+		collectors = append(collectors, kubeletCmdCollector)
+		collectors = append(collectors, systemPerfCollector)
+	}
 
 	for _, c := range collectors {
 		waitgroup.Add(1)
