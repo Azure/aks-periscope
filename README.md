@@ -1,4 +1,4 @@
-[![CI](https://github.com/Azure/aks-periscope/actions/workflows/ci-pipeline.yml/badge.svg?branch=master)](https://github.com/Azure/aks-periscope/actions/workflows/ci-pipeline.yml)
+[![CI](https://github.com/Azure/aks-periscope/actions/workflows/ci-pipeline.yml/badge.svg?branch=master)](https://github.com/Azure/aks-periscope/actions/workflows/ci-pipeline.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/Azure/aks-periscope)](https://goreportcard.com/report/github.com/Azure/aks-periscope)
 
 # AKS Periscope 
 Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster. 
