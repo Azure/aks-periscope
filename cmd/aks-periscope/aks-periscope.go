@@ -1,8 +1,12 @@
 package main
 
 import (
+	"archive/zip"
+	"fmt"
+	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -123,19 +127,47 @@ func zipAndExport(exporter interfaces.Exporter) error {
 		return err
 	}
 
-	sourcePathOnHost := "/var/log/aks-periscope/" + strings.Replace(creationTimeStamp, ":", "-", -1) + "/" + hostName
-	zipFileOnHost := sourcePathOnHost + "/" + hostName + ".zip"
+	sourcePathOnHost := fmt.Sprintf("/var/log/aks-periscope/%s/%s", strings.Replace(creationTimeStamp, ":", "-", -1), hostName)
+	zipFileOnHost := fmt.Sprintf("%s/%s.zip", sourcePathOnHost, hostName)
 	zipFileOnContainer := strings.TrimPrefix(zipFileOnHost, "/var/log")
 
-	_, err = utils.RunCommandOnHost("zip", "-r", zipFileOnHost, sourcePathOnHost)
-	if err != nil {
-		return err
+	if err = createZip(zipFileOnHost, sourcePathOnHost); err != nil {
+		return fmt.Errorf("create zip: %w", err)
 	}
 
-	err = exporter.Export([]string{zipFileOnContainer})
+	return exporter.Export([]string{zipFileOnContainer})
+}
+
+func createZip(sourcePath, destinationPath string) error {
+	destinationFile, err := os.Create(sourcePath)
 	if err != nil {
-		return err
+		return fmt.Errorf("file %s cannot be created: %w", sourcePath, err)
 	}
 
-	return nil
+	w := zip.NewWriter(destinationFile)
+	defer w.Close()
+
+	return filepath.Walk(sourcePath, func(filePath string, info os.FileInfo, err error) error {
+		if info.IsDir() {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		relPath := strings.TrimPrefix(filePath, filepath.Dir(sourcePath))
+		zipFile, err := w.Create(relPath)
+		if err != nil {
+			return err
+		}
+
+		fsFile, err := os.Open(filePath)
+		if err != nil {
+			return err
+		}
+
+		_, err = io.Copy(zipFile, fsFile)
+
+		return err
+	})
 }
