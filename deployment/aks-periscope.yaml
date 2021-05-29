@@ -1,3 +1,5 @@
+# Note: this file is deprecated and will be removed in a future release
+# Use Kustomize to deploy the project
 apiVersion: v1
 kind: Namespace
 metadata:
