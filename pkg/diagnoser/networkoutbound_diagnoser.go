@@ -63,10 +63,10 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 
 	for _, file := range diagnoser.networkOutboundCollector.GetCollectorFiles() {
 		t, err := os.Open(file)
-		defer t.Close()
 		if err != nil {
 			return fmt.Errorf("Fail to open file %s: %+v", file, err)
 		}
+		defer t.Close()
 
 		dataPoint := networkOutboundDiagnosticDatum{HostName: hostName}
 		scanner := bufio.NewScanner(t)

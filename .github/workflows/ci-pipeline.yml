@@ -39,7 +39,7 @@ jobs:
         with:
           go-version: 1.15
 
-      - name: Set up golangci-lint
+      - name: Check golangci-lint
         uses: golangci/golangci-lint-action@v2
         with:
           # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
@@ -50,10 +50,6 @@ jobs:
 
       - name: Run integration test
         run: go test -v -mod=mod ./tests/aksperiscopeintegration_test.go
-
-      # - name: Check go linter
-      #   run: golangci-lint run
-      #   continue-on-error: false
 
       - name: Stop kind
         run: bash -f ./azurepipeline/stop.sh --kind-cluster-name=integrationtest
