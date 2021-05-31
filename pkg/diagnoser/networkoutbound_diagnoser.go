@@ -75,7 +75,7 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 			var outboundDatum collector.NetworkOutboundDatum
 			err := json.Unmarshal([]byte(scanner.Text()), &outboundDatum)
 			if err != nil {
-				log.Printf("Unmarshal failed: %+w", err)
+				log.Printf("Unmarshal failed: %+v", err)
 				continue
 			}
 
