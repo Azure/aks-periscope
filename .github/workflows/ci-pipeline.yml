@@ -29,7 +29,6 @@ jobs:
           sudo apt install python3-pip -y
           pip3 install setuptools
           pip3 install pylint coverage
-          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.40.1
  
       - name: Start kind
         run: bash -f ./azurepipeline/start.sh --kind-cluster-name=integrationtest
@@ -39,6 +38,12 @@ jobs:
         uses: actions/setup-go@v2
         with:
           go-version: 1.15
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          # Optional: version of golangci-lint to use in form of v1.2 or v1.2.3 or `latest` to use the latest version
+          version: latest
 
       - name: Build project
         run: go build -v ./cmd/aks-periscope/aks-periscope.go
