@@ -206,8 +206,7 @@ func CreateCRD() error {
 
 	crdName := "aks-periscope-diagnostic" + "-" + hostName
 
-	err = writeDiagnosticCRD(crdName)
-	if err != nil {
+	if err = writeDiagnosticCRD(crdName); err != nil {
 		return err
 	}
 
