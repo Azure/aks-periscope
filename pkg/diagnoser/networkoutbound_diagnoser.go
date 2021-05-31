@@ -63,10 +63,10 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 
 	for _, file := range diagnoser.networkOutboundCollector.GetCollectorFiles() {
 		t, err := os.Open(file)
+		defer t.Close()
 		if err != nil {
 			return fmt.Errorf("Fail to open file %s: %+v", file, err)
 		}
-		defer t.Close()
 
 		dataPoint := networkOutboundDiagnosticDatum{HostName: hostName}
 		scanner := bufio.NewScanner(t)
@@ -74,7 +74,6 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 			var outboundDatum collector.NetworkOutboundDatum
 			err := json.Unmarshal([]byte(scanner.Text()), &outboundDatum)
 			fmt.Println(err)
-
 			if dataPoint.Start.IsZero() {
 				setDataPoint(&outboundDatum, &dataPoint)
 			} else {

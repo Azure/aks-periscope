@@ -51,9 +51,9 @@ jobs:
       - name: Run integration test
         run: go test -v -mod=mod ./tests/aksperiscopeintegration_test.go
 
-      - name: Check go linter
-        run: golangci-lint run
-        continue-on-error: false
+      # - name: Check go linter
+      #   run: golangci-lint run
+      #   continue-on-error: false
 
       - name: Stop kind
         run: bash -f ./azurepipeline/stop.sh --kind-cluster-name=integrationtest
