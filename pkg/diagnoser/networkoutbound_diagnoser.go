@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -43,6 +44,9 @@ func NewNetworkOutboundDiagnoser(networkOutboundCollector *collector.NetworkOutb
 // Diagnose implements the interface method
 func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 	hostName, err := utils.GetHostName()
+	if err != nil {
+		return err
+	}
 	rootPath, err := utils.CreateDiagnosticDir()
 	if err != nil {
 		return err
@@ -51,25 +55,29 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 	networkOutboundDiagnosticFile := filepath.Join(rootPath, diagnoser.GetName())
 
 	f, err := os.OpenFile(networkOutboundDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
-	defer f.Close()
 	if err != nil {
 		return fmt.Errorf("Fail to open file %s: %+v", networkOutboundDiagnosticFile, err)
 	}
+	defer f.Close()
 
 	outboundDiagnosticData := []networkOutboundDiagnosticDatum{}
 
 	for _, file := range diagnoser.networkOutboundCollector.GetCollectorFiles() {
 		t, err := os.Open(file)
-		defer t.Close()
 		if err != nil {
 			return fmt.Errorf("Fail to open file %s: %+v", file, err)
 		}
+		defer t.Close()
 
 		dataPoint := networkOutboundDiagnosticDatum{HostName: hostName}
 		scanner := bufio.NewScanner(t)
 		for scanner.Scan() {
 			var outboundDatum collector.NetworkOutboundDatum
-			json.Unmarshal([]byte(scanner.Text()), &outboundDatum)
+			err := json.Unmarshal([]byte(scanner.Text()), &outboundDatum)
+			if err != nil {
+				log.Printf("Unmarshal failed: %+v", err)
+				continue
+			}
 
 			if dataPoint.Start.IsZero() {
 				setDataPoint(&outboundDatum, &dataPoint)

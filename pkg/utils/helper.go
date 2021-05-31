@@ -78,10 +78,10 @@ func RunCommandOnContainer(command string, arg ...string) (string, error) {
 // WriteToFile writes data to a file
 func WriteToFile(fileName string, data string) error {
 	f, err := os.Create(fileName)
-	defer f.Close()
 	if err != nil {
 		return fmt.Errorf("Fail to create file %s: %+v", fileName, err)
 	}
+	defer f.Close()
 
 	_, err = f.Write([]byte(data))
 	if err != nil {
@@ -206,7 +206,9 @@ func CreateCRD() error {
 
 	crdName := "aks-periscope-diagnostic" + "-" + hostName
 
-	writeDiagnosticCRD(crdName)
+	if err = writeDiagnosticCRD(crdName); err != nil {
+		return err
+	}
 
 	_, err = RunCommandOnContainer("kubectl", "apply", "-f", "aks-periscope-diagnostic-crd.yaml")
 	if err != nil {
