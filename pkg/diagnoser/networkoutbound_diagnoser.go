@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -73,7 +74,8 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 		for scanner.Scan() {
 			var outboundDatum collector.NetworkOutboundDatum
 			err := json.Unmarshal([]byte(scanner.Text()), &outboundDatum)
-			fmt.Println(err)
+			log.Printf("Unmarshal failed: %+v", err)
+
 			if dataPoint.Start.IsZero() {
 				setDataPoint(&outboundDatum, &dataPoint)
 			} else {
