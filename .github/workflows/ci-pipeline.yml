@@ -29,6 +29,7 @@ jobs:
           sudo apt install python3-pip -y
           pip3 install setuptools
           pip3 install pylint coverage
+          curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.40.1
  
       - name: Start kind
         run: bash -f ./azurepipeline/start.sh --kind-cluster-name=integrationtest
