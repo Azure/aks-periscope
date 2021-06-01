@@ -89,10 +89,10 @@ func (collector *NetworkOutboundCollector) Collect() error {
 		networkOutboundFile := filepath.Join(rootPath, outboundType.Type)
 
 		f, err := os.OpenFile(networkOutboundFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		defer f.Close()
 		if err != nil {
 			return fmt.Errorf("Fail to open file %s: %+v", networkOutboundFile, err)
 		}
+		defer f.Close()
 
 		timeout := time.Duration(5 * time.Second)
 		_, err = net.DialTimeout("tcp", outboundType.URL, timeout)

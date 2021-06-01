@@ -47,6 +47,9 @@ func NewNetworkConfigDiagnoser(dnsCollector *collector.DNSCollector, kubeletCmdC
 // Diagnose implements the interface method
 func (diagnoser *NetworkConfigDiagnoser) Diagnose() error {
 	hostName, err := utils.GetHostName()
+	if err != nil {
+		return err
+	}
 	rootPath, err := utils.CreateDiagnosticDir()
 	if err != nil {
 		return err
@@ -55,18 +58,18 @@ func (diagnoser *NetworkConfigDiagnoser) Diagnose() error {
 	networkDiagnosticFile := filepath.Join(rootPath, diagnoser.GetName())
 
 	f, err := os.OpenFile(networkDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
-	defer f.Close()
 	if err != nil {
 		return fmt.Errorf("Fail to open file %s: %+v", networkDiagnosticFile, err)
 	}
+	defer f.Close()
 
 	networkConfigDiagnosticData := networkConfigDiagnosticDatum{HostName: hostName}
 	for _, file := range diagnoser.dnsCollector.GetCollectorFiles() {
 		t, err := os.Open(file)
-		defer t.Close()
 		if err != nil {
 			return fmt.Errorf("Fail to open file %s: %+v", file, err)
 		}
+		defer t.Close()
 
 		dnsLevel := filepath.Base(file)
 		var dns []string

@@ -15,7 +15,7 @@ metadata:
   name: aks-periscope-role
 rules:
 - apiGroups: ["","metrics.k8s.io"]
-  resources: ["pods", "nodes"]
+  resources: ["pods", "nodes", "secrets"]
   verbs: ["get", "watch", "list"]
 - apiGroups: ["aks-periscope.azure.github.com"]
   resources: ["diagnostics"]
@@ -80,6 +80,8 @@ spec:
             name: kubeobjects-config
         - configMapRef:
             name: nodelogs-config
+        - configMapRef:
+            name: clustertype-config
         - secretRef:
             name: azureblob-secret
         volumeMounts:
@@ -131,6 +133,14 @@ metadata:
   namespace: aks-periscope
 data:
   DIAGNOSTIC_NODELOGS_LIST: /var/log/azure/cluster-provision.log /var/log/cloud-init.log
+---
+apiVersion: v1 
+kind: ConfigMap 
+metadata:
+  name: clustertype-config
+  namespace: aks-periscope
+data:
+  CLUSTER_TYPE: "managedCluster" # <custom flag>
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
