@@ -30,6 +30,9 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 		return err
 	}
 
+	accountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
+	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
+
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
 	len := strings.Index(containerName, "-hcp-")
 	if len == -1 {
@@ -39,28 +42,30 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 
 	ctx := context.Background()
 
-	pipeline := azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{})
-	accountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
-	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
-
-	url, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s%s", accountName, containerName, sasKey))
+	cred, err := azblob.NewSharedKeyCredential(accountName, sasKey)
 	if err != nil {
-		return fmt.Errorf("Fail to build blob container url: %+v", err)
+		return fmt.Errorf("create SAS Key Credential: %w", err)
+	}
+
+	pipeline := azblob.NewPipeline(cred, azblob.PipelineOptions{})
+
+	url, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s", accountName, containerName))
+	if err != nil {
+		return fmt.Errorf("build blob container url: %w", err)
 	}
 
 	containerURL := azblob.NewContainerURL(*url, pipeline)
 
-	_, err = containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
-	if err != nil {
+	if _, err = containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone); err != nil {
 		storageError, ok := err.(azblob.StorageError)
 		if ok {
 			switch storageError.ServiceCode() {
 			case azblob.ServiceCodeContainerAlreadyExists:
 			default:
-				return fmt.Errorf("Failed to create blob with storage error: %+v", err)
+				return fmt.Errorf("create blob with storage error: %w", err)
 			}
 		} else {
-			return fmt.Errorf("Failed to create blob: %+v", err)
+			return fmt.Errorf("create blob: %w", err)
 		}
 	}
 
@@ -75,13 +80,13 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 				case azblob.ServiceCodeBlobNotFound:
 					_, err = appendBlobURL.Create(ctx, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
 					if err != nil {
-						return fmt.Errorf("Fail to create blob for file %s: %+v", file, err)
+						return fmt.Errorf("create blob for file %s: %w", file, err)
 					}
 				default:
-					return fmt.Errorf("Failed to create blob with storage error: %+v", err)
+					return fmt.Errorf("create blob, storage error: %w", err)
 				}
 			} else {
-				return fmt.Errorf("Failed to create blob: %+v", err)
+				return fmt.Errorf("create blob, other error: %w", err)
 			}
 		}
 
@@ -92,39 +97,34 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 
 		f, err := os.Open(file)
 		if err != nil {
-			return fmt.Errorf("Fail to open file %s: %+v", file, err)
+			return fmt.Errorf("open file %s: %w", file, err)
 		}
 
 		fileInfo, err := f.Stat()
 		if err != nil {
-			return fmt.Errorf("Fail to get file info for file %s: %+v", file, err)
+			return fmt.Errorf("get file info for file %s: %w", file, err)
 		}
 
 		end := fileInfo.Size()
 
-		fileSize := end - start
-		if fileSize > 0 {
-			for start < end {
-				lengthToWrite := end - start
+		for end-start > 0 {
+			lengthToWrite := end - start
 
-				if lengthToWrite > azblob.AppendBlobMaxAppendBlockBytes {
-					lengthToWrite = azblob.AppendBlobMaxAppendBlockBytes
-				}
-
-				b := make([]byte, lengthToWrite)
-				_, err = f.ReadAt(b, start)
-				if err != nil {
-					return fmt.Errorf("Fail to read file %s: %+v", file, err)
-				}
-
-				log.Printf("\tappend blob file: %s, start position: %d, end position: %d\n", file, start, start+lengthToWrite)
-				_, err = appendBlobURL.AppendBlock(ctx, bytes.NewReader(b), azblob.AppendBlobAccessConditions{}, nil)
-				if err != nil {
-					return fmt.Errorf("Fail to append file %s to blob: %+v", file, err)
-				}
-
-				start += lengthToWrite
+			if lengthToWrite > azblob.AppendBlobMaxAppendBlockBytes {
+				lengthToWrite = azblob.AppendBlobMaxAppendBlockBytes
 			}
+
+			b := make([]byte, lengthToWrite)
+			if _, err = f.ReadAt(b, start); err != nil {
+				return fmt.Errorf("read file %s: %w", file, err)
+			}
+
+			log.Printf("\tappend blob file: %s, start position: %d, end position: %d", file, start, start+lengthToWrite)
+			if _, err = appendBlobURL.AppendBlock(ctx, bytes.NewReader(b), azblob.AppendBlobAccessConditions{}, nil); err != nil {
+				return fmt.Errorf("append file %s to blob: %w", file, err)
+			}
+
+			start += lengthToWrite
 		}
 	}
 
