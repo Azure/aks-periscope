@@ -32,8 +32,8 @@ spec:
         - configMapRef:
             name: nodelogs-config
         volumeMounts:
-        - mountPath: /aks-periscope
-          name: aks-periscope-storage
+        - name: varlog
+          mountPath: /var/log
         resources:
           requests:
             memory: "500Mi"
@@ -42,7 +42,6 @@ spec:
             memory: "2000Mi"
             cpu: "1000m"
       volumes:
-      - name: aks-periscope-storage
+      - name: varlog
         hostPath:
-          path: /var/log/aks-periscope
-          type: DirectoryOrCreate
+          path: /var/log
