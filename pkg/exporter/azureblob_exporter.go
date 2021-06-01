@@ -43,7 +43,8 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 	accountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
 	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
 
-	url, err := url.Parse(fmt.Sprintf("https://%s.blob.core.windows.net/%s%s", accountName, containerName, sasKey))
+	ses := utils.GetStorageEndpointSuffix()
+	url, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, ses, containerName, sasKey))
 	if err != nil {
 		return fmt.Errorf("Fail to build blob container url: %+v", err)
 	}
