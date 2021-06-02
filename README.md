@@ -1,12 +1,14 @@
 [![CI](https://github.com/Azure/aks-periscope/actions/workflows/ci-pipeline.yml/badge.svg?branch=master)](https://github.com/Azure/aks-periscope/actions/workflows/ci-pipeline.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/Azure/aks-periscope)](https://goreportcard.com/report/github.com/Azure/aks-periscope)
 
-# AKS Periscope 
-Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster. 
+# AKS Periscope
+
+Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster.
 
 ![Icon](https://user-images.githubusercontent.com/33297523/69174241-4075a980-0ab6-11ea-9e33-76afc588e7fb.png)
 
-# Overview
-Hopefully most of the time, your AKS cluster is running happily and healthy. However, when things do go wrong, AKS customers need a tool to help them diagnose and collect the logs necessary to troubleshoot the issue. It can be difficult to collect the appropriate node and pod logs to figure what's wrong, how to fix the problem, or even to pass on those logs to others to help. 
+## Overview
+
+Hopefully most of the time, your AKS cluster is running happily and healthy. However, when things do go wrong, AKS customers need a tool to help them diagnose and collect the logs necessary to troubleshoot the issue. It can be difficult to collect the appropriate node and pod logs to figure what's wrong, how to fix the problem, or even to pass on those logs to others to help.
 
 AKS Periscope allows AKS customers to run initial diagnostics and collect and export the logs (like into an Azure Blob storage account) to help them analyze and identify potential problems or easily share the information to support to help with the troubleshooting process with a simple az aks kollect command. These cluster issues are many times are caused by wrong configuration of their environment, such as networking or permission issues. This tool will allow AKS customers to run initial diagnostics and collect logs and custom analyses that helps them identify the underlying problems.
 
@@ -16,17 +18,18 @@ Raw Logs and metrics from AKS cluster are collected and basic diagnostic signals
 
 ![Signals](https://user-images.githubusercontent.com/33297523/68249891-90dc0a00-ffd4-11e9-9eeb-fe9f35cbd173.png)
 
-# Data Privacy and Collection
+## Data Privacy and Collection
+
 AKS Periscope runs on customer's agent pool nodes, and collect VM and container level data. It is important that the customer is aware and gives consent before the tool is deployed/information shared. Microsoft guidelines can be found in the link below:
 
 https://azure.microsoft.com/en-us/support/legal/support-diagnostic-information-collection/
 
+## Compatibility
 
-# Compatibility
-AKS Periscope currently only work on Linux based agent nodes. Please use the script https://github.com/Azure/aks-engine/blob/master/scripts/collect-windows-logs.ps1 for Windows based agent nodes. 
+AKS Periscope currently only work on Linux based agent nodes. Please use the script https://github.com/Azure/aks-engine/blob/master/scripts/collect-windows-logs.ps1 for Windows based agent nodes.
 
+## Current Feature Set
 
-# Current Feature Set
 It collects the following logs and metrics:
 
 1. Container logs (by default all containers in the `kube-system` namespace, can be config to take other namespace/containers).
@@ -44,89 +47,93 @@ It also generates the following diagnostic signals:
 1. Network outbound connectivity, reports the down period for a specific connection.
 2. Network configuration, includes Network Plugin, DNS, and Max Pods per Node settings.
 
-
-# User Guide
+## User Guide
 
 AKS Periscope can be deployed by using Azure Command-Line tool (CLI). The steps are:
 
 0. If CLI extension aks-preview has been installed previously, uninstall it first.
-```
-az extension remove --name aks-preview
-``` 
+
+   ```sh
+   az extension remove --name aks-preview
+   ```
 
 1. Install CLI extension aks-preview.
-```
-az extension add --name aks-preview
-``` 
+
+   ```sh
+   az extension add --name aks-preview
+   ```
 
 2. Run `az aks kollect` command to collect metrics and diagnostic information, and upload to an Azure storage account. Use `az aks kollect -h` to check command details. Some useful examples are also listed below:
 
-    1. Using storage account name and a shared access signature token with write permission
-    ```
-    az aks kollect
-    -g MyResourceGroup
-    -n MyManagedCluster
-    --storage-account MyStorageAccount
-    --sas-token "MySasToken"
-    ```
+   1. Using storage account name and a shared access signature token with write permission
 
-    2. Using the resource id of a storage account resource you own.
-    ```
-    az aks kollect
-    -g MyResourceGroup
-    -n MyManagedCluster
-    --storage-account "MyStorageAccountResourceId"
-    ```
+      ```sh
+      az aks kollect \
+      -g MyResourceGroup \
+      -n MyManagedCluster \
+      --storage-account MyStorageAccount \
+      --sas-token "MySasToken"
+      ```
 
-    3. Using a pre-setup storage account ((https://docs.microsoft.com/en-us/azure/azure-monitor/platform/diagnostic-logs-stream-log-store) in diagnostics settings for your managed cluster.
-    ```
-    az aks kollect
-    -g MyResourceGroup
-    -n MyManagedCluster
-    ```
+   2. Using the resource id of a storage account resource you own.
 
-    4. Customize the container logs to collect. Its value can be either all containers in a namespace, for example, kube-system, or a specific container in a namespace, for example, kube-system/tunnelfront.
-    ```
-    az aks kollect
-    -g MyResourceGroup
-    -n MyManagedCluster
-    --container-logs "mynamespace1/mypod1 myns2"
-    ```
+      ```sh
+      az aks kollect \
+      -g MyResourceGroup \
+      -n MyManagedCluster \
+      --storage-account "MyStorageAccountResourceId"
+      ```
 
-    5. Customize the kubernetes objects to collect. Its value can be either all objects of a type in a namespace, for example, kube-system/pod, or a specific object of a type in a namespace, for example, kube-system/deployment/tunnelfront.
-    ```
-    az aks kollect
-    -g MyResourceGroup
-    -n MyManagedCluster
-    --kube-objects "mynamespace1/service myns2/deployment/deployment1"
-    ```
+   3. Using a [pre-setup storage account](https://docs.microsoft.com/en-us/azure/azure-monitor/platform/diagnostic-logs-stream-log-store) in diagnostics settings for your managed cluster.
 
-    6. Customize the node log files to collect.
-    ```
-    az aks kollect
-    -g MyResourceGroup
-    -n MyManagedCluster
-    --node-logs "/var/log/azure-vnet.log /var/log/azure-vnet-ipam.log"
-    ```
+      ```sh
+      az aks kollect \
+      -g MyResourceGroup \
+      -n MyManagedCluster
+      ```
 
-All collected logs, metrics and node level diagnostic information is stored on host nodes under directory:
-```
-/var/log/aks-periscope
-```
-This directory is also mounted to container as:
-```
-/aks-periscope
-```
+   4. Customize the container logs to collect. Its value can be either all containers in a namespace, for example, kube-system, or a specific container in a namespace, for example, kube-system/tunnelfront.
+
+      ```sh
+      az aks kollect \
+      -g MyResourceGroup \
+      -n MyManagedCluster \
+      --container-logs "mynamespace1/mypod1 myns2"
+      ```
+
+   5. Customize the kubernetes objects to collect. Its value can be either all objects of a type in a namespace, for example, kube-system/pod, or a specific object of a type in a namespace, for example, kube-system/deployment/tunnelfront.
+
+      ```sh
+      az aks kollect \
+      -g MyResourceGroup \
+      -n MyManagedCluster \
+      --kube-objects "mynamespace1/service myns2/deployment/deployment1"
+      ```
+
+   6. Customize the node log files to collect.
+
+      ```sh
+      az aks kollect \
+      -g MyResourceGroup \
+      -n MyManagedCluster \
+      --node-logs "/var/log/azure-vnet.log /var/log/azure-vnet-ipam.log"
+      ```
+
+All collected logs, metrics and node level diagnostic information is stored on host nodes under directory:  
+> `/var/log/aks-periscope`.
+
+This directory is also mounted to container as:  
+> `/aks-periscope`.
+
 After export, they will also be stored in Azure Blob Service under a container with its name equals to cluster API server FQDN. A zip file is also created for easy download.
 
 Alternatively, AKS Periscope can be deployed directly with `kubectl`. See instructions in [Appendix].
 
-
-# Programming Guide
+## Programming Guide
 
 To locally build this project from the root of this repository:
 
-```
+```sh
 CGO_ENABLED=0 GOOS=linux go build -mod=vendor github.com/Azure/aks-periscope/cmd/aks-periscope
 ```
 
@@ -134,12 +141,12 @@ CGO_ENABLED=0 GOOS=linux go build -mod=vendor github.com/Azure/aks-periscope/cmd
 
 For example:
 
-```
+```sh
 docker build -f ./builder/Dockerfile -t <some_docker_repo_name>/<aks-periscope-user-selected-test-name> .
 docker push <some_docker_repo_name>/<aks-periscope-user-selected-test-name> 
 ```
 
-# Debugging Guide
+## Debugging Guide
 
 This section intend to add some tip for debugging logs for the aks-periscope. This will help beginner to locally debug the pod logs.
 
@@ -147,7 +154,7 @@ Scenario, where `user A` uses **expired** `sas-token` and converts into `base64`
 
 In the scenario above, the `kubectl apply -f deployment-file.yaml` will show no error but the output which will look like the one below.
 
-```
+```sh
 ❯ kubectl apply -f deployment/aks-periscope.yaml
 namespace/aks-periscope created
 serviceaccount/aks-periscope-service-account created
@@ -171,12 +178,11 @@ The following command will come handy:
    * To check the logs in of the each deployed pod, this command will come handy:
        * `kubectl logs <name-of-pod> -n aks-periscope`
 
-# Feedback 
 Feel free to contact aksperiscope@microsoft.com or open an issue with any feedback or questions about AKS Periscope. This is currently a work in progress, but look out for more capabilities to come!
 
+## Contributing
 
-# Contributing
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
+This project welcomes contributions and suggestions. Most contributions require you to agree to a
 Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
 the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
 
@@ -188,6 +194,5 @@ This project has adopted the [Microsoft Open Source Code of Conduct](https://ope
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
-
-[Programming Guide]: docs/programmingguide.md
-[Appendix]: docs/appendix.md
+[programming guide]: docs/programmingguide.md
+[appendix]: docs/appendix.md
