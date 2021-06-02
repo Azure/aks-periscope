@@ -13,9 +13,13 @@ import (
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
+const (
+	connectedCluster = "connectedCluster"
+)
+
 func main() {
 	zipAndExportMode := true
-	exporter := &exporter.AzureBlobExporter{}
+	exporters := []interfaces.Exporter{}
 
 	err := utils.CreateCRD()
 	if err != nil {
@@ -23,6 +27,17 @@ func main() {
 	}
 
 	clusterType := os.Getenv("CLUSTER_TYPE")
+	isConnectedCluster := strings.EqualFold(clusterType, connectedCluster)
+	storageAccountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
+	sasTokenName := os.Getenv("AZURE_BLOB_SAS_KEY")
+
+	if isConnectedCluster && (len(storageAccountName) == 0 || len(sasTokenName) == 0) {
+		exporters = append(exporters, &exporter.LocalMachineExporter{})
+	} else {
+		exporters = append(exporters, &exporter.AzureBlobExporter{})
+	}
+
+	exporter := exporters[0]
 
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
@@ -36,7 +51,7 @@ func main() {
 	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
 	helmCollector := collector.NewHelmCollector(exporter)
 
-	if strings.EqualFold(clusterType, "connectedCluster") {
+	if isConnectedCluster {
 		collectors = append(collectors, containerLogsCollector)
 		collectors = append(collectors, dnsCollector)
 		collectors = append(collectors, helmCollector)
