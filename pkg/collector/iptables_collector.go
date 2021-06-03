@@ -1,49 +1,37 @@
 package collector
 
 import (
-	"path/filepath"
-
-	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // IPTablesCollector defines a IPTables Collector struct
 type IPTablesCollector struct {
-	BaseCollector
+	data map[string]string
 }
 
-var _ interfaces.Collector = &IPTablesCollector{}
-
 // NewIPTablesCollector is a constructor
-func NewIPTablesCollector(exporter interfaces.Exporter) *IPTablesCollector {
+func NewIPTablesCollector() *IPTablesCollector {
 	return &IPTablesCollector{
-		BaseCollector: BaseCollector{
-			collectorType: IPTables,
-			exporter:      exporter,
-		},
+		data: make(map[string]string),
 	}
+}
+
+func (collector *IPTablesCollector) GetName() string {
+	return "iptables"
 }
 
 // Collect implements the interface method
 func (collector *IPTablesCollector) Collect() error {
-	rootPath, err := utils.CreateCollectorDir(collector.GetName())
-	if err != nil {
-		return err
-	}
-
-	iptablesFile := filepath.Join(rootPath, collector.GetName())
-
 	output, err := utils.RunCommandOnHost("iptables", "-t", "nat", "-L")
 	if err != nil {
 		return err
 	}
 
-	err = utils.WriteToFile(iptablesFile, output)
-	if err != nil {
-		return err
-	}
-
-	collector.AddToCollectorFiles(iptablesFile)
+	collector.data["iptables"] = output
 
 	return nil
+}
+
+func (collector *IPTablesCollector) GetData() map[string]string {
+	return collector.data
 }

@@ -6,5 +6,5 @@ type Collector interface {
 
 	Collect() error
 
-	Export() error
+	GetData() map[string]string
 }
