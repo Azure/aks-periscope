@@ -24,6 +24,14 @@ func main() {
 
 	clusterType := os.Getenv("CLUSTER_TYPE")
 
+	// Copies self-signed cert information to container if application is running on Azure Stack Cloud.
+	// We need the cert in order to communicate with the storage account.
+	if utils.IsAzureStackCloud() {
+		if err := utils.CopyFileFromHost("/etc/ssl/certs/azsCertificate.pem", "/etc/ssl/certs/azsCertificate.pem"); err != nil {
+			log.Fatalf("cannot copy cert for Azure Stack Cloud environment: %v", err)
+		}
+	}
+
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, exporter)

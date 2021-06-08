@@ -2,14 +2,76 @@ package utils
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 )
+
+const (
+	// PublicAzureStorageEndpointSuffix defines default Storage Endpoint Suffix
+	PublicAzureStorageEndpointSuffix = "core.windows.net"
+	// AzureStackCloudName references the value that will be under the key "cloud" in azure.json if the application is running on Azure Stack Cloud
+	// https://kubernetes-sigs.github.io/cloud-provider-azure/install/configs/#azure-stack-configuration -- See this documentation for the well-known cloud name.
+	AzureStackCloudName = "AzureStackCloud"
+)
+
+// Azure defines Azure configuration
+type Azure struct {
+	Cloud string `json:"cloud"`
+}
+
+// AzureStackCloud defines Azure Stack Cloud configuration
+type AzureStackCloud struct {
+	StorageEndpointSuffix string `json:"storageEndpointSuffix"`
+}
+
+// IsAzureStackCloud returns true if the application is running on Azure Stack Cloud
+func IsAzureStackCloud() bool {
+	azureFile, err := RunCommandOnHost("cat", "/etc/kubernetes/azure.json")
+	if err != nil {
+		return false
+	}
+	var azure Azure
+	if err = json.Unmarshal([]byte(azureFile), &azure); err != nil {
+		return false
+	}
+	cloud := azure.Cloud
+	return strings.EqualFold(cloud, AzureStackCloudName)
+}
+
+// CopyFileFromHost saves the specified source file to the destination
+func CopyFileFromHost(source, destination string) error {
+	sourceFile, err := RunCommandOnHost("cat", source)
+	if err != nil {
+		return fmt.Errorf("unable to retrieve source content: %w", err)
+	}
+	if err = WriteToFile(destination, sourceFile); err != nil {
+		return fmt.Errorf("unable to write source file to destination: %w", err)
+	}
+	return nil
+}
+
+// GetStorageEndpointSuffix returns the SES url from the JSON file as a string
+func GetStorageEndpointSuffix() string {
+	if IsAzureStackCloud() {
+		ascFile, err := RunCommandOnHost("cat", "/etc/kubernetes/azurestackcloud.json")
+		if err != nil {
+			log.Fatalf("unable to locate azurestackcloud.json to extract storage endpoint suffix: %v", err)
+		}
+		var azurestackcloud AzureStackCloud
+		if err = json.Unmarshal([]byte(ascFile), &azurestackcloud); err != nil {
+			log.Fatalf("unable to read azurestackcloud.json file: %v", err)
+		}
+		return azurestackcloud.StorageEndpointSuffix
+	}
+	return PublicAzureStorageEndpointSuffix
+}
 
 // GetHostName get host name
 func GetHostName() (string, error) {
