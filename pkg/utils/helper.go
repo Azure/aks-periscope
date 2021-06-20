@@ -65,11 +65,7 @@ func IsKubernetesInDocker() bool {
 
 	//test the KIND kubeconfig location
 	_, err = RunCommandOnHost("ls", "/etc/kubernetes/kubelet.conf")
-	if err == nil {
-		return true
-	}
-
-	return false
+	return err == nil
 }
 
 // CopyFileFromHost saves the specified source file to the destination
