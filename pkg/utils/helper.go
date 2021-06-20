@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -52,6 +54,24 @@ func IsAzureStackCloud() bool {
 	return strings.EqualFold(cloud, AzureStackCloudName)
 }
 
+// IsKubernetesInDocker returns true if the application is running on KubernetesInDocker (kind)
+func IsKubernetesInDocker() bool {
+	//TODO refactor the conditional logic this check guards into a new "KindClusterOperations" type behind an interface
+	//test the AKS kubeconfig location, if we find something then this isn't a KIND cluster
+	_, err := RunCommandOnHost("ls", "/var/lib/kubelet/kubeconfig")
+	if err == nil {
+		return false
+	}
+
+	//test the KIND kubeconfig location
+	_, err = RunCommandOnHost("ls", "/etc/kubernetes/kubelet.conf")
+	if err == nil {
+		return true
+	}
+
+	return false
+}
+
 // CopyFileFromHost saves the specified source file to the destination
 func CopyFileFromHost(source, destination string) error {
 	sourceFile, err := RunCommandOnHost("cat", source)
@@ -90,26 +110,57 @@ func GetHostName() (string, error) {
 	return strings.TrimSuffix(string(hostname), "\n"), nil
 }
 
-// GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
-func GetAPIServerFQDN() (string, error) {
-	output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
-
-	if err != nil {
-		return "", fmt.Errorf("Can't open kubeconfig file: %+v", err)
-	}
-
+//ParseAPIServerFQDNFromKubeConfig parses a kubeConfig and returns the APIServerFQDN
+func ParseAPIServerFQDNFromKubeConfig(output string) (string, error) {
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		index := strings.Index(line, "server: ")
 		if index >= 0 {
 			fqdn := line[index+len("server: "):]
-			fqdn = strings.Replace(fqdn, "https://", "", -1)
-			fqdn = strings.Replace(fqdn, ":443", "", -1)
-			return fqdn, nil
+			fqdnurl, err := url.Parse(fqdn)
+			if err != nil {
+				return "", fmt.Errorf("Fail to parse url from fqdn: %s", fmt.Sprint(err)+": "+fqdn)
+			}
+
+			host, _, err := net.SplitHostPort(fqdnurl.Host)
+			if err != nil {
+				return "", fmt.Errorf("Fail to split host port from fqdnurl: %s", fmt.Sprint(err)+": "+fqdnurl.String())
+			}
+
+			return host, nil
 		}
 	}
-
 	return "", errors.New("Could not find server definitions in kubeconfig")
+}
+
+//ReadKubeletConfig reads the kubeletConfig from the node
+func ReadKubeletConfig() (string, error) {
+	if IsKubernetesInDocker() {
+		output, err := RunCommandOnHost("cat", "/etc/kubernetes/kubelet.conf")
+		if err != nil {
+			return "", fmt.Errorf("Can't open kubeconfig file at /etc/kubernetes/kubelet.conf\": %+v", err)
+		}
+		return output, nil
+	} else {
+		output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
+		if err != nil {
+			return "", fmt.Errorf("Can't open kubeconfig file at /var/lib/kubelet/kubeconfig\": %+v", err)
+		}
+		return output, nil
+	}
+}
+
+// GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
+func GetAPIServerFQDN() (string, error) {
+	output, err := ReadKubeletConfig()
+	if err != nil {
+		return "", err
+	}
+	fqdn, err := ParseAPIServerFQDNFromKubeConfig(output)
+	if err != nil {
+		return "", err
+	}
+	return fqdn, nil
 }
 
 // RunCommandOnHost runs a command on host system

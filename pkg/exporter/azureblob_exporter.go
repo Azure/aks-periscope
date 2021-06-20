@@ -23,19 +23,47 @@ type AzureBlobExporter struct{}
 
 var _ interfaces.Exporter = &AzureBlobExporter{}
 
-// Export implements the interface method
-func (exporter *AzureBlobExporter) Export(files []string) error {
-	APIServerFQDN, err := utils.GetAPIServerFQDN()
-	if err != nil {
-		return err
+// GetStorageContainerName get storage container name
+func (exporter *AzureBlobExporter) GetStorageContainerName(APIServerFQDN string) (string, error) {
+	var containerName string
+	var err error
+	if utils.IsKubernetesInDocker() {
+		containerName, err = exporter.GetKubernetesInDockerStorageContainerName(APIServerFQDN)
+	} else {
+		containerName, err = exporter.GetNonKINDStorageContainerName(APIServerFQDN)
 	}
+	if err != nil {
+		return "", fmt.Errorf("Fail to build blob container url: %+v", err)
+	}
+	//TODO run a sanitizer over the final chars in the containerName
+	return containerName, err
+}
 
+func (exporter *AzureBlobExporter) GetKubernetesInDockerStorageContainerName(APIServerFQDN string) (string, error) {
+	return APIServerFQDN, nil
+}
+
+func (exporter *AzureBlobExporter) GetNonKINDStorageContainerName(APIServerFQDN string) (string, error) {
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
 	len := strings.Index(containerName, "-hcp-")
 	if len == -1 {
 		len = maxContainerNameLength
 	}
 	containerName = strings.TrimRight(containerName[:len], "-")
+	return containerName, nil
+}
+
+// Export implements the interface method
+func (exporter *AzureBlobExporter) Export(files []string) error {
+	APIServerFQDN, err := utils.GetAPIServerFQDN()
+	if err != nil {
+		return fmt.Errorf("Failed to get APIServerFQDN: %+v", err)
+	}
+
+	containerName, err := exporter.GetStorageContainerName(APIServerFQDN)
+	if err != nil {
+		return fmt.Errorf("Failed to get StorageContainerName: %+v", err)
+	}
 
 	ctx := context.Background()
 
@@ -46,7 +74,7 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 	ses := utils.GetStorageEndpointSuffix()
 	url, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, ses, containerName, sasKey))
 	if err != nil {
-		return fmt.Errorf("Fail to build blob container url: %+v", err)
+		return fmt.Errorf("Failed to build blob container url: %+v", err)
 	}
 
 	containerURL := azblob.NewContainerURL(*url, pipeline)
