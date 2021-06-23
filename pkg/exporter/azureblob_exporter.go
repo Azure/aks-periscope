@@ -19,9 +19,20 @@ const (
 )
 
 // AzureBlobExporter defines an Azure Blob Exporter
-type AzureBlobExporter struct{}
+type AzureBlobExporter struct {
+	BaseExporter
+}
 
 var _ interfaces.Exporter = &AzureBlobExporter{}
+
+// NewAzureBlobExporter is a constructor
+func NewAzureBlobExporter() *AzureBlobExporter {
+	return &AzureBlobExporter{
+		BaseExporter: BaseExporter{
+			exporterType: AzureBlob,
+		},
+	}
+}
 
 // GetStorageContainerName get storage container name
 func (exporter *AzureBlobExporter) GetStorageContainerName(APIServerFQDN string) (string, error) {
@@ -32,6 +43,11 @@ func (exporter *AzureBlobExporter) GetStorageContainerName(APIServerFQDN string)
 	} else {
 		containerName, err = exporter.GetNonKINDStorageContainerName(APIServerFQDN)
 	}
+}
+
+// Export implements the interface method
+func (exporter *AzureBlobExporter) Export(files []string) error {
+	APIServerFQDN, err := utils.GetAPIServerFQDN()
 	if err != nil {
 		return "", fmt.Errorf("Fail to build blob container url: %+v", err)
 	}

@@ -31,11 +31,11 @@ type NetworkOutboundDiagnoser struct {
 var _ interfaces.Diagnoser = &NetworkOutboundDiagnoser{}
 
 // NewNetworkOutboundDiagnoser is a constructor
-func NewNetworkOutboundDiagnoser(networkOutboundCollector *collector.NetworkOutboundCollector, exporter interfaces.Exporter) *NetworkOutboundDiagnoser {
+func NewNetworkOutboundDiagnoser(networkOutboundCollector *collector.NetworkOutboundCollector, exporters []interfaces.Exporter) *NetworkOutboundDiagnoser {
 	return &NetworkOutboundDiagnoser{
 		BaseDiagnoser: BaseDiagnoser{
 			diagnoserType: NetworkOutbound,
-			exporter:      exporter,
+			exporters:     exporters,
 		},
 		networkOutboundCollector: networkOutboundCollector,
 	}

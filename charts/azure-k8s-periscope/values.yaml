@@ -1,0 +1,8 @@
+# Default values for Azure k8s periscope
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  clusterType: "managedClusters"
+  accountName: ""
+  saskey: ""

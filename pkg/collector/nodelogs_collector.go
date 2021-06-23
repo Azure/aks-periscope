@@ -17,11 +17,11 @@ type NodeLogsCollector struct {
 var _ interfaces.Collector = &NodeLogsCollector{}
 
 // NewNodeLogsCollector is a constructor
-func NewNodeLogsCollector(exporter interfaces.Exporter) *NodeLogsCollector {
+func NewNodeLogsCollector(exporters []interfaces.Exporter) *NodeLogsCollector {
 	return &NodeLogsCollector{
 		BaseCollector: BaseCollector{
 			collectorType: NodeLogs,
-			exporter:      exporter,
+			exporters:     exporters,
 		},
 	}
 }

@@ -1,0 +1,192 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: aks-periscope
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aks-periscope-service-account
+  namespace: aks-periscope
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aks-periscope-role
+rules:
+  - apiGroups: ["","metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["aks-periscope.azure.github.com"]
+    resources: ["diagnostics"]
+    verbs: ["get", "watch", "list", "create", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aks-periscope-role-binding
+subjects:
+  - kind: ServiceAccount
+    name: aks-periscope-service-account
+    namespace: aks-periscope
+roleRef:
+  kind: ClusterRole
+  name: aks-periscope-role
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aks-periscope-role-binding-view
+subjects:
+  - kind: ServiceAccount
+    name: aks-periscope-service-account
+    namespace: aks-periscope
+roleRef:
+  kind: ClusterRole
+  name: view
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aks-periscope
+  namespace: aks-periscope
+  labels:
+    app: aks-periscope
+spec:
+  selector:
+    matchLabels:
+      app: aks-periscope
+  template:
+    metadata:
+      labels:
+        app: aks-periscope
+    spec:
+      serviceAccountName: aks-periscope-service-account
+      hostPID: true
+      nodeSelector:
+        beta.kubernetes.io/os: linux
+      containers:
+        - name: aks-periscope
+          image: aksrepos.azurecr.io/staging/aks-periscope:v0.3
+          securityContext:
+            privileged: true
+          imagePullPolicy: Always
+          envFrom:
+            - configMapRef:
+                name: containerlogs-config
+            - configMapRef:
+                name: kubeobjects-config
+            - configMapRef:
+                name: nodelogs-config
+            - configMapRef:
+                name: collectors-config
+            - configMapRef:
+                name: diagnosers-config
+            - configMapRef:
+                name: exporters-config
+            - secretRef:
+                name: azureblob-secret
+          volumeMounts:
+            - mountPath: /aks-periscope
+              name: aks-periscope-storage
+          resources:
+            requests:
+              memory: "500Mi"
+              cpu: "250m"
+            limits:
+              memory: "2000Mi"
+              cpu: "1000m"
+      volumes:
+        - name: aks-periscope-storage
+          hostPath:
+            path: /var/log/aks-periscope
+            type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: azureblob-secret
+  namespace: aks-periscope
+type: Opaque
+data:
+  AZURE_BLOB_ACCOUNT_NAME: # <accountName, base64 encoded>
+  AZURE_BLOB_SAS_KEY:      # <saskey, base64 encoded>
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: containerlogs-config
+  namespace: aks-periscope
+data:
+  DIAGNOSTIC_CONTAINERLOGS_LIST: kube-system
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubeobjects-config
+  namespace: aks-periscope
+data:
+  DIAGNOSTIC_KUBEOBJECTS_LIST: kube-system/pod kube-system/service kube-system/deployment
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nodelogs-config
+  namespace: aks-periscope
+data:
+  DIAGNOSTIC_NODELOGS_LIST: /var/log/azure/cluster-provision.log /var/log/cloud-init.log
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collectors-config
+  namespace: aks-periscope
+data:
+  ENABLED_COLLECTORS: dns containerlogs iptables kubeletcmd kubeobjects networkoutbound nodelogs systemlogs systemperf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: diagnosers-config
+  namespace: aks-periscope
+data:
+  ENABLED_DIAGNOSERS: networkconfig networkoutbound
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: exporters-config
+  namespace: aks-periscope
+data:
+  ENABLED_EXPORTERS: azureblob
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: diagnostics.aks-periscope.azure.github.com
+spec:
+  group: aks-periscope.azure.github.com
+  versions:
+    - name: v1
+      served: true
+      storage: true
+  validation:
+    openAPIV3Schema:
+      type: object
+      properties:
+        spec:
+          type: object
+          properties:
+            dns:
+              type: string
+            networkoutbound:
+              type: string
+  scope: Namespaced
+  names:
+    plural: diagnostics
+    singular: diagnostic
+    kind: Diagnostic
+    shortNames:
+      - apd

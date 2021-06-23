@@ -15,11 +15,11 @@ type SystemPerfCollector struct {
 var _ interfaces.Collector = &SystemPerfCollector{}
 
 // NewSystemPerfCollector is a constructor
-func NewSystemPerfCollector(exporter interfaces.Exporter) *SystemPerfCollector {
+func NewSystemPerfCollector(exporters []interfaces.Exporter) *SystemPerfCollector {
 	return &SystemPerfCollector{
 		BaseCollector: BaseCollector{
 			collectorType: SystemPerf,
-			exporter:      exporter,
+			exporters:     exporters,
 		},
 	}
 }

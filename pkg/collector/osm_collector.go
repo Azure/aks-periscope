@@ -17,11 +17,11 @@ type OsmCollector struct {
 var _ interfaces.Collector = &OsmCollector{}
 
 // NewOsmCollector is a constructor
-func NewOsmCollector(exporter interfaces.Exporter) *OsmCollector {
+func NewOsmCollector(exporters []interfaces.Exporter) *OsmCollector {
 	return &OsmCollector{
 		BaseCollector: BaseCollector{
 			collectorType: Osm,
-			exporter:      exporter,
+			exporters:     exporters,
 		},
 	}
 }

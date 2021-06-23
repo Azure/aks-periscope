@@ -11,11 +11,11 @@ import (
 	"github.com/Azure/aks-periscope/pkg/exporter"
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 func main() {
-	zipAndExportMode := true
-	exporter := &exporter.AzureBlobExporter{}
 
 	err := utils.CreateCRD()
 	if err != nil {
@@ -32,18 +32,91 @@ func main() {
 		}
 	}
 
+	collectors, diagnosers, exporters := initializeComponents()
+
+	collectorGrp := new(sync.WaitGroup)
+	runCollectors(collectors, collectorGrp)
+	collectorGrp.Wait()
+
+	diagnoserGrp := new(sync.WaitGroup)
+	runDiagnosers(diagnosers, diagnoserGrp)
+	diagnoserGrp.Wait()
+
+	log.Print("Zip result files")
+	zippedOutputs, err := zipOutputDirectory()
+	if err != nil {
+		log.Printf("Failed to zip result files: %+v", err)
+	}
+
+	log.Print("Run exporters for result files")
+	err = runExporters(exporters, zippedOutputs)
+	if err != nil {
+		log.Printf("Failed to export result files: %+v", err)
+	}
+
+	// TODO: Hack: for now AKS-Periscope is running as a deamonset so it shall not stop (or the pod will be restarted)
+	// Revert from https://github.com/Azure/aks-periscope/blob/b98d66a238e942158ef2628a9315b58937ff9c8f/cmd/aks-periscope/aks-periscope.go#L70
+	select {}
+
+	// TODO: remove this //nolint comment once the select{} has been removed
+	//nolint:govet
+	return
+}
+
+// initializeComponents initializes and returns collectors, diagnosers and exporters
+func initializeComponents() ([]interfaces.Collector, []interfaces.Diagnoser, []interfaces.Exporter) {
+
+	//exporters
+	azureBlobExporter := exporter.NewAzureBlobExporter()
+	selectedExporters := selectExporters(
+		map[string]interfaces.Exporter{
+			azureBlobExporter.GetName(): azureBlobExporter,
+		})
+
+	//collectors
+	containerLogsCollector := collector.NewContainerLogsCollector(selectedExporters)
+	systemLogsCollector := collector.NewSystemLogsCollector(selectedExporters)
+	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, selectedExporters)
+	ipTablesCollector := collector.NewIPTablesCollector(selectedExporters)
+	dnsCollector := collector.NewDNSCollector(selectedExporters)
+	nodeLogsCollector := collector.NewNodeLogsCollector(selectedExporters)
+	kubeObjectsCollector := collector.NewKubeObjectsCollector(selectedExporters)
+	kubeletCmdCollector := collector.NewKubeletCmdCollector(selectedExporters)
+	systemPerfCollector := collector.NewSystemPerfCollector(selectedExporters)
+	helmCollector := collector.NewHelmCollector(selectedExporters)
+	osmCollector := collector.NewOsmCollector(selectedExporters)
+
+	selectedCollectors := selectCollectors(
+		map[string]interfaces.Collector{
+			containerLogsCollector.GetName():   containerLogsCollector,
+			systemLogsCollector.GetName():      systemLogsCollector,
+			networkOutboundCollector.GetName(): networkOutboundCollector,
+			ipTablesCollector.GetName():        ipTablesCollector,
+			nodeLogsCollector.GetName():        nodeLogsCollector,
+			dnsCollector.GetName():             dnsCollector,
+			kubeObjectsCollector.GetName():     kubeObjectsCollector,
+			kubeletCmdCollector.GetName():      kubeletCmdCollector,
+			systemPerfCollector.GetName():      systemPerfCollector,
+			helmCollector.GetName():            helmCollector,
+			osmCollector.GetName():             osmCollector,
+		})
+
+	//diagnosers
+	//NOTE currently the collector instance objects are shared between the collector itself and things which use it as a dependency
+	networkConfigDiagnoser := diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, selectedExporters)
+	networkOutboundDiagnoser := diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, selectedExporters)
+	selectedDiagnosers := selectDiagnosers(
+		map[string]interfaces.Diagnoser{
+			networkConfigDiagnoser.GetName():   networkConfigDiagnoser,
+			networkOutboundDiagnoser.GetName(): networkOutboundDiagnoser,
+		})
+
+	return selectedCollectors, selectedDiagnosers, selectedExporters
+}
+
+// selectCollectors select the collectors to run
+func selectCollectors(allCollectorsByName map[string]interfaces.Collector) []interfaces.Collector {
 	collectors := []interfaces.Collector{}
-	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
-	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, exporter)
-	dnsCollector := collector.NewDNSCollector(exporter)
-	kubeObjectsCollector := collector.NewKubeObjectsCollector(exporter)
-	systemLogsCollector := collector.NewSystemLogsCollector(exporter)
-	ipTablesCollector := collector.NewIPTablesCollector(exporter)
-	nodeLogsCollector := collector.NewNodeLogsCollector(exporter)
-	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
-	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
-	helmCollector := collector.NewHelmCollector(exporter)
-	osmCollector := collector.NewOsmCollector(exporter)
 
 	collectors = append(collectors, containerLogsCollector)
 	collectors = append(collectors, dnsCollector)
@@ -64,8 +137,46 @@ func main() {
 		collectors = append(collectors, osmCollector)
 	}
 
-	collectorGrp := new(sync.WaitGroup)
+	//read list of collectors that are enabled
+	enabledCollectorNames := strings.Fields(os.Getenv("ENABLED_COLLECTORS"))
 
+	for _, collector := range enabledCollectorNames {
+		collectors = append(collectors, allCollectorsByName[collector])
+	}
+
+	return collectors
+}
+
+// selectDiagnosers select the diagnosers to run
+func selectDiagnosers(allDiagnosersByName map[string]interfaces.Diagnoser) []interfaces.Diagnoser {
+	diagnosers := []interfaces.Diagnoser{}
+
+	//read list of diagnosers that are enabled
+	enabledDiagnoserNames := strings.Fields(os.Getenv("ENABLED_DIAGNOSERS"))
+
+	for _, diagnoser := range enabledDiagnoserNames {
+		diagnosers = append(diagnosers, allDiagnosersByName[diagnoser])
+	}
+
+	return diagnosers
+}
+
+// selectedExporters select the exporters to run
+func selectExporters(allExporters map[string]interfaces.Exporter) []interfaces.Exporter {
+	exporters := []interfaces.Exporter{}
+
+	//read list of collectors that are enabled
+	enabledExporterNames := strings.Fields(os.Getenv("ENABLED_EXPORTERS"))
+
+	for _, exporter := range enabledExporterNames {
+		exporters = append(exporters, allExporters[exporter])
+	}
+
+	return exporters
+}
+
+// runCollectors run the collectors
+func runCollectors(collectors []interfaces.Collector, waitgroup *sync.WaitGroup) {
 	for _, c := range collectors {
 		collectorGrp.Add(1)
 		go func(c interfaces.Collector) {
@@ -85,15 +196,10 @@ func main() {
 			}
 		}(c)
 	}
+}
 
-	collectorGrp.Wait()
-
-	diagnosers := []interfaces.Diagnoser{}
-	diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
-	diagnosers = append(diagnosers, diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, exporter))
-
-	diagnoserGrp := new(sync.WaitGroup)
-
+// runDiagnosers run the diagnosers
+func runDiagnosers(diagnosers []interfaces.Diagnoser, diagnoserGrp *sync.WaitGroup) {
 	for _, d := range diagnosers {
 		diagnoserGrp.Add(1)
 		go func(d interfaces.Diagnoser) {
@@ -113,28 +219,29 @@ func main() {
 			}
 		}(d)
 	}
-
-	diagnoserGrp.Wait()
-
-	if zipAndExportMode {
-		log.Print("Zip and export result files")
-		err := zipAndExport(exporter)
-		if err != nil {
-			log.Fatalf("Failed to zip and export result files: %v", err)
-		}
-	}
 }
 
-// zipAndExport zip the results and export
-func zipAndExport(exporter interfaces.Exporter) error {
+// runExporters run the exporters
+func runExporters(exporters []interfaces.Exporter, filesToExport []string) error {
+	var result error
+	for _, exporter := range exporters {
+		if err := exporter.Export(filesToExport); err != nil {
+			result = multierror.Append(result, err)
+		}
+	}
+	return result
+}
+
+// zipAndExport zip the results
+func zipOutputDirectory() (zipFiles []string, error error) {
 	hostName, err := utils.GetHostName()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	creationTimeStamp, err := utils.GetCreationTimeStamp()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	sourcePathOnHost := "/var/log/aks-periscope/" + strings.Replace(creationTimeStamp, ":", "-", -1) + "/" + hostName
@@ -143,21 +250,10 @@ func zipAndExport(exporter interfaces.Exporter) error {
 
 	_, err = utils.RunCommandOnHost("zip", "-r", zipFileOnHost, sourcePathOnHost)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = exporter.Export([]string{zipFileOnContainer})
-	if err != nil {
-		return err
-	}
-
-	// TODO: Hack: for now AKS-Periscope is running as a deamonset so it shall not stop (or the pod will be restarted)
-	// Revert from https://github.com/Azure/aks-periscope/blob/b98d66a238e942158ef2628a9315b58937ff9c8f/cmd/aks-periscope/aks-periscope.go#L70
-	select {}
-
-	// TODO: remove this //nolint comment once the select{} has been removed
-	//nolint:govet
-	return nil
+	return []string{zipFileOnContainer}, nil
 }
 
 func contains(flagsList []string, flag string) bool {
