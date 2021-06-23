@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"net/url"
 	"os"
 	"strings"
@@ -49,16 +50,24 @@ func (exporter *AzureBlobExporter) GetStorageContainerName(APIServerFQDN string)
 }
 
 func (exporter *AzureBlobExporter) GetKubernetesInDockerStorageContainerName(APIServerFQDN string) (string, error) {
-	return APIServerFQDN, nil
+	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
+
+	return containerName, nil
 }
 
 func (exporter *AzureBlobExporter) GetNonKINDStorageContainerName(APIServerFQDN string) (string, error) {
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
-	len := strings.Index(containerName, "-hcp-")
-	if len == -1 {
-		len = maxContainerNameLength
+
+	//TODO I really dont like the line below, it makes for weird behaviour if e.g. .hcp. or -hcp- is in the fqdn for some reason other than being auto-added by AKS
+	length := strings.Index(containerName, "-hcp-")
+
+	if length == -1 {
+		maxLength := len(containerName)
+		length = int(math.Min(float64(maxLength), float64(maxContainerNameLength)))
 	}
-	containerName = strings.TrimRight(containerName[:len], "-")
+
+	containerName = containerName[:length]
+	containerName = strings.TrimRight(containerName, "-")
 	return containerName, nil
 }
 

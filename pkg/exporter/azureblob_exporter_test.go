@@ -8,7 +8,9 @@ var getStorageContainerNameTests = []struct {
 	apiServerFqdn string
 	containerName string
 }{
-	{"dakydd-test-eastus-dns-d0daedb9.hcp.eastus.azmk8s.io", "dakydd-test-eastus-dns-d0daedb9"},
+	{"standard-aks-fqdn-dns-d0daedb9.hcp.eastus.azmk8s.io", "standard-aks-fqdn-dns-d0daedb9"},
+	{"aks-engine-fqdn.westeurope.cloudapp.azure.com", "aks-engine-fqdn-westeurope-cloudapp-azure-com"},
+	{"extra.super.duper.long.apiserverfqdn.that.has.more.than.63.characters", "extra-super-duper-long-apiserverfqdn-that-has-more-than-63-char"},
 }
 
 // TestGetNonKINDStorageContainerName get storage container name for non kind cluster
