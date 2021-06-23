@@ -43,14 +43,7 @@ func (exporter *AzureBlobExporter) GetStorageContainerName(APIServerFQDN string)
 	} else {
 		containerName, err = exporter.GetNonKINDStorageContainerName(APIServerFQDN)
 	}
-}
 
-// Export implements the interface method
-func (exporter *AzureBlobExporter) Export(files []string) error {
-	APIServerFQDN, err := utils.GetAPIServerFQDN()
-	if err != nil {
-		return "", fmt.Errorf("Fail to build blob container url: %+v", err)
-	}
 	//TODO run a sanitizer over the final chars in the containerName
 	return containerName, err
 }

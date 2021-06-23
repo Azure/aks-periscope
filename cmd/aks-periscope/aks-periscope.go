@@ -176,7 +176,7 @@ func selectExporters(allExporters map[string]interfaces.Exporter) []interfaces.E
 }
 
 // runCollectors run the collectors
-func runCollectors(collectors []interfaces.Collector, waitgroup *sync.WaitGroup) {
+func runCollectors(collectors []interfaces.Collector, collectorGrp *sync.WaitGroup) {
 	for _, c := range collectors {
 		collectorGrp.Add(1)
 		go func(c interfaces.Collector) {
