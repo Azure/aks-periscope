@@ -22,8 +22,6 @@ func main() {
 		log.Fatalf("Failed to create CRD: %v", err)
 	}
 
-	collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))
-
 	// Copies self-signed cert information to container if application is running on Azure Stack Cloud.
 	// We need the cert in order to communicate with the storage account.
 	if utils.IsAzureStackCloud() {
@@ -118,33 +116,48 @@ func initializeComponents() ([]interfaces.Collector, []interfaces.Diagnoser, []i
 func selectCollectors(allCollectorsByName map[string]interfaces.Collector) []interfaces.Collector {
 	collectors := []interfaces.Collector{}
 
-	collectors = append(collectors, containerLogsCollector)
-	collectors = append(collectors, dnsCollector)
-	collectors = append(collectors, kubeObjectsCollector)
-	collectors = append(collectors, networkOutboundCollector)
-
-	if contains(collectorList, "connectedCluster") {
-		collectors = append(collectors, helmCollector)
-	} else {
-		collectors = append(collectors, systemLogsCollector)
-		collectors = append(collectors, ipTablesCollector)
-		collectors = append(collectors, nodeLogsCollector)
-		collectors = append(collectors, kubeletCmdCollector)
-		collectors = append(collectors, systemPerfCollector)
-	}
-
-	if contains(collectorList, "OSM") {
-		collectors = append(collectors, osmCollector)
-	}
-
 	//read list of collectors that are enabled
-	enabledCollectorNames := strings.Fields(os.Getenv("ENABLED_COLLECTORS"))
+	var enabledCollectorNames []string
 
-	for _, collector := range enabledCollectorNames {
-		collectors = append(collectors, allCollectorsByName[collector])
+	//TODO try get partners to move from COLLECTOR_LIST to use ENABLED_COLLECTORS instead, for now COLLECTOR_LIST takes precedence if defined
+	collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))
+	if collectorList != nil {
+		enabledCollectorNames = selectCollectorsUsingCollectorList(collectorList)
+	} else {
+		enabledCollectorNames = strings.Fields(os.Getenv("ENABLED_COLLECTORS"))
+	}
+
+	enabledCollectorNames = strings.Fields(os.Getenv("ENABLED_COLLECTORS"))
+
+	for _, collectorName := range enabledCollectorNames {
+		collectors = append(collectors, allCollectorsByName[collectorName])
 	}
 
 	return collectors
+}
+
+//selectCollectorsUsingCollectorList use clusterType
+func selectCollectorsUsingCollectorList(collectorList []string) []string {
+	var enabledCollectorNames []string
+
+	//select default collectors
+	enabledCollectorNames = append(enabledCollectorNames,
+		"dns", "containerlogs", "kubeobjects", "networkoutbound")
+
+	if contains(collectorList, "connectedCluster") {
+		//select connectedCluster colelctors
+		enabledCollectorNames = append(enabledCollectorNames, "helm")
+	} else {
+		//select non-connectedCluster collectors
+		enabledCollectorNames = append(enabledCollectorNames,
+			"iptables", "kubeletcmd", "nodelogs", "systemlogs", "systemperf")
+	}
+	if contains(collectorList, "OSM") {
+		//select OSM collectors
+		enabledCollectorNames = append(enabledCollectorNames, "osm")
+	}
+
+	return enabledCollectorNames
 }
 
 // selectDiagnosers select the diagnosers to run
@@ -154,8 +167,8 @@ func selectDiagnosers(allDiagnosersByName map[string]interfaces.Diagnoser) []int
 	//read list of diagnosers that are enabled
 	enabledDiagnoserNames := strings.Fields(os.Getenv("ENABLED_DIAGNOSERS"))
 
-	for _, diagnoser := range enabledDiagnoserNames {
-		diagnosers = append(diagnosers, allDiagnosersByName[diagnoser])
+	for _, diagnoserName := range enabledDiagnoserNames {
+		diagnosers = append(diagnosers, allDiagnosersByName[diagnoserName])
 	}
 
 	return diagnosers
@@ -168,8 +181,8 @@ func selectExporters(allExporters map[string]interfaces.Exporter) []interfaces.E
 	//read list of collectors that are enabled
 	enabledExporterNames := strings.Fields(os.Getenv("ENABLED_EXPORTERS"))
 
-	for _, exporter := range enabledExporterNames {
-		exporters = append(exporters, allExporters[exporter])
+	for _, exporterName := range enabledExporterNames {
+		exporters = append(exporters, allExporters[exporterName])
 	}
 
 	return exporters
@@ -224,8 +237,8 @@ func runDiagnosers(diagnosers []interfaces.Diagnoser, diagnoserGrp *sync.WaitGro
 // runExporters run the exporters
 func runExporters(exporters []interfaces.Exporter, filesToExport []string) error {
 	var result error
-	for _, exporter := range exporters {
-		if err := exporter.Export(filesToExport); err != nil {
+	for _, e := range exporters {
+		if err := e.Export(filesToExport); err != nil {
 			result = multierror.Append(result, err)
 		}
 	}
