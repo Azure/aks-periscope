@@ -34,6 +34,7 @@ func main() {
 
 	collectors := []interfaces.Collector{}
 	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
+	containerDLogsCollector := collector.NewContainerDLogsCollector(exporter)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, exporter)
 	dnsCollector := collector.NewDNSCollector(exporter)
 	kubeObjectsCollector := collector.NewKubeObjectsCollector(exporter)
@@ -49,6 +50,7 @@ func main() {
 	collectors = append(collectors, dnsCollector)
 	collectors = append(collectors, kubeObjectsCollector)
 	collectors = append(collectors, networkOutboundCollector)
+	collectors = append(collectors, containerDLogsCollector)
 
 	if contains(collectorList, "connectedCluster") {
 		collectors = append(collectors, helmCollector)

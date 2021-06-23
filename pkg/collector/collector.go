@@ -33,11 +33,13 @@ const (
 	SystemLogs
 	// SystemPerf defines SystemPerf Collector Type
 	SystemPerf
+	// ContainerDLogs defines ContainerDLogs Collector Type
+	ContainerDLogs
 )
 
 // Name returns type name
 func (t Type) name() string {
-	return [...]string{"dns", "containerlogs", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "osm", "systemlogs", "systemperf"}[t]
+	return [...]string{"dns", "containerlogs", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "osm", "systemlogs", "systemperf", "containerdlogs"}[t]
 }
 
 // BaseCollector defines Base Collector
