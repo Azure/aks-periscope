@@ -72,11 +72,11 @@ func main() {
 		collectors = append(collectors, systemPerfCollector)
 	}
 
+	// OSM and SMI flags are mutually exclusive
 	if contains(collectorList, "OSM") {
 		collectors = append(collectors, osmCollector)
-	}
-
-	if contains(collectorList, "SMI") {
+		collectors = append(collectors, smiCollector)
+	} else if contains(collectorList, "SMI") {
 		collectors = append(collectors, smiCollector)
 	}
 
