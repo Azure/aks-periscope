@@ -9,18 +9,18 @@ import (
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
-// ContainerLogsCollector defines a ContainerLogs Collector struct for containerd clusters
+// ContainerLogsCollectorContainerD defines a ContainerLogs Collector struct for containerd clusters
 type ContainerLogsCollectorContainerD struct {
 	BaseCollector
 }
 
 var _ interfaces.Collector = &ContainerLogsCollectorContainerD{}
 
-// NewContainerLogsCollector is a constructor
+// NewContainerLogsCollectorContainerD is a constructor
 func NewContainerLogsCollectorContainerD(exporters []interfaces.Exporter) *ContainerLogsCollector {
 	return &ContainerLogsCollector{
 		BaseCollector: BaseCollector{
-			collectorType: ContainerLogs,
+			collectorType: ContainerLogsContainerD,
 			exporters:     exporters,
 		},
 	}
@@ -43,7 +43,6 @@ type ContainerLogSelector struct {
 // where I assume # is incremented and a new log created for each container restart (starts at # == 0)
 const containerLogDirectory = "/var/log/containers"
 
-//var/log/pods and /var/logs/containers
 // Collect implements the interface method
 func (collector *ContainerLogsCollectorContainerD) Collect() error {
 	selectorStrings := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))

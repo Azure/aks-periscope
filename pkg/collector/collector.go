@@ -17,6 +17,8 @@ const (
 	DNS Type = iota
 	// ContainerLogs defines ContainerLogs Collector Type
 	ContainerLogs
+	// ContainerLogs defines ContainerLogs Collector Type for clusters using ContainerD
+	ContainerLogsContainerD
 	//Helm defines Helm Collector Type
 	Helm
 	// IPTables defines IPTables Collector Type
@@ -39,7 +41,7 @@ const (
 
 // Name returns type name
 func (t Type) name() string {
-	return [...]string{"dns", "containerlogs", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "osm", "systemlogs", "systemperf"}[t]
+	return [...]string{"dns", "containerlogs", "containerlogscontainerd", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "osm", "systemlogs", "systemperf"}[t]
 }
 
 // BaseCollector defines Base Collector
