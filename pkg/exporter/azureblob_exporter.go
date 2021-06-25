@@ -39,26 +39,28 @@ func NewAzureBlobExporter() *AzureBlobExporter {
 func (exporter *AzureBlobExporter) GetStorageContainerName(APIServerFQDN string) (string, error) {
 	var containerName string
 	var err error
-	if utils.IsKubernetesInDocker() {
-		containerName, err = exporter.GetKubernetesInDockerStorageContainerName(APIServerFQDN)
+	if utils.IsRunningInAks() {
+		containerName, err = exporter.GetAKSStorageContainerName(APIServerFQDN)
 	} else {
-		containerName, err = exporter.GetNonKINDStorageContainerName(APIServerFQDN)
+		containerName, err = exporter.GetNonAKSStorageContainerName(APIServerFQDN)
 	}
 
 	//TODO run a sanitizer over the final chars in the containerName
 	return containerName, err
 }
 
-func (exporter *AzureBlobExporter) GetKubernetesInDockerStorageContainerName(APIServerFQDN string) (string, error) {
+//GetNonAKSStorageContainerName get the storage container name for non AKS cluster
+func (exporter *AzureBlobExporter) GetNonAKSStorageContainerName(APIServerFQDN string) (string, error) {
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
 
 	return containerName, nil
 }
 
-func (exporter *AzureBlobExporter) GetNonKINDStorageContainerName(APIServerFQDN string) (string, error) {
+//GetAKSStorageContainerName get the storage container name when running on an AKS cluster
+func (exporter *AzureBlobExporter) GetAKSStorageContainerName(APIServerFQDN string) (string, error) {
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
 
-	//TODO I really dont like the line below, it makes for weird behaviour if e.g. .hcp. or -hcp- is in the fqdn for some reason other than being auto-added by AKS
+	//TODO DK: I really dont like the line below, it makes for weird behaviour if e.g. .hcp. or -hcp- is in the fqdn for some reason other than being auto-added by AKS
 	length := strings.Index(containerName, "-hcp-")
 
 	if length == -1 {

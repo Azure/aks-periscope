@@ -54,17 +54,18 @@ func IsAzureStackCloud() bool {
 	return strings.EqualFold(cloud, AzureStackCloudName)
 }
 
-// IsKubernetesInDocker returns true if the application is running on KubernetesInDocker (kind)
-func IsKubernetesInDocker() bool {
-	//TODO refactor the conditional logic this check guards into a new "KindClusterOperations" type behind an interface
-	//test the AKS kubeconfig location, if we find something then this isn't a KIND cluster
-	_, err := RunCommandOnHost("ls", "/var/lib/kubelet/kubeconfig")
+// IsRunningInAks returns true if the application is running on AKS
+func IsRunningInAks() bool {
+	//TODO refactor the conditional logic this check guards into new Cluster-Type specific components behind an interface
+	//test the non-AKS kubeconfig location, if we find something then this is *not* an AKS cluster
+	_, err := RunCommandOnHost("ls", "/etc/kubernetes/kubelet.conf")
 	if err == nil {
 		return false
 	}
 
-	//test the KIND kubeconfig location
-	_, err = RunCommandOnHost("ls", "/etc/kubernetes/kubelet.conf")
+	//test the AKS kubeconfig location
+	//TODO can we improve this check to be more like the IsAzureStackCloud one, which seems less arbitrary?
+	_, err = RunCommandOnHost("ls", "/var/lib/kubelet/kubeconfig")
 	return err == nil
 }
 
@@ -120,7 +121,7 @@ func ParseAPIServerFQDNFromKubeConfig(output string) (string, error) {
 
 			host, _, err := net.SplitHostPort(fqdnurl.Host)
 			if err != nil {
-				return "", fmt.Errorf("Fail to split host port from fqdnurl: %s", fmt.Sprint(err)+": "+fqdnurl.String())
+				return "", fmt.Errorf("Fail to split host port from fqdnurl: %s: %w", fqdnurl, err)
 			}
 
 			return host, nil
@@ -131,16 +132,16 @@ func ParseAPIServerFQDNFromKubeConfig(output string) (string, error) {
 
 //ReadKubeletConfig reads the kubeletConfig from the node
 func ReadKubeletConfig() (string, error) {
-	if IsKubernetesInDocker() {
-		output, err := RunCommandOnHost("cat", "/etc/kubernetes/kubelet.conf")
-		if err != nil {
-			return "", fmt.Errorf("Can't open kubeconfig file at /etc/kubernetes/kubelet.conf\": %+v", err)
-		}
-		return output, nil
-	} else {
+	if IsRunningInAks() {
 		output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
 		if err != nil {
 			return "", fmt.Errorf("Can't open kubeconfig file at /var/lib/kubelet/kubeconfig\": %+v", err)
+		}
+		return output, nil
+	} else {
+		output, err := RunCommandOnHost("cat", "/etc/kubernetes/kubelet.conf")
+		if err != nil {
+			return "", fmt.Errorf("Can't open kubeconfig file at /etc/kubernetes/kubelet.conf\": %+v", err)
 		}
 		return output, nil
 	}

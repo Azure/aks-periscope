@@ -15,12 +15,12 @@ var getStorageContainerNameTests = []struct {
 	{"extra.super.duper.long.apiserverfqdn.that.has.more.than.63.characters", "extra-super-duper-long-apiserverfqdn-that-has-more-than-63-char"},
 }
 
-// TestGetNonKINDStorageContainerName get storage container name for non kind cluster
-func TestGetNonKINDStorageContainerName(t *testing.T) {
+// TestGetAKSStorageContainerName get storage container name for non kind cluster
+func TestGetAKSStorageContainerName(t *testing.T) {
 	for _, tt := range getStorageContainerNameTests {
 		t.Run(tt.apiServerFqdn, func(t *testing.T) {
 			var blobExporter = &AzureBlobExporter{}
-			containerName, _ := blobExporter.GetNonKINDStorageContainerName(tt.apiServerFqdn)
+			containerName, _ := blobExporter.GetAKSStorageContainerName(tt.apiServerFqdn)
 
 			if containerName != tt.containerName {
 				t.Errorf("Sprintf(%q, &blobExporter) => %q, want %q",
