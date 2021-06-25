@@ -3,6 +3,7 @@ package collector
 import (
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
@@ -46,6 +47,7 @@ const containerLogDirectory = "/var/log/containers"
 // Collect implements the interface method
 func (collector *ContainerLogsCollectorContainerD) Collect() error {
 	selectorStrings := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))
+	rootPath, err := utils.CreateCollectorDir(collector.GetName())
 
 	containerLogSelectors := collector.ParseContainerLogSelectors(selectorStrings)
 
@@ -59,7 +61,14 @@ func (collector *ContainerLogsCollectorContainerD) Collect() error {
 	containerLogsToCollect := collector.DetermineContainerLogsToCollect(containerLogs, containerLogSelectors)
 
 	for _, containerLog := range containerLogsToCollect {
-		collector.AddToCollectorFiles(containerLog.filepath)
+		output, err := utils.RunCommandOnHost("cat", containerLog.filepath)
+		containerLogOnContainer := filepath.Join(rootPath, filepath.Base(containerLog.filepath))
+
+		err = utils.WriteToFile(containerLogOnContainer, output)
+		if err != nil {
+			return err
+		}
+		collector.AddToCollectorFiles(containerLogOnContainer)
 	}
 
 	return nil
