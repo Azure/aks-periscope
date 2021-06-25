@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -40,16 +41,24 @@ func main() {
 	runDiagnosers(diagnosers, diagnoserGrp)
 	diagnoserGrp.Wait()
 
-	log.Print("Zip result files")
-	zippedOutputs, err := zipOutputDirectory()
-	if err != nil {
-		log.Printf("Failed to zip result files: %+v", err)
+	zipAndExportString, found := os.LookupEnv("ZIP_AND_EXPORT")
+	zipAndExport, parseErr := strconv.ParseBool(zipAndExportString)
+	if !found || parseErr != nil{
+		zipAndExport = true
 	}
 
-	log.Print("Run exporters for result files")
-	err = runExporters(exporters, zippedOutputs)
-	if err != nil {
-		log.Printf("Failed to export result files: %+v", err)
+	if zipAndExport {
+		log.Print("Zip result files")
+		zippedOutputs, err := zipOutputDirectory()
+		if err != nil {
+			log.Printf("Failed to zip result files: %+v", err)
+		}
+
+		log.Print("Run exporters for result files")
+		err = runExporters(exporters, zippedOutputs)
+		if err != nil {
+			log.Printf("Failed to export result files: %+v", err)
+		}
 	}
 
 	// TODO: Hack: for now AKS-Periscope is running as a deamonset so it shall not stop (or the pod will be restarted)
