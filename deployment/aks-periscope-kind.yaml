@@ -144,7 +144,7 @@ metadata:
   name: nodelogs-config
   namespace: aks-periscope
 data:
-  DIAGNOSTIC_NODELOGS_LIST: /var/log/azure/cluster-provision.log /var/log/cloud-init.log
+  DIAGNOSTIC_NODELOGS_LIST:
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -152,7 +152,7 @@ metadata:
   name: collectors-config
   namespace: aks-periscope
 data:
-  ENABLED_COLLECTORS: dns containerlogs iptables kubeletcmd kubeobjects networkoutbound systemlogs
+  ENABLED_COLLECTORS: dns containerlogscontainerd iptables kubeletcmd kubeobjects networkoutbound systemlogs
 ---
 apiVersion: v1
 kind: ConfigMap
