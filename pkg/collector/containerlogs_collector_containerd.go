@@ -17,8 +17,8 @@ type ContainerLogsCollectorContainerD struct {
 var _ interfaces.Collector = &ContainerLogsCollectorContainerD{}
 
 // NewContainerLogsCollectorContainerD is a constructor
-func NewContainerLogsCollectorContainerD(exporters []interfaces.Exporter) *ContainerLogsCollector {
-	return &ContainerLogsCollector{
+func NewContainerLogsCollectorContainerD(exporters []interfaces.Exporter) *ContainerLogsCollectorContainerD {
+	return &ContainerLogsCollectorContainerD{
 		BaseCollector: BaseCollector{
 			collectorType: ContainerLogsContainerD,
 			exporters:     exporters,

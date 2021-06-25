@@ -73,6 +73,7 @@ func initializeComponents() ([]interfaces.Collector, []interfaces.Diagnoser, []i
 
 	//collectors
 	containerLogsCollector := collector.NewContainerLogsCollector(selectedExporters)
+	containerLogsCollectorContainerD := collector.NewContainerLogsCollectorContainerD(selectedExporters)
 	systemLogsCollector := collector.NewSystemLogsCollector(selectedExporters)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, selectedExporters)
 	ipTablesCollector := collector.NewIPTablesCollector(selectedExporters)
@@ -87,6 +88,7 @@ func initializeComponents() ([]interfaces.Collector, []interfaces.Diagnoser, []i
 	selectedCollectors := selectCollectors(
 		map[string]interfaces.Collector{
 			containerLogsCollector.GetName():   containerLogsCollector,
+			containerLogsCollectorContainerD.GetName(): containerLogsCollectorContainerD,
 			systemLogsCollector.GetName():      systemLogsCollector,
 			networkOutboundCollector.GetName(): networkOutboundCollector,
 			ipTablesCollector.GetName():        ipTablesCollector,
@@ -145,7 +147,7 @@ func selectCollectorsUsingCollectorList(collectorList []string) []string {
 		"dns", "containerlogs", "kubeobjects", "networkoutbound")
 
 	if contains(collectorList, "connectedCluster") {
-		//select connectedCluster colelctors
+		//select connectedCluster collectors
 		enabledCollectorNames = append(enabledCollectorNames, "helm")
 	} else {
 		//select non-connectedCluster collectors
