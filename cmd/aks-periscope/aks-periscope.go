@@ -72,6 +72,7 @@ func main() {
 
 // initializeComponents initializes and returns collectors, diagnosers and exporters
 func initializeComponents() ([]interfaces.Collector, []interfaces.Diagnoser, []interfaces.Exporter) {
+	//TODO it would be nice if we only instantiated those collector/diagnoser/exporters that were actually selected for execution
 
 	//exporters
 	azureBlobExporter := exporter.NewAzureBlobExporter()
@@ -138,8 +139,6 @@ func selectCollectors(allCollectorsByName map[string]interfaces.Collector) []int
 		enabledCollectorNames = strings.Fields(os.Getenv("ENABLED_COLLECTORS"))
 	}
 
-	enabledCollectorNames = strings.Fields(os.Getenv("ENABLED_COLLECTORS"))
-
 	for _, collectorName := range enabledCollectorNames {
 		collectors = append(collectors, allCollectorsByName[collectorName])
 	}
@@ -176,7 +175,13 @@ func selectDiagnosers(allDiagnosersByName map[string]interfaces.Diagnoser) []int
 	diagnosers := []interfaces.Diagnoser{}
 
 	//read list of diagnosers that are enabled
-	enabledDiagnoserNames := strings.Fields(os.Getenv("ENABLED_DIAGNOSERS"))
+	enabledDiagnoserString, found := os.LookupEnv("ENABLED_DIAGNOSERS")
+	if !found{
+		//if not defined, default to all diagnosers enabled
+		enabledDiagnoserString = "networkconfig networkoutbound"
+	}
+
+	enabledDiagnoserNames := strings.Fields(enabledDiagnoserString)
 
 	for _, diagnoserName := range enabledDiagnoserNames {
 		diagnosers = append(diagnosers, allDiagnosersByName[diagnoserName])
@@ -189,8 +194,14 @@ func selectDiagnosers(allDiagnosersByName map[string]interfaces.Diagnoser) []int
 func selectExporters(allExporters map[string]interfaces.Exporter) []interfaces.Exporter {
 	exporters := []interfaces.Exporter{}
 
-	//read list of collectors that are enabled
-	enabledExporterNames := strings.Fields(os.Getenv("ENABLED_EXPORTERS"))
+	//read list of exporters that are enabled
+	enabledExportersString, found := os.LookupEnv("ENABLED_EXPORTERS")
+	if !found{
+		//if not defined, default to all exporters enabled
+		enabledExportersString = "azureblob"
+	}
+
+	enabledExporterNames := strings.Fields(enabledExportersString)
 
 	for _, exporterName := range enabledExporterNames {
 		exporters = append(exporters, allExporters[exporterName])
