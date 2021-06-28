@@ -69,13 +69,13 @@ func collectSmiCustomResourcesFromAllNamespaces(collector *SmiCollector, rootPat
 
 	for _, namespace := range namespacesList {
 		namespaceRootPath := filepath.Join(rootPath, "namespace_"+namespace)
-		collectSmiCustomResourcesFromSingleNamespace(collector, namespaceRootPath, smiCrdsList, namespace)
+		collectSmiCustomResourcesFromNamespace(collector, namespaceRootPath, smiCrdsList, namespace)
 	}
 
 	return nil
 }
 
-func collectSmiCustomResourcesFromSingleNamespace(collector *SmiCollector, rootPath string, smiCrdsList []string, namespace string) {
+func collectSmiCustomResourcesFromNamespace(collector *SmiCollector, rootPath string, smiCrdsList []string, namespace string) {
 	for _, smiCrdType := range smiCrdsList {
 		// get all custom resources of this smi crd type
 		customResourcesList, err := utils.GetResourceList([]string{"get", smiCrdType, "-n", namespace, "-o", "jsonpath={..metadata.name}"}, " ")
