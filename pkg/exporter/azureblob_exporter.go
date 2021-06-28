@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math"
 	"net/url"
 	"os"
 	"strings"
@@ -19,23 +20,70 @@ const (
 )
 
 // AzureBlobExporter defines an Azure Blob Exporter
-type AzureBlobExporter struct{}
+type AzureBlobExporter struct {
+	BaseExporter
+}
 
 var _ interfaces.Exporter = &AzureBlobExporter{}
+
+// NewAzureBlobExporter is a constructor
+func NewAzureBlobExporter() *AzureBlobExporter {
+	return &AzureBlobExporter{
+		BaseExporter: BaseExporter{
+			exporterType: AzureBlob,
+		},
+	}
+}
+
+// GetStorageContainerName get storage container name
+func (exporter *AzureBlobExporter) GetStorageContainerName(APIServerFQDN string) (string, error) {
+	var containerName string
+	var err error
+	if utils.IsRunningInAks() {
+		containerName, err = exporter.GetAKSStorageContainerName(APIServerFQDN)
+	} else {
+		containerName, err = exporter.GetNonAKSStorageContainerName(APIServerFQDN)
+	}
+
+	//TODO run a sanitizer over the final chars in the containerName
+	return containerName, err
+}
+
+//GetNonAKSStorageContainerName get the storage container name for non AKS cluster
+func (exporter *AzureBlobExporter) GetNonAKSStorageContainerName(APIServerFQDN string) (string, error) {
+	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
+
+	return containerName, nil
+}
+
+//GetAKSStorageContainerName get the storage container name when running on an AKS cluster
+func (exporter *AzureBlobExporter) GetAKSStorageContainerName(APIServerFQDN string) (string, error) {
+	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
+
+	//TODO DK: I really dont like the line below, it makes for weird behaviour if e.g. .hcp. or -hcp- is in the fqdn for some reason other than being auto-added by AKS
+	length := strings.Index(containerName, "-hcp-")
+
+	if length == -1 {
+		maxLength := len(containerName)
+		length = int(math.Min(float64(maxLength), float64(maxContainerNameLength)))
+	}
+
+	containerName = containerName[:length]
+	containerName = strings.TrimRight(containerName, "-")
+	return containerName, nil
+}
 
 // Export implements the interface method
 func (exporter *AzureBlobExporter) Export(files []string) error {
 	APIServerFQDN, err := utils.GetAPIServerFQDN()
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to get APIServerFQDN: %+v", err)
 	}
 
-	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
-	len := strings.Index(containerName, "-hcp-")
-	if len == -1 {
-		len = maxContainerNameLength
+	containerName, err := exporter.GetStorageContainerName(APIServerFQDN)
+	if err != nil {
+		return fmt.Errorf("Failed to get StorageContainerName: %+v", err)
 	}
-	containerName = strings.TrimRight(containerName[:len], "-")
 
 	ctx := context.Background()
 
@@ -46,7 +94,7 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 	ses := utils.GetStorageEndpointSuffix()
 	url, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, ses, containerName, sasKey))
 	if err != nil {
-		return fmt.Errorf("Fail to build blob container url: %+v", err)
+		return fmt.Errorf("Failed to build blob container url: %+v", err)
 	}
 
 	containerURL := azblob.NewContainerURL(*url, pipeline)

@@ -5,6 +5,8 @@ import (
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
+
+	"github.com/hashicorp/go-multierror"
 )
 
 // Type defines Collector Type
@@ -15,6 +17,8 @@ const (
 	DNS Type = iota
 	// ContainerLogs defines ContainerLogs Collector Type
 	ContainerLogs
+	// ContainerLogs defines ContainerLogs Collector Type for clusters using ContainerD
+	ContainerLogsContainerD
 	//Helm defines Helm Collector Type
 	Helm
 	// IPTables defines IPTables Collector Type
@@ -37,7 +41,7 @@ const (
 
 // Name returns type name
 func (t Type) name() string {
-	return [...]string{"dns", "containerlogs", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "osm", "systemlogs", "systemperf"}[t]
+	return [...]string{"dns", "containerlogs", "containerlogscontainerd", "helm", "iptables", "kubeletcmd", "kubeobjects", "networkoutbound", "nodelogs", "osm", "systemlogs", "systemperf"}[t]
 }
 
 // BaseCollector defines Base Collector
@@ -45,7 +49,7 @@ type BaseCollector struct {
 	collectorType            Type
 	collectIntervalInSeconds int
 	collectorFiles           []string
-	exporter                 interfaces.Exporter
+	exporters                []interfaces.Exporter
 }
 
 // GetName gets collector name
@@ -70,11 +74,15 @@ func (b *BaseCollector) AddToCollectorFiles(file string) {
 
 // Export implements the interface method
 func (b *BaseCollector) Export() error {
-	if b.exporter != nil {
-		return b.exporter.Export(b.collectorFiles)
+	var result error
+	for _, exporter := range b.exporters {
+		if exporter != nil {
+			if err := exporter.Export(b.collectorFiles); err != nil {
+				result = multierror.Append(result, err)
+			}
+		}
 	}
-
-	return nil
+	return result
 }
 
 // CollectKubectlOutputToCollectorFiles collects output of a given kubectl command to a file.

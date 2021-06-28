@@ -15,11 +15,11 @@ type HelmCollector struct {
 var _ interfaces.Collector = &HelmCollector{}
 
 // NewHelmCollector is a constructor
-func NewHelmCollector(exporter interfaces.Exporter) *HelmCollector {
+func NewHelmCollector(exporters []interfaces.Exporter) *HelmCollector {
 	return &HelmCollector{
 		BaseCollector: BaseCollector{
 			collectorType: Helm,
-			exporter:      exporter,
+			exporters:     exporters,
 		},
 	}
 }

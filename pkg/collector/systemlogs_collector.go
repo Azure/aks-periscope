@@ -15,11 +15,11 @@ type SystemLogsCollector struct {
 var _ interfaces.Collector = &SystemLogsCollector{}
 
 // NewSystemLogsCollector is a constructor
-func NewSystemLogsCollector(exporter interfaces.Exporter) *SystemLogsCollector {
+func NewSystemLogsCollector(exporters []interfaces.Exporter) *SystemLogsCollector {
 	return &SystemLogsCollector{
 		BaseCollector: BaseCollector{
 			collectorType: SystemLogs,
-			exporter:      exporter,
+			exporters:     exporters,
 		},
 	}
 }

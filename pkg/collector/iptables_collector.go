@@ -15,11 +15,11 @@ type IPTablesCollector struct {
 var _ interfaces.Collector = &IPTablesCollector{}
 
 // NewIPTablesCollector is a constructor
-func NewIPTablesCollector(exporter interfaces.Exporter) *IPTablesCollector {
+func NewIPTablesCollector(exporters []interfaces.Exporter) *IPTablesCollector {
 	return &IPTablesCollector{
 		BaseCollector: BaseCollector{
 			collectorType: IPTables,
-			exporter:      exporter,
+			exporters:     exporters,
 		},
 	}
 }

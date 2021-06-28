@@ -15,11 +15,11 @@ type DNSCollector struct {
 var _ interfaces.Collector = &DNSCollector{}
 
 // NewDNSCollector is a constructor
-func NewDNSCollector(exporter interfaces.Exporter) *DNSCollector {
+func NewDNSCollector(exporters []interfaces.Exporter) *DNSCollector {
 	return &DNSCollector{
 		BaseCollector: BaseCollector{
 			collectorType: DNS,
-			exporter:      exporter,
+			exporters:     exporters,
 		},
 	}
 }
