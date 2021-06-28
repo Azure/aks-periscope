@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fmt"
 	"log"
 	"path/filepath"
 	"strings"
@@ -42,15 +43,11 @@ func (collector *SmiCollector) Collect() error {
 	crdNameContainsSmiPredicate := func(s string) bool { return strings.Contains(s, "smi-spec.io") }
 	smiCrdsList := filter(allCrdsList, crdNameContainsSmiPredicate)
 	if len(smiCrdsList) == 0 {
-		// TODO should this return an error?
-		log.Printf("Cluster does not contain any SMI CustomResourceDefinitions\n")
-		return nil
+		return fmt.Errorf("Cluster does not contain any SMI CRDs")
 	}
 
 	collectSmiCrds(collector, filepath.Join(rootPath, "smi_crd_definitions"), smiCrdsList)
-	collectSmiCustomResourcesFromAllNamespaces(collector, filepath.Join(rootPath, "smi_custom_resources"), smiCrdsList)
-
-	return nil
+	return collectSmiCustomResourcesFromAllNamespaces(collector, filepath.Join(rootPath, "smi_custom_resources"), smiCrdsList)
 }
 
 func collectSmiCrds(collector *SmiCollector, rootPath string, smiCrdsList []string) {
@@ -58,23 +55,24 @@ func collectSmiCrds(collector *SmiCollector, rootPath string, smiCrdsList []stri
 		fileName := smiCrd + "_definition.yaml"
 		kubeCmd := []string{"get", "crd", smiCrd, "-o", "yaml"}
 		if err := collector.CollectKubectlOutputToCollectorFiles(rootPath, fileName, kubeCmd); err != nil {
-			log.Printf("Failed to collect %s: %+v", fileName, err)
+			log.Printf("Skipping: unable to collect yaml definition of %s to %s: %+v", smiCrd, fileName, err)
 		}
 	}
 }
 
-func collectSmiCustomResourcesFromAllNamespaces(collector *SmiCollector, rootPath string, smiCrdsList []string) {
+func collectSmiCustomResourcesFromAllNamespaces(collector *SmiCollector, rootPath string, smiCrdsList []string) error {
 	// Get all namespaces in the cluster
 	namespacesList, err := utils.GetResourceList([]string{"get", "namespaces", "-o", "jsonpath={..metadata.name}"}, " ")
 	if err != nil {
-		log.Printf("Failed to list namespaces in the cluster: %+v", err)
-		return
+		return fmt.Errorf("Failed to collect SMI custom resources: unable to list namespaces in the cluster: %+v", err)
 	}
 
 	for _, namespace := range namespacesList {
 		namespaceRootPath := filepath.Join(rootPath, "namespace_"+namespace)
 		collectSmiCustomResourcesFromSingleNamespace(collector, namespaceRootPath, smiCrdsList, namespace)
 	}
+
+	return nil
 }
 
 func collectSmiCustomResourcesFromSingleNamespace(collector *SmiCollector, rootPath string, smiCrdsList []string, namespace string) {
@@ -82,7 +80,7 @@ func collectSmiCustomResourcesFromSingleNamespace(collector *SmiCollector, rootP
 		// get all custom resources of this smi crd type
 		customResourcesList, err := utils.GetResourceList([]string{"get", smiCrdType, "-n", namespace, "-o", "jsonpath={..metadata.name}"}, " ")
 		if err != nil {
-			log.Printf("Failed to list custom resources of type %s in namespace %s: %+v", smiCrdType, namespace, err)
+			log.Printf("Skipping: unable to list custom resources of type %s in namespace %s: %+v", smiCrdType, namespace, err)
 			continue
 		}
 
@@ -91,7 +89,7 @@ func collectSmiCustomResourcesFromSingleNamespace(collector *SmiCollector, rootP
 			fileName := smiCrdType + "_" + customResourceName + ".yaml"
 			kubeCmd := []string{"get", smiCrdType, customResourceName, "-n", namespace, "-o", "yaml"}
 			if err := collector.CollectKubectlOutputToCollectorFiles(customResourcesRootPath, fileName, kubeCmd); err != nil {
-				log.Printf("Failed to collect %s: %+v", fileName, err)
+				log.Printf("Skipping: unable to collect yaml definition of %s (custom resource type: %s) to %s: %+v", customResourceName, smiCrdType, fileName, err)
 			}
 		}
 	}
