@@ -128,9 +128,9 @@ func selectCollectors(allCollectorsByName map[string]interfaces.Collector) []int
 	var enabledCollectorNames []string
 
 	//TODO try get partners to move from COLLECTOR_LIST to use ENABLED_COLLECTORS instead, for now COLLECTOR_LIST takes precedence if defined
-	collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))
-	if collectorList != nil {
-		enabledCollectorNames = selectCollectorsUsingCollectorList(collectorList)
+	collectorList, found := os.LookupEnv("COLLECTOR_LIST")
+	if found {
+		enabledCollectorNames = selectCollectorsUsingCollectorList(strings.Fields(collectorList))
 	} else {
 		enabledCollectorNames = strings.Fields(os.Getenv("ENABLED_COLLECTORS"))
 	}
