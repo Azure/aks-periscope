@@ -47,13 +47,13 @@ func (collector *SmiCollector) Collect() error {
 		return nil
 	}
 
-	collectSmiCrdDefinitions(collector, filepath.Join(rootPath, "smi_crd_definitions"), smiCrdsList)
+	collectSmiCrds(collector, filepath.Join(rootPath, "smi_crd_definitions"), smiCrdsList)
 	collectSmiCustomResourcesFromAllNamespaces(collector, filepath.Join(rootPath, "smi_custom_resources"), smiCrdsList)
 
 	return nil
 }
 
-func collectSmiCrdDefinitions(collector *SmiCollector, rootPath string, smiCrdsList []string) {
+func collectSmiCrds(collector *SmiCollector, rootPath string, smiCrdsList []string) {
 	for _, smiCrd := range smiCrdsList {
 		fileName := smiCrd + "_definition.yaml"
 		kubeCmd := []string{"get", "crd", smiCrd, "-o", "yaml"}
