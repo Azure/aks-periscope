@@ -68,6 +68,7 @@ func collectSmiCustomResourcesFromAllNamespaces(collector *SmiCollector, rootPat
 	}
 
 	for _, namespace := range namespacesList {
+		// all SMI custom resources in the namespace will be collected to the directory "namespace_X" where X is the namespace name
 		namespaceRootPath := filepath.Join(rootPath, "namespace_"+namespace)
 		collectSmiCustomResourcesFromNamespace(collector, namespaceRootPath, smiCrdsList, namespace)
 	}
