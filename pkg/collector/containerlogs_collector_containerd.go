@@ -28,15 +28,15 @@ func NewContainerLogsCollectorContainerD(exporters []interfaces.Exporter) *Conta
 }
 
 type ContainerLog struct {
-	podname string
-	namespace string
+	podname       string
+	namespace     string
 	containerName string
-	containeruid string
-	filepath string
+	containeruid  string
+	filepath      string
 }
 
 type ContainerLogSelector struct {
-	namespace string
+	namespace           string
 	containerNamePrefix string
 }
 
@@ -48,6 +48,9 @@ const containerLogDirectory = "/var/log/containers"
 func (collector *ContainerLogsCollectorContainerD) Collect() error {
 	selectorStrings := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))
 	rootPath, err := utils.CreateCollectorDir(collector.GetName())
+	if err != nil {
+		return err
+	}
 
 	containerLogSelectors := collector.ParseContainerLogSelectors(selectorStrings)
 
@@ -62,6 +65,10 @@ func (collector *ContainerLogsCollectorContainerD) Collect() error {
 
 	for _, containerLog := range containerLogsToCollect {
 		output, err := utils.RunCommandOnHost("cat", containerLog.filepath)
+		if err != nil {
+			return err
+		}
+
 		containerLogOnContainer := filepath.Join(rootPath, filepath.Base(containerLog.filepath))
 
 		err = utils.WriteToFile(containerLogOnContainer, output)
@@ -79,7 +86,7 @@ func (collector *ContainerLogsCollectorContainerD) DetermineContainerLogsToColle
 	var selectedContainerLogs []ContainerLog
 	for _, containerLog := range allContainers {
 		for _, selector := range selectors {
-			if collector.DoesSelectorSelectContainerLog(containerLog, selector){
+			if collector.DoesSelectorSelectContainerLog(containerLog, selector) {
 				selectedContainerLogs = append(selectedContainerLogs, containerLog)
 			}
 		}
@@ -100,15 +107,17 @@ func (collector *ContainerLogsCollectorContainerD) ParseContainerLogSelectors(se
 	for _, selectorString := range selectorStrings {
 		selectorStringParts := strings.Split(selectorString, "/")
 
-		if len(selectorStringParts) == 1{
-		containerLogSelectors = append(containerLogSelectors, ContainerLogSelector{
-			namespace:           selectorStringParts[0],
-		})}
-		if len(selectorStringParts) == 2{
-		containerLogSelectors = append(containerLogSelectors, ContainerLogSelector{
-			namespace:           selectorStringParts[0],
-			containerNamePrefix: selectorStringParts[1],
-		})}
+		if len(selectorStringParts) == 1 {
+			containerLogSelectors = append(containerLogSelectors, ContainerLogSelector{
+				namespace: selectorStringParts[0],
+			})
+		}
+		if len(selectorStringParts) == 2 {
+			containerLogSelectors = append(containerLogSelectors, ContainerLogSelector{
+				namespace:           selectorStringParts[0],
+				containerNamePrefix: selectorStringParts[1],
+			})
+		}
 	}
 
 	return containerLogSelectors
@@ -127,7 +136,7 @@ func (collector *ContainerLogsCollectorContainerD) ParseContainerLogFilenames(di
 		containerNameWithIDSplitOnDash := strings.Split(logFileSplitOnUnderscore[2], "-")
 
 		//uid is the last value
-		indexOfUid := len(containerNameWithIDSplitOnDash)-1
+		indexOfUid := len(containerNameWithIDSplitOnDash) - 1
 
 		//containerName is everything except the last value, joined
 		containerName := strings.Join(containerNameWithIDSplitOnDash[0:indexOfUid], "")
@@ -145,7 +154,7 @@ func (collector *ContainerLogsCollectorContainerD) ParseContainerLogFilenames(di
 }
 
 //GetAllContainerLogFilesThatHaveEverRunOnHost gets the list of log files for all containers that have ever run on the host
-func (collector *ContainerLogsCollectorContainerD) GetAllContainerLogFilesThatHaveEverRunOnHost() ([]string, error){
+func (collector *ContainerLogsCollectorContainerD) GetAllContainerLogFilesThatHaveEverRunOnHost() ([]string, error) {
 	output, err := utils.RunCommandOnHost("ls", containerLogDirectory)
 	if err != nil {
 		return nil, err

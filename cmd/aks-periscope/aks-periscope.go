@@ -43,7 +43,7 @@ func main() {
 
 	zipAndExportString, found := os.LookupEnv("ZIP_AND_EXPORT")
 	zipAndExport, parseErr := strconv.ParseBool(zipAndExportString)
-	if !found || parseErr != nil{
+	if !found || parseErr != nil {
 		zipAndExport = true
 	}
 
@@ -64,10 +64,6 @@ func main() {
 	// TODO: Hack: for now AKS-Periscope is running as a deamonset so it shall not stop (or the pod will be restarted)
 	// Revert from https://github.com/Azure/aks-periscope/blob/b98d66a238e942158ef2628a9315b58937ff9c8f/cmd/aks-periscope/aks-periscope.go#L70
 	select {}
-
-	// TODO: remove this //nolint comment once the select{} has been removed
-	//nolint:govet
-	return
 }
 
 // initializeComponents initializes and returns collectors, diagnosers and exporters
@@ -97,18 +93,18 @@ func initializeComponents() ([]interfaces.Collector, []interfaces.Diagnoser, []i
 
 	selectedCollectors := selectCollectors(
 		map[string]interfaces.Collector{
-			containerLogsCollector.GetName():   containerLogsCollector,
+			containerLogsCollector.GetName():           containerLogsCollector,
 			containerLogsCollectorContainerD.GetName(): containerLogsCollectorContainerD,
-			systemLogsCollector.GetName():      systemLogsCollector,
-			networkOutboundCollector.GetName(): networkOutboundCollector,
-			ipTablesCollector.GetName():        ipTablesCollector,
-			nodeLogsCollector.GetName():        nodeLogsCollector,
-			dnsCollector.GetName():             dnsCollector,
-			kubeObjectsCollector.GetName():     kubeObjectsCollector,
-			kubeletCmdCollector.GetName():      kubeletCmdCollector,
-			systemPerfCollector.GetName():      systemPerfCollector,
-			helmCollector.GetName():            helmCollector,
-			osmCollector.GetName():             osmCollector,
+			systemLogsCollector.GetName():              systemLogsCollector,
+			networkOutboundCollector.GetName():         networkOutboundCollector,
+			ipTablesCollector.GetName():                ipTablesCollector,
+			nodeLogsCollector.GetName():                nodeLogsCollector,
+			dnsCollector.GetName():                     dnsCollector,
+			kubeObjectsCollector.GetName():             kubeObjectsCollector,
+			kubeletCmdCollector.GetName():              kubeletCmdCollector,
+			systemPerfCollector.GetName():              systemPerfCollector,
+			helmCollector.GetName():                    helmCollector,
+			osmCollector.GetName():                     osmCollector,
 		})
 
 	//diagnosers
@@ -176,7 +172,7 @@ func selectDiagnosers(allDiagnosersByName map[string]interfaces.Diagnoser) []int
 
 	//read list of diagnosers that are enabled
 	enabledDiagnoserString, found := os.LookupEnv("ENABLED_DIAGNOSERS")
-	if !found{
+	if !found {
 		//if not defined, default to all diagnosers enabled
 		enabledDiagnoserString = "networkconfig networkoutbound"
 	}
@@ -196,7 +192,7 @@ func selectExporters(allExporters map[string]interfaces.Exporter) []interfaces.E
 
 	//read list of exporters that are enabled
 	enabledExportersString, found := os.LookupEnv("ENABLED_EXPORTERS")
-	if !found{
+	if !found {
 		//if not defined, default to all exporters enabled
 		enabledExportersString = "azureblob"
 	}
