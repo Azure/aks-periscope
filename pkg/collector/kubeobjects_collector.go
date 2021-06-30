@@ -2,37 +2,30 @@ package collector
 
 import (
 	"os"
-	"path/filepath"
 	"strings"
 
-	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // KubeObjectsCollector defines a KubeObjects Collector struct
 type KubeObjectsCollector struct {
-	BaseCollector
+	data map[string]string
 }
 
-var _ interfaces.Collector = &KubeObjectsCollector{}
-
 // NewKubeObjectsCollector is a constructor
-func NewKubeObjectsCollector(exporter interfaces.Exporter) *KubeObjectsCollector {
+func NewKubeObjectsCollector() *KubeObjectsCollector {
 	return &KubeObjectsCollector{
-		BaseCollector: BaseCollector{
-			collectorType: KubeObjects,
-			exporter:      exporter,
-		},
+		data: make(map[string]string),
 	}
+}
+
+func (collector *KubeObjectsCollector) GetName() string {
+	return "kubeobjects"
 }
 
 // Collect implements the interface method
 func (collector *KubeObjectsCollector) Collect() error {
 	kubernetesObjects := strings.Fields(os.Getenv("DIAGNOSTIC_KUBEOBJECTS_LIST"))
-	rootPath, err := utils.CreateCollectorDir(collector.GetName())
-	if err != nil {
-		return err
-	}
 
 	for _, kubernetesObject := range kubernetesObjects {
 		kubernetesObjectParts := strings.Split(kubernetesObject, "/")
@@ -53,21 +46,19 @@ func (collector *KubeObjectsCollector) Collect() error {
 		}
 
 		for _, object := range objects {
-			kubernetesObjectFile := filepath.Join(rootPath, nameSpace+"_"+objectType+"_"+object)
 
 			output, err := utils.RunCommandOnContainer("kubectl", "-n", nameSpace, "describe", objectType, object)
 			if err != nil {
 				return err
 			}
 
-			err = utils.WriteToFile(kubernetesObjectFile, output)
-			if err != nil {
-				return err
-			}
-
-			collector.AddToCollectorFiles(kubernetesObjectFile)
+			collector.data[nameSpace+"_"+objectType+"_"+object] = output
 		}
 	}
 
 	return nil
+}
+
+func (collector *KubeObjectsCollector) GetData() map[string]string {
+	return collector.data
 }

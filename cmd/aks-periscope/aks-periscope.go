@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"log"
 	"os"
 	"strings"
@@ -14,15 +15,22 @@ import (
 )
 
 func main() {
-	zipAndExportMode := true
-	exporter := &exporter.AzureBlobExporter{}
-
-	err := utils.CreateCRD()
+	creationTimeStamp, err := utils.GetCreationTimeStamp()
 	if err != nil {
+		log.Fatalf("Failed to get creation timestamp: %v", err)
+	}
+
+	hostname, err := utils.GetHostName()
+	if err != nil {
+		log.Fatalf("Failed to get the hostname on which AKS Periscope is running: %v", err)
+	}
+
+	if err := utils.CreateCRD(); err != nil {
 		log.Fatalf("Failed to create CRD: %v", err)
 	}
 
 	collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))
+	exp := exporter.NewAzureBlobExporter(creationTimeStamp, hostname)
 
 	// Copies self-signed cert information to container if application is running on Azure Stack Cloud.
 	// We need the cert in order to communicate with the storage account.
@@ -32,23 +40,26 @@ func main() {
 		}
 	}
 
-	collectors := []interfaces.Collector{}
-	containerLogsCollector := collector.NewContainerLogsCollector(exporter)
-	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, exporter)
-	dnsCollector := collector.NewDNSCollector(exporter)
-	kubeObjectsCollector := collector.NewKubeObjectsCollector(exporter)
-	systemLogsCollector := collector.NewSystemLogsCollector(exporter)
-	ipTablesCollector := collector.NewIPTablesCollector(exporter)
-	nodeLogsCollector := collector.NewNodeLogsCollector(exporter)
-	kubeletCmdCollector := collector.NewKubeletCmdCollector(exporter)
-	systemPerfCollector := collector.NewSystemPerfCollector(exporter)
-	helmCollector := collector.NewHelmCollector(exporter)
-	osmCollector := collector.NewOsmCollector(exporter)
+	dataProducers := []interfaces.DataProducer{}
 
-	collectors = append(collectors, containerLogsCollector)
-	collectors = append(collectors, dnsCollector)
-	collectors = append(collectors, kubeObjectsCollector)
-	collectors = append(collectors, networkOutboundCollector)
+	containerLogsCollector := collector.NewContainerLogsCollector()
+	networkOutboundCollector := collector.NewNetworkOutboundCollector()
+	dnsCollector := collector.NewDNSCollector()
+	kubeObjectsCollector := collector.NewKubeObjectsCollector()
+	systemLogsCollector := collector.NewSystemLogsCollector()
+	ipTablesCollector := collector.NewIPTablesCollector()
+	nodeLogsCollector := collector.NewNodeLogsCollector()
+	kubeletCmdCollector := collector.NewKubeletCmdCollector()
+	systemPerfCollector := collector.NewSystemPerfCollector()
+	helmCollector := collector.NewHelmCollector()
+	osmCollector := collector.NewOsmCollector()
+
+	collectors := []interfaces.Collector{
+		containerLogsCollector,
+		dnsCollector,
+		kubeObjectsCollector,
+		networkOutboundCollector,
+	}
 
 	if contains(collectorList, "connectedCluster") {
 		collectors = append(collectors, helmCollector)
@@ -67,6 +78,7 @@ func main() {
 	collectorGrp := new(sync.WaitGroup)
 
 	for _, c := range collectors {
+		dataProducers = append(dataProducers, c)
 		collectorGrp.Add(1)
 		go func(c interfaces.Collector) {
 			defer collectorGrp.Done()
@@ -79,8 +91,7 @@ func main() {
 			}
 
 			log.Printf("Collector: %s, export data", c.GetName())
-			err = c.Export()
-			if err != nil {
+			if err = exp.Export(c); err != nil {
 				log.Printf("Collector: %s, export data failed: %v", c.GetName(), err)
 			}
 		}(c)
@@ -88,13 +99,15 @@ func main() {
 
 	collectorGrp.Wait()
 
-	diagnosers := []interfaces.Diagnoser{}
-	diagnosers = append(diagnosers, diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, exporter))
-	diagnosers = append(diagnosers, diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, exporter))
+	diagnosers := []interfaces.Diagnoser{
+		diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector),
+		diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector),
+	}
 
 	diagnoserGrp := new(sync.WaitGroup)
 
 	for _, d := range diagnosers {
+		dataProducers = append(dataProducers, d)
 		diagnoserGrp.Add(1)
 		go func(d interfaces.Diagnoser) {
 			defer diagnoserGrp.Done()
@@ -107,8 +120,7 @@ func main() {
 			}
 
 			log.Printf("Diagnoser: %s, export data", d.GetName())
-			err = d.Export()
-			if err != nil {
+			if err = exp.Export(d); err != nil {
 				log.Printf("Diagnoser: %s, export data failed: %v", d.GetName(), err)
 			}
 		}(d)
@@ -116,39 +128,13 @@ func main() {
 
 	diagnoserGrp.Wait()
 
-	if zipAndExportMode {
-		log.Print("Zip and export result files")
-		err := zipAndExport(exporter)
-		if err != nil {
-			log.Fatalf("Failed to zip and export result files: %v", err)
+	zip, err := exporter.Zip(dataProducers)
+	if err != nil {
+		log.Printf("Could not zip data: %v", err)
+	} else {
+		if err := exp.ExportReader(hostname+".zip", bytes.NewReader(zip.Bytes())); err != nil {
+			log.Printf("Could not export zip archive: %v", err)
 		}
-	}
-}
-
-// zipAndExport zip the results and export
-func zipAndExport(exporter interfaces.Exporter) error {
-	hostName, err := utils.GetHostName()
-	if err != nil {
-		return err
-	}
-
-	creationTimeStamp, err := utils.GetCreationTimeStamp()
-	if err != nil {
-		return err
-	}
-
-	sourcePathOnHost := "/var/log/aks-periscope/" + strings.Replace(creationTimeStamp, ":", "-", -1) + "/" + hostName
-	zipFileOnHost := sourcePathOnHost + "/" + hostName + ".zip"
-	zipFileOnContainer := strings.TrimPrefix(zipFileOnHost, "/var/log")
-
-	_, err = utils.RunCommandOnHost("zip", "-r", zipFileOnHost, sourcePathOnHost)
-	if err != nil {
-		return err
-	}
-
-	err = exporter.Export([]string{zipFileOnContainer})
-	if err != nil {
-		return err
 	}
 
 	// TODO: Hack: for now AKS-Periscope is running as a deamonset so it shall not stop (or the pod will be restarted)
@@ -157,7 +143,6 @@ func zipAndExport(exporter interfaces.Exporter) error {
 
 	// TODO: remove this //nolint comment once the select{} has been removed
 	//nolint:govet
-	return nil
 }
 
 func contains(flagsList []string, flag string) bool {

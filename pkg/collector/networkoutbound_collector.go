@@ -4,11 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 	"time"
 
-	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -26,20 +23,18 @@ type NetworkOutboundDatum struct {
 
 // NetworkOutboundCollector defines a NetworkOutbound Collector struct
 type NetworkOutboundCollector struct {
-	BaseCollector
+	data map[string]string
 }
 
-var _ interfaces.Collector = &NetworkOutboundCollector{}
-
 // NewNetworkOutboundCollector is a constructor
-func NewNetworkOutboundCollector(collectIntervalInSeconds int, exporter interfaces.Exporter) *NetworkOutboundCollector {
+func NewNetworkOutboundCollector() *NetworkOutboundCollector {
 	return &NetworkOutboundCollector{
-		BaseCollector: BaseCollector{
-			collectorType:            NetworkOutbound,
-			collectIntervalInSeconds: collectIntervalInSeconds,
-			exporter:                 exporter,
-		},
+		data: make(map[string]string),
 	}
+}
+
+func (collector *NetworkOutboundCollector) GetName() string {
+	return "networkoutbound"
 }
 
 // Collect implements the interface method
@@ -80,20 +75,8 @@ func (collector *NetworkOutboundCollector) Collect() error {
 			URL:  "mcr.microsoft.com:80",
 		},
 	)
-	rootPath, err := utils.CreateCollectorDir(collector.GetName())
-	if err != nil {
-		return err
-	}
 
 	for _, outboundType := range outboundTypes {
-		networkOutboundFile := filepath.Join(rootPath, outboundType.Type)
-
-		f, err := os.OpenFile(networkOutboundFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			return fmt.Errorf("Fail to open file %s: %+v", networkOutboundFile, err)
-		}
-		defer f.Close()
-
 		timeout := time.Duration(5 * time.Second)
 		_, err = net.DialTimeout("tcp", outboundType.URL, timeout)
 
@@ -110,16 +93,15 @@ func (collector *NetworkOutboundCollector) Collect() error {
 
 		dataBytes, err := json.Marshal(data)
 		if err != nil {
-			return fmt.Errorf("Fail to marshal data: %+v", err)
+			return fmt.Errorf("marshal data: %w", err)
 		}
 
-		_, err = f.WriteString(string(dataBytes) + "\n")
-		if err != nil {
-			return fmt.Errorf("Fail to write data to file: %+v", err)
-		}
-
-		collector.AddToCollectorFiles(networkOutboundFile)
+		collector.data[outboundType.Type] = string(dataBytes)
 	}
 
 	return nil
+}
+
+func (collector *NetworkOutboundCollector) GetData() map[string]string {
+	return collector.data
 }
