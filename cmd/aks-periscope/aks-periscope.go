@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"log"
 	"os"
 	"strconv"
@@ -17,9 +18,17 @@ import (
 )
 
 func main() {
-
-	err := utils.CreateCRD()
+	creationTimeStamp, err := utils.GetCreationTimeStamp()
 	if err != nil {
+		log.Fatalf("Failed to get creation timestamp: %v", err)
+	}
+
+	hostname, err := utils.GetHostName()
+	if err != nil {
+		log.Fatalf("Failed to get the hostname on which AKS Periscope is running: %v", err)
+	}
+
+	if err := utils.CreateCRD(); err != nil {
 		log.Fatalf("Failed to create CRD: %v", err)
 	}
 
@@ -31,14 +40,23 @@ func main() {
 		}
 	}
 
-	collectors, diagnosers, exporters := initializeComponents()
+	collectors, diagnosers, exporters := initializeComponents(creationTimeStamp, hostname)
+
+	//dataProducers includes all selected collectors and diagnosers
+	dataProducers := []interfaces.DataProducer{}
+	for _, collector := range collectors {
+		dataProducers = append(dataProducers, collector)
+	}
+	for _, diagnoser := range diagnosers {
+		dataProducers = append(dataProducers, diagnoser)
+	}
 
 	collectorGrp := new(sync.WaitGroup)
-	runCollectors(collectors, collectorGrp)
+	runCollectors(collectors, exporters, collectorGrp)
 	collectorGrp.Wait()
 
 	diagnoserGrp := new(sync.WaitGroup)
-	runDiagnosers(diagnosers, diagnoserGrp)
+	runDiagnosers(diagnosers, exporters, diagnoserGrp)
 	diagnoserGrp.Wait()
 
 	zipAndExportString, found := os.LookupEnv("ZIP_AND_EXPORT")
@@ -49,15 +67,14 @@ func main() {
 
 	if zipAndExport {
 		log.Print("Zip result files")
-		zippedOutputs, err := zipOutputDirectory()
+		zip, err := exporter.Zip(dataProducers)
 		if err != nil {
-			log.Printf("Failed to zip result files: %+v", err)
-		}
+			log.Printf("Could not zip data: %v", err)
+		} else {
 
-		log.Print("Run exporters for result files")
-		err = runExporters(exporters, zippedOutputs)
-		if err != nil {
-			log.Printf("Failed to export result files: %+v", err)
+			if err := runExportersForZip(exporters, zip, hostname); err != nil {
+				log.Printf("Could not export zip archive: %v", err)
+			}
 		}
 	}
 
@@ -67,29 +84,22 @@ func main() {
 }
 
 // initializeComponents initializes and returns collectors, diagnosers and exporters
-func initializeComponents() ([]interfaces.Collector, []interfaces.Diagnoser, []interfaces.Exporter) {
+func initializeComponents(creationTimeStamp string, hostname string) ([]interfaces.Collector, []interfaces.Diagnoser, []interfaces.Exporter) {
 	//TODO it would be nice if we only instantiated those collector/diagnoser/exporters that were actually selected for execution
 
-	//exporters
-	azureBlobExporter := exporter.NewAzureBlobExporter()
-	selectedExporters := selectExporters(
-		map[string]interfaces.Exporter{
-			azureBlobExporter.GetName(): azureBlobExporter,
-		})
-
 	//collectors
-	containerLogsCollector := collector.NewContainerLogsCollector(selectedExporters)
-	containerLogsCollectorContainerD := collector.NewContainerLogsCollectorContainerD(selectedExporters)
-	systemLogsCollector := collector.NewSystemLogsCollector(selectedExporters)
-	networkOutboundCollector := collector.NewNetworkOutboundCollector(5, selectedExporters)
-	ipTablesCollector := collector.NewIPTablesCollector(selectedExporters)
-	dnsCollector := collector.NewDNSCollector(selectedExporters)
-	nodeLogsCollector := collector.NewNodeLogsCollector(selectedExporters)
-	kubeObjectsCollector := collector.NewKubeObjectsCollector(selectedExporters)
-	kubeletCmdCollector := collector.NewKubeletCmdCollector(selectedExporters)
-	systemPerfCollector := collector.NewSystemPerfCollector(selectedExporters)
-	helmCollector := collector.NewHelmCollector(selectedExporters)
-	osmCollector := collector.NewOsmCollector(selectedExporters)
+	containerLogsCollector := collector.NewContainerLogsCollector()
+	containerLogsCollectorContainerD := collector.NewContainerLogsCollectorContainerD()
+	systemLogsCollector := collector.NewSystemLogsCollector()
+	networkOutboundCollector := collector.NewNetworkOutboundCollector()
+	ipTablesCollector := collector.NewIPTablesCollector()
+	dnsCollector := collector.NewDNSCollector()
+	nodeLogsCollector := collector.NewNodeLogsCollector()
+	kubeObjectsCollector := collector.NewKubeObjectsCollector()
+	kubeletCmdCollector := collector.NewKubeletCmdCollector()
+	systemPerfCollector := collector.NewSystemPerfCollector()
+	helmCollector := collector.NewHelmCollector()
+	osmCollector := collector.NewOsmCollector()
 
 	selectedCollectors := selectCollectors(
 		map[string]interfaces.Collector{
@@ -109,12 +119,19 @@ func initializeComponents() ([]interfaces.Collector, []interfaces.Diagnoser, []i
 
 	//diagnosers
 	//NOTE currently the collector instance objects are shared between the collector itself and things which use it as a dependency
-	networkConfigDiagnoser := diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector, selectedExporters)
-	networkOutboundDiagnoser := diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector, selectedExporters)
+	networkConfigDiagnoser := diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector)
+	networkOutboundDiagnoser := diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector)
 	selectedDiagnosers := selectDiagnosers(
 		map[string]interfaces.Diagnoser{
 			networkConfigDiagnoser.GetName():   networkConfigDiagnoser,
 			networkOutboundDiagnoser.GetName(): networkOutboundDiagnoser,
+		})
+
+	//exporters
+	azureBlobExporter := exporter.NewAzureBlobExporter(creationTimeStamp, hostname)
+	selectedExporters := selectExporters(
+		map[string]interfaces.Exporter{
+			azureBlobExporter.GetName(): azureBlobExporter,
 		})
 
 	return selectedCollectors, selectedDiagnosers, selectedExporters
@@ -207,7 +224,7 @@ func selectExporters(allExporters map[string]interfaces.Exporter) []interfaces.E
 }
 
 // runCollectors run the collectors
-func runCollectors(collectors []interfaces.Collector, collectorGrp *sync.WaitGroup) {
+func runCollectors(collectors []interfaces.Collector, exporters []interfaces.Exporter, collectorGrp *sync.WaitGroup) {
 	for _, c := range collectors {
 		collectorGrp.Add(1)
 		go func(c interfaces.Collector) {
@@ -221,8 +238,7 @@ func runCollectors(collectors []interfaces.Collector, collectorGrp *sync.WaitGro
 			}
 
 			log.Printf("Collector: %s, export data", c.GetName())
-			err = c.Export()
-			if err != nil {
+			if err = runExportersForDataProducer(exporters, c); err != nil {
 				log.Printf("Collector: %s, export data failed: %v", c.GetName(), err)
 			}
 		}(c)
@@ -230,7 +246,7 @@ func runCollectors(collectors []interfaces.Collector, collectorGrp *sync.WaitGro
 }
 
 // runDiagnosers run the diagnosers
-func runDiagnosers(diagnosers []interfaces.Diagnoser, diagnoserGrp *sync.WaitGroup) {
+func runDiagnosers(diagnosers []interfaces.Diagnoser, exporters []interfaces.Exporter, diagnoserGrp *sync.WaitGroup) {
 	for _, d := range diagnosers {
 		diagnoserGrp.Add(1)
 		go func(d interfaces.Diagnoser) {
@@ -244,49 +260,36 @@ func runDiagnosers(diagnosers []interfaces.Diagnoser, diagnoserGrp *sync.WaitGro
 			}
 
 			log.Printf("Diagnoser: %s, export data", d.GetName())
-			err = d.Export()
-			if err != nil {
+			if err = runExportersForDataProducer(exporters, d); err != nil {
 				log.Printf("Diagnoser: %s, export data failed: %v", d.GetName(), err)
 			}
 		}(d)
 	}
 }
 
-// runExporters run the exporters
-func runExporters(exporters []interfaces.Exporter, filesToExport []string) error {
+// runExporters run the exporters for a data producer
+func runExportersForDataProducer(exporters []interfaces.Exporter, dataProducer interfaces.DataProducer) error {
 	var result error
 	for _, e := range exporters {
-		if err := e.Export(filesToExport); err != nil {
+		if err := e.Export(dataProducer); err != nil {
 			result = multierror.Append(result, err)
 		}
 	}
 	return result
 }
 
-// zipAndExport zip the results
-func zipOutputDirectory() (zipFiles []string, error error) {
-	hostName, err := utils.GetHostName()
-	if err != nil {
-		return nil, err
+//runExportersForZip run the exporters for the zip file
+func runExportersForZip(exporters []interfaces.Exporter, zip *bytes.Buffer, hostname string) error {
+	var result error
+	for _, exp := range exporters {
+		if err := exp.ExportReader(hostname+".zip", bytes.NewReader(zip.Bytes())); err != nil {
+			result = multierror.Append(result, err)
+		}
 	}
-
-	creationTimeStamp, err := utils.GetCreationTimeStamp()
-	if err != nil {
-		return nil, err
-	}
-
-	sourcePathOnHost := "/var/log/aks-periscope/" + strings.Replace(creationTimeStamp, ":", "-", -1) + "/" + hostName
-	zipFileOnHost := sourcePathOnHost + "/" + hostName + ".zip"
-	zipFileOnContainer := strings.TrimPrefix(zipFileOnHost, "/var/log")
-
-	_, err = utils.RunCommandOnHost("zip", "-r", zipFileOnHost, sourcePathOnHost)
-	if err != nil {
-		return nil, err
-	}
-
-	return []string{zipFileOnContainer}, nil
+	return result
 }
 
+//contains checks if an array contains a value
 func contains(flagsList []string, flag string) bool {
 	for _, f := range flagsList {
 		if strings.EqualFold(f, flag) {

@@ -1,16 +1,13 @@
 package diagnoser
 
 import (
-	"bufio"
 	"encoding/json"
 	"fmt"
 	"log"
-	"os"
-	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/Azure/aks-periscope/pkg/collector"
-	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -24,21 +21,20 @@ type networkOutboundDiagnosticDatum struct {
 
 // NetworkOutboundDiagnoser defines a NetworkOutbound Diagnoser struct
 type NetworkOutboundDiagnoser struct {
-	BaseDiagnoser
 	networkOutboundCollector *collector.NetworkOutboundCollector
+	data                     map[string]string
 }
 
-var _ interfaces.Diagnoser = &NetworkOutboundDiagnoser{}
-
 // NewNetworkOutboundDiagnoser is a constructor
-func NewNetworkOutboundDiagnoser(networkOutboundCollector *collector.NetworkOutboundCollector, exporters []interfaces.Exporter) *NetworkOutboundDiagnoser {
+func NewNetworkOutboundDiagnoser(networkOutboundCollector *collector.NetworkOutboundCollector) *NetworkOutboundDiagnoser {
 	return &NetworkOutboundDiagnoser{
-		BaseDiagnoser: BaseDiagnoser{
-			diagnoserType: NetworkOutbound,
-			exporters:     exporters,
-		},
 		networkOutboundCollector: networkOutboundCollector,
+		data:                     make(map[string]string),
 	}
+}
+
+func (collector *NetworkOutboundDiagnoser) GetName() string {
+	return "networkoutbound"
 }
 
 // Diagnose implements the interface method
@@ -47,35 +43,17 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 	if err != nil {
 		return err
 	}
-	rootPath, err := utils.CreateDiagnosticDir()
-	if err != nil {
-		return err
-	}
-
-	networkOutboundDiagnosticFile := filepath.Join(rootPath, diagnoser.GetName())
-
-	f, err := os.OpenFile(networkOutboundDiagnosticFile, os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("Fail to open file %s: %+v", networkOutboundDiagnosticFile, err)
-	}
-	defer f.Close()
 
 	outboundDiagnosticData := []networkOutboundDiagnosticDatum{}
 
-	for _, file := range diagnoser.networkOutboundCollector.GetCollectorFiles() {
-		t, err := os.Open(file)
-		if err != nil {
-			return fmt.Errorf("Fail to open file %s: %+v", file, err)
-		}
-		defer t.Close()
-
+	for _, data := range diagnoser.networkOutboundCollector.GetData() {
 		dataPoint := networkOutboundDiagnosticDatum{HostName: hostName}
-		scanner := bufio.NewScanner(t)
-		for scanner.Scan() {
+		lines := strings.Split(data, "\n")
+		for _, line := range lines {
 			var outboundDatum collector.NetworkOutboundDatum
-			err := json.Unmarshal([]byte(scanner.Text()), &outboundDatum)
+			err := json.Unmarshal([]byte(line), &outboundDatum)
 			if err != nil {
-				log.Printf("Unmarshal failed: %+v", err)
+				log.Printf("Unmarshal failed: %v", err)
 				continue
 			}
 
@@ -86,7 +64,7 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 					outboundDiagnosticData = append(outboundDiagnosticData, dataPoint)
 					setDataPoint(&outboundDatum, &dataPoint)
 				} else {
-					if int(outboundDatum.TimeStamp.Sub(dataPoint.End).Seconds()) > diagnoser.networkOutboundCollector.GetCollectIntervalInSeconds() {
+					if int(outboundDatum.TimeStamp.Sub(dataPoint.End).Seconds()) > 5 {
 						outboundDiagnosticData = append(outboundDiagnosticData, dataPoint)
 						setDataPoint(&outboundDatum, &dataPoint)
 					} else {
@@ -103,22 +81,21 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 
 	dataBytes, err := json.Marshal(outboundDiagnosticData)
 	if err != nil {
-		return fmt.Errorf("Fail to marshal data: %+v", err)
+		return fmt.Errorf("marshal data from NetworkOutbound Diagnoser: %w", err)
 	}
 
-	_, err = f.WriteString(string(dataBytes) + "\n")
-	if err != nil {
-		return fmt.Errorf("Fail to write data to file: %+v", err)
-	}
+	diagnoser.data["networkoutbound"] = string(dataBytes)
 
-	diagnoser.AddToDiagnoserFiles(networkOutboundDiagnosticFile)
-
-	err = utils.WriteToCRD(networkOutboundDiagnosticFile, diagnoser.GetName())
+	err = utils.WriteToCRD(string(dataBytes), diagnoser.GetName())
 	if err != nil {
-		return fmt.Errorf("Fail to write file %s to CRD: %+v", networkOutboundDiagnosticFile, err)
+		return fmt.Errorf("write data from NetworkOutbound Diagnoser to CRD: %w", err)
 	}
 
 	return nil
+}
+
+func (collector *NetworkOutboundDiagnoser) GetData() map[string]string {
+	return collector.data
 }
 
 func setDataPoint(outboundDatum *collector.NetworkOutboundDatum, dataPoint *networkOutboundDiagnosticDatum) {

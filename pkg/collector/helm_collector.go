@@ -1,61 +1,44 @@
 package collector
 
 import (
-	"path/filepath"
-
-	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // HelmCollector defines a Helm Collector struct
 type HelmCollector struct {
-	BaseCollector
+	data map[string]string
 }
 
-var _ interfaces.Collector = &HelmCollector{}
-
 // NewHelmCollector is a constructor
-func NewHelmCollector(exporters []interfaces.Exporter) *HelmCollector {
+func NewHelmCollector() *HelmCollector {
 	return &HelmCollector{
-		BaseCollector: BaseCollector{
-			collectorType: Helm,
-			exporters:     exporters,
-		},
+		data: make(map[string]string),
 	}
+}
+
+func (collector *HelmCollector) GetName() string {
+	return "helm"
 }
 
 // Collect implements the interface method
 func (collector *HelmCollector) Collect() error {
-	rootPath, err := utils.CreateCollectorDir(collector.GetName())
+	helmList, err := utils.RunCommandOnContainer("helm", "list", "--all-namespaces")
 	if err != nil {
 		return err
 	}
 
-	helmListFile := filepath.Join(rootPath, "helm_list")
-	helm_list_output, helm_list_err := utils.RunCommandOnContainer("helm", "list", "--all-namespaces")
-	if helm_list_err != nil {
-		return helm_list_err
+	collector.data["helm_list"] = helmList
+
+	helmHistory, err := utils.RunCommandOnContainer("helm", "history", "-n", "default", "azure-arc")
+	if err != nil {
+		return err
 	}
 
-	helm_list_err = utils.WriteToFile(helmListFile, helm_list_output)
-	if helm_list_err != nil {
-		return helm_list_err
-	}
-
-	collector.AddToCollectorFiles(helmListFile)
-
-	helmHistoryFile := filepath.Join(rootPath, "helm_history")
-	helm_history_output, helm_history_err := utils.RunCommandOnContainer("helm", "history", "-n", "default", "azure-arc")
-	if helm_history_err != nil {
-		return helm_history_err
-	}
-
-	helm_history_err = utils.WriteToFile(helmHistoryFile, helm_history_output)
-	if helm_history_err != nil {
-		return helm_history_err
-	}
-
-	collector.AddToCollectorFiles(helmHistoryFile)
+	collector.data["helm_history"] = helmHistory
 
 	return nil
+}
+
+func (collector *HelmCollector) GetData() map[string]string {
+	return collector.data
 }

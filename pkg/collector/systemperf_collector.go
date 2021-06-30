@@ -1,67 +1,48 @@
 package collector
 
 import (
-	"path/filepath"
-
-	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // SystemPerfCollector defines a SystemPerf Collector struct
 type SystemPerfCollector struct {
-	BaseCollector
+	data map[string]string
 }
 
-var _ interfaces.Collector = &SystemPerfCollector{}
-
 // NewSystemPerfCollector is a constructor
-func NewSystemPerfCollector(exporters []interfaces.Exporter) *SystemPerfCollector {
+func NewSystemPerfCollector() *SystemPerfCollector {
 	return &SystemPerfCollector{
-		BaseCollector: BaseCollector{
-			collectorType: SystemPerf,
-			exporters:     exporters,
-		},
+		data: make(map[string]string),
 	}
+}
+
+func (collector *SystemPerfCollector) GetName() string {
+	return "systemperf"
 }
 
 // Collect implements the interface method
 func (collector *SystemPerfCollector) Collect() error {
-	rootPath, err := utils.CreateCollectorDir(collector.GetName())
-	if err != nil {
+	if err := utils.CreateKubeConfigFromServiceAccount(); err != nil {
 		return err
 	}
-
-	err = utils.CreateKubeConfigFromServiceAccount()
-	if err != nil {
-		return err
-	}
-
-	topNodesFile := filepath.Join(rootPath, "nodes")
-	topPodsFile := filepath.Join(rootPath, "pods")
 
 	output, err := utils.RunCommandOnContainer("kubectl", "top", "nodes")
 	if err != nil {
 		return err
 	}
 
-	err = utils.WriteToFile(topNodesFile, output)
-	if err != nil {
-		return err
-	}
-
-	collector.AddToCollectorFiles(topNodesFile)
+	collector.data["nodes"] = output
 
 	output, err = utils.RunCommandOnContainer("kubectl", "top", "pods", "--all-namespaces")
 	if err != nil {
 		return err
 	}
 
-	err = utils.WriteToFile(topPodsFile, output)
-	if err != nil {
-		return err
-	}
-
-	collector.AddToCollectorFiles(topPodsFile)
+	collector.data["pods"] = output
 
 	return nil
+}
+
+func (collector *SystemPerfCollector) GetData() map[string]string {
+	return collector.data
 }

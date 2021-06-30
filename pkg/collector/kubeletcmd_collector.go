@@ -1,49 +1,37 @@
 package collector
 
 import (
-	"path/filepath"
-
-	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // KubeletCmdCollector defines a KubeletCmd Collector struct
 type KubeletCmdCollector struct {
-	BaseCollector
+	data map[string]string
 }
 
-var _ interfaces.Collector = &KubeletCmdCollector{}
-
 // NewKubeletCmdCollector is a constructor
-func NewKubeletCmdCollector(exporters []interfaces.Exporter) *KubeletCmdCollector {
+func NewKubeletCmdCollector() *KubeletCmdCollector {
 	return &KubeletCmdCollector{
-		BaseCollector: BaseCollector{
-			collectorType: KubeletCmd,
-			exporters:     exporters,
-		},
+		data: make(map[string]string),
 	}
+}
+
+func (collector *KubeletCmdCollector) GetName() string {
+	return "kubeletcmd"
 }
 
 // Collect implements the interface method
 func (collector *KubeletCmdCollector) Collect() error {
-	rootPath, err := utils.CreateCollectorDir(collector.GetName())
-	if err != nil {
-		return err
-	}
-
-	kubeletcmdFile := filepath.Join(rootPath, collector.GetName())
-
 	output, err := utils.RunCommandOnHost("ps", "-o", "cmd=", "-C", "kubelet")
 	if err != nil {
 		return err
 	}
 
-	err = utils.WriteToFile(kubeletcmdFile, output)
-	if err != nil {
-		return err
-	}
-
-	collector.AddToCollectorFiles(kubeletcmdFile)
+	collector.data["kubeletcmd"] = output
 
 	return nil
+}
+
+func (collector *KubeletCmdCollector) GetData() map[string]string {
+	return collector.data
 }

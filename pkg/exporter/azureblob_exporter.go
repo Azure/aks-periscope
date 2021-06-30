@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"net/url"
@@ -21,17 +22,14 @@ const (
 
 // AzureBlobExporter defines an Azure Blob Exporter
 type AzureBlobExporter struct {
-	BaseExporter
+	hostname     string
+	creationTime string
 }
 
-var _ interfaces.Exporter = &AzureBlobExporter{}
-
-// NewAzureBlobExporter is a constructor
-func NewAzureBlobExporter() *AzureBlobExporter {
+func NewAzureBlobExporter(creationTime, hostname string) *AzureBlobExporter {
 	return &AzureBlobExporter{
-		BaseExporter: BaseExporter{
-			exporterType: AzureBlob,
-		},
+		hostname:     hostname,
+		creationTime: creationTime,
 	}
 }
 
@@ -73,16 +71,16 @@ func (exporter *AzureBlobExporter) GetAKSStorageContainerName(APIServerFQDN stri
 	return containerName, nil
 }
 
-// Export implements the interface method
-func (exporter *AzureBlobExporter) Export(files []string) error {
+//CreateContainerURL creates the full storage container URL including SAS key
+func (exporter *AzureBlobExporter) createContainerURL() (azblob.ContainerURL, error) {
 	APIServerFQDN, err := utils.GetAPIServerFQDN()
 	if err != nil {
-		return fmt.Errorf("Failed to get APIServerFQDN: %+v", err)
+		return azblob.ContainerURL{}, err
 	}
 
 	containerName, err := exporter.GetStorageContainerName(APIServerFQDN)
 	if err != nil {
-		return fmt.Errorf("Failed to get StorageContainerName: %+v", err)
+		return fmt.Errorf("get StorageContainerName: %+w", err)
 	}
 
 	ctx := context.Background()
@@ -94,7 +92,7 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 	ses := utils.GetStorageEndpointSuffix()
 	url, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, ses, containerName, sasKey))
 	if err != nil {
-		return fmt.Errorf("Failed to build blob container url: %+v", err)
+		return azblob.ContainerURL{}, fmt.Errorf("build blob container url: %w", err)
 	}
 
 	containerURL := azblob.NewContainerURL(*url, pipeline)
@@ -106,76 +104,78 @@ func (exporter *AzureBlobExporter) Export(files []string) error {
 			switch storageError.ServiceCode() {
 			case azblob.ServiceCodeContainerAlreadyExists:
 			default:
-				return fmt.Errorf("Failed to create blob with storage error: %+v", err)
+				return azblob.ContainerURL{}, fmt.Errorf("create container with storage error: %w", err)
 			}
 		} else {
-			return fmt.Errorf("Failed to create blob: %+v", err)
+			return azblob.ContainerURL{}, fmt.Errorf("create container: %w", err)
 		}
 	}
 
-	for _, file := range files {
-		appendBlobURL := containerURL.NewAppendBlobURL(strings.TrimPrefix(file, "/aks-periscope/"))
+	return containerURL, nil
+}
 
-		blobGetPropertiesResponse, err := appendBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{})
-		if err != nil {
+// Export implements the interface method
+func (exporter *AzureBlobExporter) Export(producer interfaces.DataProducer) error {
+	containerURL, err := createContainerURL()
+	if err != nil {
+		return err
+	}
+
+	ctx := context.Background()
+
+	for key, data := range producer.GetData() {
+		appendBlobURL := containerURL.NewAppendBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, key))
+
+		if _, err := appendBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{}); err != nil {
 			storageError, ok := err.(azblob.StorageError)
 			if ok {
 				switch storageError.ServiceCode() {
 				case azblob.ServiceCodeBlobNotFound:
 					_, err = appendBlobURL.Create(ctx, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
 					if err != nil {
-						return fmt.Errorf("Fail to create blob for file %s: %+v", file, err)
+						return fmt.Errorf("create blob for file %s: %w", key, err)
 					}
 				default:
-					return fmt.Errorf("Failed to create blob with storage error: %+v", err)
+					return fmt.Errorf("create blob with storage error: %w", err)
 				}
 			} else {
-				return fmt.Errorf("Failed to create blob: %+v", err)
+				return fmt.Errorf("create blob: %w", err)
 			}
 		}
 
-		var start int64
-		if blobGetPropertiesResponse != nil {
-			start = blobGetPropertiesResponse.ContentLength()
-		}
+		bData := []byte(data)
+		start := 0
+		size := len(bData)
 
-		f, err := os.Open(file)
-		if err != nil {
-			return fmt.Errorf("Fail to open file %s: %+v", file, err)
-		}
+		for size-start > 0 {
+			lengthToWrite := size - start
 
-		fileInfo, err := f.Stat()
-		if err != nil {
-			return fmt.Errorf("Fail to get file info for file %s: %+v", file, err)
-		}
-
-		end := fileInfo.Size()
-
-		fileSize := end - start
-		if fileSize > 0 {
-			for start < end {
-				lengthToWrite := end - start
-
-				if lengthToWrite > azblob.AppendBlobMaxAppendBlockBytes {
-					lengthToWrite = azblob.AppendBlobMaxAppendBlockBytes
-				}
-
-				b := make([]byte, lengthToWrite)
-				_, err = f.ReadAt(b, start)
-				if err != nil {
-					return fmt.Errorf("Fail to read file %s: %+v", file, err)
-				}
-
-				log.Printf("\tappend blob file: %s, start position: %d, end position: %d\n", file, start, start+lengthToWrite)
-				_, err = appendBlobURL.AppendBlock(ctx, bytes.NewReader(b), azblob.AppendBlobAccessConditions{}, nil)
-				if err != nil {
-					return fmt.Errorf("Fail to append file %s to blob: %+v", file, err)
-				}
-
-				start += lengthToWrite
+			if lengthToWrite > azblob.AppendBlobMaxAppendBlockBytes {
+				lengthToWrite = azblob.AppendBlobMaxAppendBlockBytes
 			}
+
+			w := bData[start : start+lengthToWrite]
+			log.Printf("\tAppend blob file: %s (%d bytes), write from %d to %d (%d bytes)", key, size, start, start+lengthToWrite, len(w))
+
+			if _, err = appendBlobURL.AppendBlock(ctx, bytes.NewReader(w), azblob.AppendBlobAccessConditions{}, nil); err != nil {
+				return fmt.Errorf("append file %s to blob: %w", key, err)
+			}
+
+			start += lengthToWrite + 1
 		}
 	}
 
 	return nil
+}
+
+func (exporter *AzureBlobExporter) ExportReader(name string, reader io.ReadSeeker) error {
+	containerURL, err := createContainerURL()
+	if err != nil {
+		return err
+	}
+
+	blob := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, name))
+	_, err = blob.Upload(context.Background(), reader, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
+
+	return err
 }

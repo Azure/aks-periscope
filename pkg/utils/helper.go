@@ -75,8 +75,21 @@ func CopyFileFromHost(source, destination string) error {
 	if err != nil {
 		return fmt.Errorf("unable to retrieve source content: %w", err)
 	}
-	if err = WriteToFile(destination, sourceFile); err != nil {
-		return fmt.Errorf("unable to write source file to destination: %w", err)
+
+	if err := os.MkdirAll(filepath.Dir(destination), os.ModePerm); err != nil {
+		return fmt.Errorf("create path directories for file %s: %w", destination, err)
+	}
+
+	f, err := os.Create(destination)
+	if err != nil {
+		return fmt.Errorf("create file %s: %w", destination, err)
+	}
+
+	defer f.Close()
+
+	_, err = f.Write([]byte(sourceFile))
+	if err != nil {
+		return fmt.Errorf("write data to file %s: %w", destination, err)
 	}
 	return nil
 }
@@ -189,7 +202,7 @@ func RunCommandOnContainerWithOutputStreams(command string, arg ...string) (Comm
 	outputStreams := CommandOutputStreams{stdout.String(), stderr.String()}
 
 	if err != nil {
-		return outputStreams, fmt.Errorf("Fail to run command in container: %s", fmt.Sprint(err)+": "+stderr.String())
+		return outputStreams, fmt.Errorf("run command in container: %w", err)
 	}
 
 	return outputStreams, nil
@@ -243,67 +256,6 @@ func GetUrlWithRetries(url string, maxRetries int) ([]byte, error) {
 			return ioutil.ReadAll(resp.Body)
 		}
 	}
-}
-
-// WriteToFile writes data to a file
-func WriteToFile(fileName string, data string) error {
-	if err := os.MkdirAll(filepath.Dir(fileName), os.ModePerm); err != nil {
-		return fmt.Errorf("Fail to create path directories for file %s: %w", fileName, err)
-	}
-	f, err := os.Create(fileName)
-	if err != nil {
-		return fmt.Errorf("Fail to create file %s: %+v", fileName, err)
-	}
-	defer f.Close()
-
-	_, err = f.Write([]byte(data))
-	if err != nil {
-		return fmt.Errorf("Fail to write data to file %s: %+v", fileName, err)
-	}
-
-	return nil
-}
-
-// CreateCollectorDir creates a working dir for a collector
-func CreateCollectorDir(name string) (string, error) {
-	hostName, err := GetHostName()
-	if err != nil {
-		return "", err
-	}
-
-	creationTimeStamp, err := GetCreationTimeStamp()
-	if err != nil {
-		return "", err
-	}
-
-	rootPath := filepath.Join("/aks-periscope", strings.Replace(creationTimeStamp, ":", "-", -1), hostName, "collector", name)
-	err = os.MkdirAll(rootPath, os.ModePerm)
-	if err != nil {
-		return "", fmt.Errorf("Fail to create dir %s: %+v", rootPath, err)
-	}
-
-	return rootPath, nil
-}
-
-// CreateDiagnosticDir creates a working dir for diagnostic
-func CreateDiagnosticDir() (string, error) {
-	hostName, err := GetHostName()
-	if err != nil {
-		return "", err
-	}
-
-	creationTimeStamp, err := GetCreationTimeStamp()
-	if err != nil {
-		return "", err
-	}
-
-	rootPath := filepath.Join("/aks-periscope", strings.Replace(creationTimeStamp, ":", "-", -1), hostName, "diagnoser")
-	err = os.MkdirAll(rootPath, os.ModePerm)
-	if err != nil {
-		return "", fmt.Errorf("Fail to create dir %s: %+v", rootPath, err)
-	}
-
-	return rootPath, nil
 }
 
 // CreateKubeConfigFromServiceAccount creates kubeconfig based on creds in service account

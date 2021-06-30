@@ -6,5 +6,5 @@ type Diagnoser interface {
 
 	Diagnose() error
 
-	Export() error
+	GetData() map[string]string
 }
