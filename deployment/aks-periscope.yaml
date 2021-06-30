@@ -92,6 +92,9 @@ spec:
             name: collectors-config
         - secretRef:
             name: azureblob-secret
+        volumeMounts:
+         - mountPath: /aks-periscope
+           name: aks-periscope-storage
         resources:
           requests:
             memory: "500Mi"
@@ -99,6 +102,11 @@ spec:
           limits:
             memory: "2000Mi"
             cpu: "1000m"
+      volumes:
+       - name: aks-periscope-storage
+         hostPath:
+           path: /var/log/aks-periscope
+           type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Secret
