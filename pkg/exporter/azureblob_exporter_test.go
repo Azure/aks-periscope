@@ -19,11 +19,10 @@ var getStorageContainerNameTests = []struct {
 func TestGetAKSStorageContainerName(t *testing.T) {
 	for _, tt := range getStorageContainerNameTests {
 		t.Run(tt.apiServerFqdn, func(t *testing.T) {
-			var blobExporter = &AzureBlobExporter{}
-			containerName, _ := blobExporter.GetAKSStorageContainerName(tt.apiServerFqdn)
+			containerName, _ := getAKSStorageContainerName(tt.apiServerFqdn)
 
 			if containerName != tt.containerName {
-				t.Errorf("Sprintf(%q, &blobExporter) => %q, want %q",
+				t.Errorf("GetAKSStorageContainerName(%q) => %q, want %q",
 					tt.apiServerFqdn, containerName, tt.containerName)
 			}
 		})
