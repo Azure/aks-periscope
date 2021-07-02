@@ -18,3 +18,28 @@ metadata:
   name: nodelogs-config
 data:
   DIAGNOSTIC_NODELOGS_LIST: /var/log/azure/cluster-provision.log /var/log/cloud-init.log
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: collectors-config
+  namespace: aks-periscope
+data:
+  ENABLED_COLLECTORS: dns containerlogscontainerd iptables kubeletcmd kubeobjects networkoutbound systemlogs
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: diagnosers-config
+  namespace: aks-periscope
+data:
+  ENABLED_DIAGNOSERS: networkconfig networkoutbound
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: exporters-config
+  namespace: aks-periscope
+data:
+  ENABLED_EXPORTERS: "azureblob"
+  ZIP_AND_EXPORT: "false"

@@ -31,6 +31,12 @@ spec:
             name: kubeobjects-config
         - configMapRef:
             name: nodelogs-config
+        - configMapRef:
+            name: collectors-config
+        - configMapRef:
+            name: diagnosers-config
+        - configMapRef:
+            name: exporters-config
         volumeMounts:
         - mountPath: /aks-periscope
           name: aks-periscope-storage
