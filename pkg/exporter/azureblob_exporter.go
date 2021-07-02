@@ -34,13 +34,13 @@ func NewAzureBlobExporter(creationTime, hostname string) *AzureBlobExporter {
 }
 
 // GetStorageContainerName get storage container name
-func (exporter *AzureBlobExporter) GetStorageContainerName(APIServerFQDN string) (string, error) {
+func GetStorageContainerName(APIServerFQDN string) (string, error) {
 	var containerName string
 	var err error
 	if utils.IsRunningInAks() {
-		containerName, err = exporter.GetAKSStorageContainerName(APIServerFQDN)
+		containerName, err = GetAKSStorageContainerName(APIServerFQDN)
 	} else {
-		containerName, err = exporter.GetNonAKSStorageContainerName(APIServerFQDN)
+		containerName, err = GetNonAKSStorageContainerName(APIServerFQDN)
 	}
 
 	//TODO run a sanitizer over the final chars in the containerName
@@ -48,14 +48,14 @@ func (exporter *AzureBlobExporter) GetStorageContainerName(APIServerFQDN string)
 }
 
 //GetNonAKSStorageContainerName get the storage container name for non AKS cluster
-func (exporter *AzureBlobExporter) GetNonAKSStorageContainerName(APIServerFQDN string) (string, error) {
+func GetNonAKSStorageContainerName(APIServerFQDN string) (string, error) {
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
 
 	return containerName, nil
 }
 
 //GetAKSStorageContainerName get the storage container name when running on an AKS cluster
-func (exporter *AzureBlobExporter) GetAKSStorageContainerName(APIServerFQDN string) (string, error) {
+func GetAKSStorageContainerName(APIServerFQDN string) (string, error) {
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
 
 	//TODO DK: I really dont like the line below, it makes for weird behaviour if e.g. .hcp. or -hcp- is in the fqdn for some reason other than being auto-added by AKS
@@ -72,15 +72,15 @@ func (exporter *AzureBlobExporter) GetAKSStorageContainerName(APIServerFQDN stri
 }
 
 //CreateContainerURL creates the full storage container URL including SAS key
-func (exporter *AzureBlobExporter) createContainerURL() (azblob.ContainerURL, error) {
+func createContainerURL() (azblob.ContainerURL, error) {
 	APIServerFQDN, err := utils.GetAPIServerFQDN()
 	if err != nil {
 		return azblob.ContainerURL{}, err
 	}
 
-	containerName, err := exporter.GetStorageContainerName(APIServerFQDN)
+	containerName, err := GetStorageContainerName(APIServerFQDN)
 	if err != nil {
-		return fmt.Errorf("get StorageContainerName: %+w", err)
+		return azblob.ContainerURL{}, fmt.Errorf("get StorageContainerName: %+w", err)
 	}
 
 	ctx := context.Background()
@@ -90,12 +90,12 @@ func (exporter *AzureBlobExporter) createContainerURL() (azblob.ContainerURL, er
 	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
 
 	ses := utils.GetStorageEndpointSuffix()
-	url, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, ses, containerName, sasKey))
+	parsedUrl, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, ses, containerName, sasKey))
 	if err != nil {
 		return azblob.ContainerURL{}, fmt.Errorf("build blob container url: %w", err)
 	}
 
-	containerURL := azblob.NewContainerURL(*url, pipeline)
+	containerURL := azblob.NewContainerURL(*parsedUrl, pipeline)
 
 	_, err = containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
 	if err != nil {
