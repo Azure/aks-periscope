@@ -44,11 +44,11 @@ func main() {
 
 	//dataProducers includes all selected collectors and diagnosers
 	dataProducers := []interfaces.DataProducer{}
-	for _, collector := range collectors {
-		dataProducers = append(dataProducers, collector)
+	for _, c := range collectors {
+		dataProducers = append(dataProducers, c)
 	}
-	for _, diagnoser := range diagnosers {
-		dataProducers = append(dataProducers, diagnoser)
+	for _, d := range diagnosers {
+		dataProducers = append(dataProducers, d)
 	}
 
 	collectorGrp := new(sync.WaitGroup)
@@ -167,7 +167,7 @@ func selectCollectorsUsingCollectorList(collectorList []string) []string {
 	enabledCollectorNames = append(enabledCollectorNames,
 		"dns", "containerlogs", "kubeobjects", "networkoutbound")
 
-	if contains(collectorList, "connectedCluster") {
+	if utils.Contains(collectorList, "connectedCluster") {
 		//select connectedCluster collectors
 		enabledCollectorNames = append(enabledCollectorNames, "helm")
 	} else {
@@ -175,7 +175,7 @@ func selectCollectorsUsingCollectorList(collectorList []string) []string {
 		enabledCollectorNames = append(enabledCollectorNames,
 			"iptables", "kubeletcmd", "nodelogs", "systemlogs", "systemperf")
 	}
-	if contains(collectorList, "OSM") {
+	if utils.Contains(collectorList, "OSM") {
 		//select OSM collectors
 		enabledCollectorNames = append(enabledCollectorNames, "osm")
 	}
@@ -287,14 +287,4 @@ func runExportersForZip(exporters []interfaces.Exporter, zip *bytes.Buffer, host
 		}
 	}
 	return result
-}
-
-//contains checks if an array contains a value
-func contains(flagsList []string, flag string) bool {
-	for _, f := range flagsList {
-		if strings.EqualFold(f, flag) {
-			return true
-		}
-	}
-	return false
 }

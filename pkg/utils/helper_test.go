@@ -5,7 +5,7 @@ import (
 )
 
 var parseAPIServerFQDNFromKubeConfigTests = []struct {
-	kubeConfig string
+	kubeConfig    string
 	APIServerFQDN string
 }{
 	{`apiVersion: v1
@@ -27,7 +27,7 @@ users:
   user:
     client-certificate: /var/lib/kubelet/pki/kubelet-client-current.pem
     client-key: /var/lib/kubelet/pki/kubelet-client-current.pem`,
-    "kind-control-plane"},
+		"kind-control-plane"},
 
 	{`apiVersion: v1
 kind: Config
@@ -47,21 +47,21 @@ contexts:
     user: client
   name: localclustercontext
 current-context: localclustercontext`,
-"dakydd-test-eastus-dns-d0daedb9.hcp.eastus.azmk8s.io"},
+		"dakydd-test-eastus-dns-d0daedb9.hcp.eastus.azmk8s.io"},
 }
 
 // GetStorageContainerName get storage container name
 func TestParseAPIServerFQDNFromKubeConfig(t *testing.T) {
 	for _, tt := range parseAPIServerFQDNFromKubeConfigTests {
-		t.Run(tt.kubeConfig, func(t *testing.T) {
+		t.Run(tt.APIServerFQDN, func(t *testing.T) {
 			APIServerFQDN, err := ParseAPIServerFQDNFromKubeConfig(tt.kubeConfig)
-			if err != nil {
-				t.Errorf("Sprintf(%q, utils.TestParseAPIServerFQDNFromKubeConfig) Error: %q, expected %q",
+			if err == nil {
+				t.Errorf("utils.TestParseAPIServerFQDNFromKubeConfig(%q) Error: %q, expected %q",
 					tt.kubeConfig, err, tt.APIServerFQDN)
 			}
 
 			if APIServerFQDN != tt.APIServerFQDN {
-				t.Errorf("Sprintf(%q, utils.TestParseAPIServerFQDNFromKubeConfig) => %q, want %q",
+				t.Errorf("utils.TestParseAPIServerFQDNFromKubeConfig(%q) => %q, want %q",
 					tt.kubeConfig, APIServerFQDN, tt.APIServerFQDN)
 			}
 		})

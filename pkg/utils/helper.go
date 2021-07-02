@@ -360,6 +360,16 @@ func GetResourceList(kubeCmds []string, separator string) ([]string, error) {
 	return strings.Split(strings.Trim(resourceList, "\""), separator), nil
 }
 
+//contains checks if an array contains a value
+func Contains(flagsList []string, flag string) bool {
+	for _, f := range flagsList {
+		if strings.EqualFold(f, flag) {
+			return true
+		}
+	}
+	return false
+}
+
 func writeDiagnosticCRD(crdName string) error {
 	f, err := os.Create("aks-periscope-diagnostic-crd.yaml")
 	if err != nil {
