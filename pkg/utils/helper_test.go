@@ -55,7 +55,7 @@ func TestParseAPIServerFQDNFromKubeConfig(t *testing.T) {
 	for _, tt := range parseAPIServerFQDNFromKubeConfigTests {
 		t.Run(tt.APIServerFQDN, func(t *testing.T) {
 			APIServerFQDN, err := ParseAPIServerFQDNFromKubeConfig(tt.kubeConfig)
-			if err == nil {
+			if err != nil {
 				t.Errorf("utils.TestParseAPIServerFQDNFromKubeConfig(%q) Error: %q, expected %q",
 					tt.kubeConfig, err, tt.APIServerFQDN)
 			}
