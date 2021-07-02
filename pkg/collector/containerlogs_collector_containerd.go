@@ -3,28 +3,25 @@ package collector
 import (
 	"os"
 	"path"
-	"path/filepath"
 	"strings"
 
-	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // ContainerLogsCollectorContainerD defines a ContainerLogs Collector struct for containerd clusters
 type ContainerLogsCollectorContainerD struct {
-	BaseCollector
+	data map[string]string
 }
 
-var _ interfaces.Collector = &ContainerLogsCollectorContainerD{}
-
 // NewContainerLogsCollectorContainerD is a constructor
-func NewContainerLogsCollectorContainerD(exporters []interfaces.Exporter) *ContainerLogsCollectorContainerD {
+func NewContainerLogsCollectorContainerD() *ContainerLogsCollectorContainerD {
 	return &ContainerLogsCollectorContainerD{
-		BaseCollector: BaseCollector{
-			collectorType: ContainerLogsContainerD,
-			exporters:     exporters,
-		},
+		data: make(map[string]string),
 	}
+}
+
+func (collector *ContainerLogsCollectorContainerD) GetName() string {
+	return "containerlogscollectorcontainerd"
 }
 
 type ContainerLog struct {
@@ -47,10 +44,6 @@ const containerLogDirectory = "/var/log/containers"
 // Collect implements the interface method
 func (collector *ContainerLogsCollectorContainerD) Collect() error {
 	selectorStrings := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))
-	rootPath, err := utils.CreateCollectorDir(collector.GetName())
-	if err != nil {
-		return err
-	}
 
 	containerLogSelectors := collector.ParseContainerLogSelectors(selectorStrings)
 
@@ -69,13 +62,7 @@ func (collector *ContainerLogsCollectorContainerD) Collect() error {
 			return err
 		}
 
-		containerLogOnContainer := filepath.Join(rootPath, filepath.Base(containerLog.filepath))
-
-		err = utils.WriteToFile(containerLogOnContainer, output)
-		if err != nil {
-			return err
-		}
-		collector.AddToCollectorFiles(containerLogOnContainer)
+		collector.data[containerLog.containerName] = output
 	}
 
 	return nil
