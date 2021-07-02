@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-multierror"
 	"io/ioutil"
 	"log"
 	"net"
@@ -52,21 +53,6 @@ func IsAzureStackCloud() bool {
 	}
 	cloud := azure.Cloud
 	return strings.EqualFold(cloud, AzureStackCloudName)
-}
-
-// IsRunningInAks returns true if the application is running on AKS
-func IsRunningInAks() bool {
-	//TODO refactor the conditional logic this check guards into new Cluster-Type specific components behind an interface
-	//test the non-AKS kubeconfig location, if we find something then this is *not* an AKS cluster
-	_, err := RunCommandOnHost("ls", "/etc/kubernetes/kubelet.conf")
-	if err == nil {
-		return false
-	}
-
-	//test the AKS kubeconfig location
-	//TODO can we improve this check to be more like the IsAzureStackCloud one, which seems less arbitrary?
-	_, err = RunCommandOnHost("ls", "/var/lib/kubelet/kubeconfig")
-	return err == nil
 }
 
 // CopyFileFromHost saves the specified source file to the destination
@@ -145,19 +131,17 @@ func ParseAPIServerFQDNFromKubeConfig(output string) (string, error) {
 
 //ReadKubeletConfig reads the kubeletConfig from the node
 func ReadKubeletConfig() (string, error) {
-	if IsRunningInAks() {
-		output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
+	var result error
+	output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
+	if err != nil {
+		result = multierror.Append(result, err)
+		output, err = RunCommandOnHost("cat", "/etc/kubernetes/kubelet.conf")
 		if err != nil {
-			return "", fmt.Errorf("Can't open kubeconfig file at /var/lib/kubelet/kubeconfig\": %+v", err)
+			result = multierror.Append(result, err)
+			return "", fmt.Errorf("Can't open kubeconfig file at either /etc/kubernetes/kubelet.conf or /var/lib/kubelet/kubeconfig\": %+v", err)
 		}
-		return output, nil
-	} else {
-		output, err := RunCommandOnHost("cat", "/etc/kubernetes/kubelet.conf")
-		if err != nil {
-			return "", fmt.Errorf("Can't open kubeconfig file at /etc/kubernetes/kubelet.conf\": %+v", err)
-		}
-		return output, nil
 	}
+	return output, nil
 }
 
 // GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
