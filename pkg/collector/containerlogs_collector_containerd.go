@@ -41,20 +41,24 @@ type ContainerLogSelector struct {
 // where I assume # is incremented and a new log created for each container restart (starts at # == 0)
 const containerLogDirectory = "/var/log/containers"
 
+func (collector *ContainerLogsCollectorContainerD) GetData() map[string]string {
+	return collector.data
+}
+
 // Collect implements the interface method
 func (collector *ContainerLogsCollectorContainerD) Collect() error {
 	selectorStrings := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))
 
-	containerLogSelectors := collector.ParseContainerLogSelectors(selectorStrings)
+	containerLogSelectors := parseContainerLogSelectors(selectorStrings)
 
-	allContainersEverRun, err := collector.GetAllContainerLogFilesThatHaveEverRunOnHost()
+	allContainersEverRun, err := getAllContainerLogFilesThatHaveEverRunOnHost()
 	if err != nil {
 		return err
 	}
 
-	containerLogs := collector.ParseContainerLogFilenames(containerLogDirectory, allContainersEverRun)
+	containerLogs := parseContainerLogFilenames(containerLogDirectory, allContainersEverRun)
 
-	containerLogsToCollect := collector.DetermineContainerLogsToCollect(containerLogs, containerLogSelectors)
+	containerLogsToCollect := determineContainerLogsToCollect(containerLogs, containerLogSelectors)
 
 	for _, containerLog := range containerLogsToCollect {
 		output, err := utils.RunCommandOnHost("cat", containerLog.filepath)
@@ -68,12 +72,11 @@ func (collector *ContainerLogsCollectorContainerD) Collect() error {
 	return nil
 }
 
-//DetermineContainerLogsToCollect applies the containerLogSelectors to filter the list of containerLogs to be collected
-func (collector *ContainerLogsCollectorContainerD) DetermineContainerLogsToCollect(allContainers []ContainerLog, selectors []ContainerLogSelector) []ContainerLog {
+func determineContainerLogsToCollect(allContainers []ContainerLog, selectors []ContainerLogSelector) []ContainerLog {
 	var selectedContainerLogs []ContainerLog
 	for _, containerLog := range allContainers {
 		for _, selector := range selectors {
-			if collector.DoesSelectorSelectContainerLog(containerLog, selector) {
+			if doesSelectorSelectContainerLog(containerLog, selector) {
 				selectedContainerLogs = append(selectedContainerLogs, containerLog)
 			}
 		}
@@ -81,14 +84,12 @@ func (collector *ContainerLogsCollectorContainerD) DetermineContainerLogsToColle
 	return selectedContainerLogs
 }
 
-//DoesSelectorSelectContainerLog contains the logic for determining if a selector selects a containerLog for collecting
-func (collector *ContainerLogsCollectorContainerD) DoesSelectorSelectContainerLog(containerLog ContainerLog, selector ContainerLogSelector) bool {
+func doesSelectorSelectContainerLog(containerLog ContainerLog, selector ContainerLogSelector) bool {
 	return containerLog.namespace == selector.namespace && strings.HasPrefix(containerLog.containerName, selector.containerNamePrefix)
 }
 
-//ParseContainerLogSelectors parses selectorStrings into component struct
 //TODO allow the raw struct objects to be defined directly in the deployment yaml and add additional required logic to DoesSelectorSelectContainerLog
-func (collector *ContainerLogsCollectorContainerD) ParseContainerLogSelectors(selectorStrings []string) []ContainerLogSelector {
+func parseContainerLogSelectors(selectorStrings []string) []ContainerLogSelector {
 	var containerLogSelectors []ContainerLogSelector
 
 	for _, selectorString := range selectorStrings {
@@ -110,8 +111,7 @@ func (collector *ContainerLogsCollectorContainerD) ParseContainerLogSelectors(se
 	return containerLogSelectors
 }
 
-//ParseContainerLogFilenames parses container log filenames into component struct
-func (collector *ContainerLogsCollectorContainerD) ParseContainerLogFilenames(directoryPath string, containerLogFilenames []string) []ContainerLog {
+func parseContainerLogFilenames(directoryPath string, containerLogFilenames []string) []ContainerLog {
 
 	var containerLogs []ContainerLog
 
@@ -140,8 +140,7 @@ func (collector *ContainerLogsCollectorContainerD) ParseContainerLogFilenames(di
 	return containerLogs
 }
 
-//GetAllContainerLogFilesThatHaveEverRunOnHost gets the list of log files for all containers that have ever run on the host
-func (collector *ContainerLogsCollectorContainerD) GetAllContainerLogFilesThatHaveEverRunOnHost() ([]string, error) {
+func getAllContainerLogFilesThatHaveEverRunOnHost() ([]string, error) {
 	output, err := utils.RunCommandOnHost("ls", containerLogDirectory)
 	if err != nil {
 		return nil, err
