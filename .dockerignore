@@ -1,0 +1,5 @@
+/docs
+/tests
+/builder
+/deployment
+*.md
