@@ -105,27 +105,6 @@ func (exporter *AzureBlobExporter) ExportReader(name string, reader io.ReadSeeke
 
 // GetStorageContainerName get storage container name
 func getStorageContainerName(APIServerFQDN string) (string, error) {
-	var containerName string
-	var err error
-	if utils.IsRunningInAks() {
-		containerName, err = getAKSStorageContainerName(APIServerFQDN)
-	} else {
-		containerName, err = getNonAKSStorageContainerName(APIServerFQDN)
-	}
-
-	//TODO run a sanitizer over the final chars in the containerName
-	return containerName, err
-}
-
-//GetNonAKSStorageContainerName get the storage container name for non AKS cluster
-func getNonAKSStorageContainerName(APIServerFQDN string) (string, error) {
-	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
-
-	return containerName, nil
-}
-
-//GetAKSStorageContainerName get the storage container name when running on an AKS cluster
-func getAKSStorageContainerName(APIServerFQDN string) (string, error) {
 	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
 
 	//TODO DK: I really dont like the line below, it makes for weird behaviour if e.g. .hcp. or -hcp- is in the fqdn for some reason other than being auto-added by AKS
