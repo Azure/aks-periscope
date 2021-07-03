@@ -115,12 +115,12 @@ func ParseAPIServerFQDNFromKubeConfig(output string) (string, error) {
 			fqdn := line[index+len("server: "):]
 			fqdnurl, err := url.Parse(fqdn)
 			if err != nil {
-				return "", fmt.Errorf("Fail to parse url from fqdn: %s", fmt.Sprint(err)+": "+fqdn)
+				return "", fmt.Errorf("parse url from fqdn: %s", fmt.Sprint(err)+": "+fqdn)
 			}
 
 			host, _, err := net.SplitHostPort(fqdnurl.Host)
 			if err != nil {
-				return "", fmt.Errorf("Fail to split host port from fqdnurl: %s: %w", fqdnurl, err)
+				return "", fmt.Errorf("split host port from fqdnurl: %s: %w", fqdnurl, err)
 			}
 
 			return host, nil
@@ -138,7 +138,7 @@ func ReadKubeletConfig() (string, error) {
 		output, err = RunCommandOnHost("cat", "/etc/kubernetes/kubelet.conf")
 		if err != nil {
 			result = multierror.Append(result, err)
-			return "", fmt.Errorf("Can't open kubeconfig file at either /etc/kubernetes/kubelet.conf or /var/lib/kubelet/kubeconfig\": %+v", err)
+			return "", fmt.Errorf("open kubeconfig file at /etc/kubernetes/kubelet.conf or /var/lib/kubelet/kubeconfig\": %+v", result)
 		}
 	}
 	return output, nil
