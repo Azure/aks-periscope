@@ -53,7 +53,7 @@ func main() {
 	systemPerfCollector := collector.NewSystemPerfCollector()
 	helmCollector := collector.NewHelmCollector()
 	osmCollector := collector.NewOsmCollector()
-	smiCollector := collector.NewSmiCollector(exporter)
+	smiCollector := collector.NewSmiCollector()
 
 	collectors := []interfaces.Collector{
 		containerLogsCollector,

@@ -58,7 +58,6 @@ func CopyFileFromHost(source, destination string) error {
 	if err != nil {
 		return fmt.Errorf("unable to retrieve source content: %w", err)
 	}
-<<<<<<< HEAD
 
 	if err := os.MkdirAll(filepath.Dir(destination), os.ModePerm); err != nil {
 		return fmt.Errorf("create path directories for file %s: %w", destination, err)
@@ -74,10 +73,6 @@ func CopyFileFromHost(source, destination string) error {
 	_, err = f.Write([]byte(sourceFile))
 	if err != nil {
 		return fmt.Errorf("write data to file %s: %w", destination, err)
-=======
-	if err = WriteToFile(destination, sourceFile); err != nil {
-		return fmt.Errorf("unable to write source file to destination: %w", err)
->>>>>>> bdb3847 (Add text=auto in .gitattributes (#70))
 	}
 	return nil
 }
