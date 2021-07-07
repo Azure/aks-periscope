@@ -21,7 +21,7 @@ func NewContainerLogsCollectorContainerD() *ContainerLogsCollectorContainerD {
 }
 
 func (collector *ContainerLogsCollectorContainerD) GetName() string {
-	return "containerlogscollectorcontainerd"
+	return "containerlogscontainerd"
 }
 
 type ContainerLog struct {
