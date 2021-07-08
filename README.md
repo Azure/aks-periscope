@@ -146,6 +146,10 @@ docker build -f ./builder/Dockerfile -t <some_docker_repo_name>/<aks-periscope-u
 docker push <some_docker_repo_name>/<aks-periscope-user-selected-test-name> 
 ```
 
+## Dependent Consuming Tools and Working Contract
+
+`az-cli` and `vscode` both consume the `aks-periscope.yaml` file. If the `aks-periscope.yaml` file is changed, you will introduce breaking changes to `az-cli` and `vscode`.
+
 ## Debugging Guide
 
 This section intend to add some tip for debugging logs for the aks-periscope. This will help beginner to locally debug the pod logs.
