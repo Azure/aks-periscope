@@ -80,7 +80,7 @@ spec:
         beta.kubernetes.io/os: linux
       containers:
       - name: aks-periscope
-        image: aksrepos.azurecr.io/staging/aks-periscope:v0.3
+        image: johshmsft/aks-periscope:latest # johshmsft/aks-periscope:latest aksrepos.azurecr.io/staging/aks-periscope:v0.3
         securityContext:
           privileged: true
         imagePullPolicy: Always
@@ -118,8 +118,8 @@ metadata:
   namespace: aks-periscope
 type: Opaque
 data:
-  AZURE_BLOB_ACCOUNT_NAME: # <accountName, base64 encoded>
-  AZURE_BLOB_SAS_KEY: # <saskey, base64 encoded>
+  AZURE_BLOB_ACCOUNT_NAME: YXpzdG9yYWdlYWNjam9oc2g=
+  AZURE_BLOB_SAS_KEY: P3N2PTIwMjAtMDgtMDQmc3M9YmZxdCZzcnQ9c2NvJnNwPXJ3ZGxhY3VwdGZ4JnNlPTIwMjItMDEtMDFUMTc6MTg6MTZaJnN0PTIwMjEtMDctMDhUMDg6MTg6MTZaJnNwcj1odHRwcyZzaWc9bGhMZ0h4Yjl5QWRQZ05XTU1zR2VRZFRnT2F0NXpiJTJCZGgzS3RBbmd1SmE4JTNE
 ---
 apiVersion: v1 
 kind: ConfigMap 

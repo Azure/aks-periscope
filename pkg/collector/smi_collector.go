@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -40,7 +41,7 @@ func (collector *SmiCollector) Collect() error {
 	crdNameContainsSmiTestPredicate := func(s string) bool { return strings.Contains(s, "smi-spec.io") }
 	smiCrdsList := utils.FilterSliceElemsWithTestPredicate(allCrdsList, crdNameContainsSmiTestPredicate)
 	if len(smiCrdsList) == 0 {
-		return fmt.Errorf("Cluster does not contain any SMI CRDs")
+		return errors.New("cluster does not contain any SMI CRDs")
 	}
 
 	collectSmiCrds(collector, smiCrdsList)
@@ -61,7 +62,7 @@ func collectSmiCustomResourcesFromAllNamespaces(collector *SmiCollector, smiCrds
 	// Get all namespaces in the cluster
 	namespacesList, err := utils.GetResourceList([]string{"get", "namespaces", "-o", "jsonpath={..metadata.name}"}, " ")
 	if err != nil {
-		return fmt.Errorf("Failed to collect SMI custom resources: unable to list namespaces in the cluster: %+v", err)
+		return fmt.Errorf("collect SMI custom resources: unable to list namespaces in the cluster: %w", err)
 	}
 
 	for _, namespace := range namespacesList {
