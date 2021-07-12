@@ -364,8 +364,8 @@ func writeDiagnosticCRD(crdName string) error {
 
 // FilterSliceElemsWithTestPredicate filters a slice using the test predicate function
 // and returns a slice that only contains elements that pass the test predicate function.
-func FilterSliceElemsWithTestPredicate(ss []string, testPredicate func(string) bool) (ret []string) {
-	for _, s := range ss {
+func FilterSliceElemsWithTestPredicate(slice []string, testPredicate func(string) bool) (ret []string) {
+	for _, s := range slice {
 		if testPredicate(s) {
 			ret = append(ret, s)
 		}
