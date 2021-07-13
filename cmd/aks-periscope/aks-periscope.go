@@ -100,8 +100,8 @@ func main() {
 	collectorGrp.Wait()
 
 	diagnosers := []interfaces.Diagnoser{
-		diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector),
-		diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector),
+		diagnoser.NewNetworkConfigDiagnoser(hostname, dnsCollector, kubeletCmdCollector),
+		diagnoser.NewNetworkOutboundDiagnoser(hostname, networkOutboundCollector),
 	}
 
 	diagnoserGrp := new(sync.WaitGroup)
