@@ -32,6 +32,10 @@ func NewAzureBlobExporter(creationTime, hostname string) *AzureBlobExporter {
 	}
 }
 
+func (exporter *AzureBlobExporter) GetName() string {
+	return "azureblob"
+}
+
 func createContainerURL() (azblob.ContainerURL, error) {
 	APIServerFQDN, err := utils.GetAPIServerFQDN()
 	if err != nil {
