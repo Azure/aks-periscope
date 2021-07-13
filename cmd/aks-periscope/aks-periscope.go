@@ -121,8 +121,8 @@ func initializeComponents(creationTimeStamp string, hostname string) ([]interfac
 
 	//diagnosers
 	//NOTE currently the collector instance objects are shared between the collector itself and things which use it as a dependency
-	networkConfigDiagnoser := diagnoser.NewNetworkConfigDiagnoser(hostname, dnsCollector, kubeletCmdCollector)
-	networkOutboundDiagnoser := diagnoser.NewNetworkOutboundDiagnoser(hostname, networkOutboundCollector)
+	networkConfigDiagnoser := diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector)
+	networkOutboundDiagnoser := diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector)
 	selectedDiagnosers := selectDiagnosers(
 		map[string]interfaces.Diagnoser{
 			networkConfigDiagnoser.GetName():   networkConfigDiagnoser,
