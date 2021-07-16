@@ -38,8 +38,12 @@ func (collector *SmiCollector) Collect() error {
 	}
 
 	// Filter to obtain a list of Smi CustomResourceDefinitions in the cluster
-	crdNameContainsSmiTestPredicate := func(s string) bool { return strings.Contains(s, "smi-spec.io") }
-	smiCrdsList := utils.FilterSliceElemsWithTestPredicate(allCrdsList, crdNameContainsSmiTestPredicate)
+	var smiCrdsList []string
+	for _, s := range allCrdsList {
+		if strings.Contains(s, "smi-spec.io") {
+			smiCrdsList = append(smiCrdsList, s)
+		}
+	}
 	if len(smiCrdsList) == 0 {
 		return errors.New("cluster does not contain any SMI CRDs")
 	}
