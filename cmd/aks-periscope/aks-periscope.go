@@ -103,6 +103,7 @@ func initializeComponents(creationTimeStamp string, hostname string) ([]interfac
 	systemPerfCollector := collector.NewSystemPerfCollector()
 	helmCollector := collector.NewHelmCollector()
 	osmCollector := collector.NewOsmCollector()
+	smiCollector := collector.NewSmiCollector()
 
 	selectedCollectors := selectCollectors(
 		map[string]interfaces.Collector{
@@ -117,6 +118,7 @@ func initializeComponents(creationTimeStamp string, hostname string) ([]interfac
 			systemPerfCollector.GetName():              systemPerfCollector,
 			helmCollector.GetName():                    helmCollector,
 			osmCollector.GetName():                     osmCollector,
+      smiCollector.GetName():                     smiCollector,
 		})
 
 	//diagnosers
@@ -146,7 +148,7 @@ func selectCollectors(allCollectorsByName map[string]interfaces.Collector) []int
 	enabledCollectorString, found := os.LookupEnv("ENABLED_COLLECTORS")
 	if !found {
 		//if not defined, default to all collectors enabled
-		enabledCollectorString = "containerlogs dns helm iptables kubeletcmd kubeobjects networkoutbound nodelogs osm systemlogs systemperf"
+		enabledCollectorString = "containerlogs dns helm iptables kubeletcmd kubeobjects networkoutbound nodelogs osm smi systemlogs systemperf"
 	}
 
 	enabledCollectorNames := strings.Fields(enabledCollectorString)
