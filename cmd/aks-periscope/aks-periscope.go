@@ -118,7 +118,7 @@ func initializeComponents(creationTimeStamp string, hostname string) ([]interfac
 			systemPerfCollector.GetName():              systemPerfCollector,
 			helmCollector.GetName():                    helmCollector,
 			osmCollector.GetName():                     osmCollector,
-      smiCollector.GetName():                     smiCollector,
+      			smiCollector.GetName():                     smiCollector,
 		})
 
 	//diagnosers
