@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -93,14 +94,40 @@ func GetStorageEndpointSuffix() string {
 	return PublicAzureStorageEndpointSuffix
 }
 
+type HostName struct {
+	hostName string
+	err      error
+}
+
+var singletonHostName *HostName
+var once sync.Once
+
+// GetHostNameSingleton get host name singleton use
+func GetHostNameSingleton() *HostName {
+	once.Do(func() {
+		hostname, err := RunCommandOnHost("cat", "/etc/hostname")
+
+		if hostname != "" {
+			hostname = strings.TrimSuffix(string(hostname), "\n")
+		}
+
+		singletonHostName = &HostName{
+			hostName: hostname,
+			err:      err,
+		}
+	})
+
+	return singletonHostName
+}
+
 // GetHostName get host name
 func GetHostName() (string, error) {
-	hostname, err := RunCommandOnHost("cat", "/etc/hostname")
-	if err != nil {
-		return "", fmt.Errorf("Fail to get host name: %+v", err)
+	hostName := GetHostNameSingleton()
+	if hostName.err != nil {
+		return "", fmt.Errorf("Fail to get host name: %+v", hostName.err)
 	}
 
-	return strings.TrimSuffix(string(hostname), "\n"), nil
+	return hostName.hostName, nil
 }
 
 // GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
