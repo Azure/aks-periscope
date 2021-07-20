@@ -24,6 +24,8 @@ const (
 	AzureStackCloudName = "AzureStackCloud"
 )
 
+var GetHostNameFunc = GetHostNameSingleton()
+
 // Azure defines Azure configuration
 type Azure struct {
 	Cloud string `json:"cloud"`
@@ -95,8 +97,8 @@ func GetStorageEndpointSuffix() string {
 }
 
 type HostName struct {
-	hostName string
-	err      error
+	HostName string
+	Err      error
 }
 
 var singletonHostName *HostName
@@ -112,8 +114,8 @@ func GetHostNameSingleton() *HostName {
 		}
 
 		singletonHostName = &HostName{
-			hostName: hostname,
-			err:      err,
+			HostName: hostname,
+			Err:      err,
 		}
 	})
 
@@ -122,12 +124,12 @@ func GetHostNameSingleton() *HostName {
 
 // GetHostName get host name
 func GetHostName() (string, error) {
-	hostName := GetHostNameSingleton()
-	if hostName.err != nil {
-		return "", fmt.Errorf("Fail to get host name: %+v", hostName.err)
+	hostName := GetHostNameFunc
+	if hostName.Err != nil {
+		return "", fmt.Errorf("Fail to get host name: %+v", hostName.Err)
 	}
 
-	return hostName.hostName, nil
+	return hostName.HostName, nil
 }
 
 // GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
