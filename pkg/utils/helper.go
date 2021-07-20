@@ -251,7 +251,7 @@ func GetCreationTimeStamp() (string, error) {
 }
 
 // WriteToCRD writes diagnostic data to CRD
-func WriteToCRD(fileContent string, key string) error {
+func WriteToCRD(crdContent string, key string) error {
 	hostName, err := GetHostName()
 	if err != nil {
 		return err
@@ -259,7 +259,7 @@ func WriteToCRD(fileContent string, key string) error {
 
 	crdName := "aks-periscope-diagnostic" + "-" + hostName
 
-	patchContent := fmt.Sprintf("{\"spec\":{%q:%q}}", key, fileContent)
+	patchContent := fmt.Sprintf("{\"spec\":{%q:%q}}", key, crdContent)
 
 	_, err = RunCommandOnContainer("kubectl", "-n", "aks-periscope", "patch", "apd", crdName, "-p", patchContent, "--type=merge")
 	if err != nil {
