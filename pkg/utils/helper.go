@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,6 +23,8 @@ const (
 	// https://kubernetes-sigs.github.io/cloud-provider-azure/install/configs/#azure-stack-configuration -- See this documentation for the well-known cloud name.
 	AzureStackCloudName = "AzureStackCloud"
 )
+
+var GetHostNameFunc = GetHostNameSingleton()
 
 // Azure defines Azure configuration
 type Azure struct {
@@ -93,14 +96,40 @@ func GetStorageEndpointSuffix() string {
 	return PublicAzureStorageEndpointSuffix
 }
 
+type HostName struct {
+	HostName string
+	Err      error
+}
+
+var singletonHostName *HostName
+var once sync.Once
+
+// GetHostNameSingleton get host name singleton use
+func GetHostNameSingleton() *HostName {
+	once.Do(func() {
+		hostname, err := RunCommandOnHost("cat", "/etc/hostname")
+
+		if hostname != "" {
+			hostname = strings.TrimSuffix(string(hostname), "\n")
+		}
+
+		singletonHostName = &HostName{
+			HostName: hostname,
+			Err:      err,
+		}
+	})
+
+	return singletonHostName
+}
+
 // GetHostName get host name
 func GetHostName() (string, error) {
-	hostname, err := RunCommandOnHost("cat", "/etc/hostname")
-	if err != nil {
-		return "", fmt.Errorf("Fail to get host name: %+v", err)
+	hostName := GetHostNameFunc
+	if hostName.Err != nil {
+		return "", fmt.Errorf("Fail to get host name: %+v", hostName.Err)
 	}
 
-	return strings.TrimSuffix(string(hostname), "\n"), nil
+	return hostName.HostName, nil
 }
 
 // GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
@@ -251,7 +280,7 @@ func GetCreationTimeStamp() (string, error) {
 }
 
 // WriteToCRD writes diagnostic data to CRD
-func WriteToCRD(fileName string, key string) error {
+func WriteToCRD(crdContent string, key string) error {
 	hostName, err := GetHostName()
 	if err != nil {
 		return err
@@ -259,12 +288,7 @@ func WriteToCRD(fileName string, key string) error {
 
 	crdName := "aks-periscope-diagnostic" + "-" + hostName
 
-	jsonBytes, err := ioutil.ReadFile(fileName)
-	if err != nil {
-		return err
-	}
-
-	patchContent := fmt.Sprintf("{\"spec\":{%q:%q}}", key, string(jsonBytes))
+	patchContent := fmt.Sprintf("{\"spec\":{%q:%q}}", key, crdContent)
 
 	_, err = RunCommandOnContainer("kubectl", "-n", "aks-periscope", "patch", "apd", crdName, "-p", patchContent, "--type=merge")
 	if err != nil {
