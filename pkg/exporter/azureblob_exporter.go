@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"net/url"
 	"os"
 	"strings"
@@ -32,18 +33,17 @@ func NewAzureBlobExporter(creationTime, hostname string) *AzureBlobExporter {
 	}
 }
 
+//CreateContainerURL creates the full storage container URL including SAS key
 func createContainerURL() (azblob.ContainerURL, error) {
 	APIServerFQDN, err := utils.GetAPIServerFQDN()
 	if err != nil {
 		return azblob.ContainerURL{}, err
 	}
 
-	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
-	containerLen := strings.Index(containerName, "-hcp-")
-	if containerLen == -1 {
-		containerLen = maxContainerNameLength
+	containerName, err := getStorageContainerName(APIServerFQDN)
+	if err != nil {
+		return azblob.ContainerURL{}, fmt.Errorf("get StorageContainerName: %+w", err)
 	}
-	containerName = strings.TrimRight(containerName[:containerLen], "-")
 
 	ctx := context.Background()
 
@@ -52,12 +52,12 @@ func createContainerURL() (azblob.ContainerURL, error) {
 	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
 
 	ses := utils.GetStorageEndpointSuffix()
-	url, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, ses, containerName, sasKey))
+	parsedUrl, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, ses, containerName, sasKey))
 	if err != nil {
 		return azblob.ContainerURL{}, fmt.Errorf("build blob container url: %w", err)
 	}
 
-	containerURL := azblob.NewContainerURL(*url, pipeline)
+	containerURL := azblob.NewContainerURL(*parsedUrl, pipeline)
 
 	_, err = containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
 	if err != nil {
@@ -75,6 +75,24 @@ func createContainerURL() (azblob.ContainerURL, error) {
 
 	return containerURL, nil
 }
+
+// GetStorageContainerName get storage container name
+func getStorageContainerName(APIServerFQDN string) (string, error) {
+	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
+
+	//TODO DK: I really dont like the line below, it makes for weird behaviour if e.g. .hcp. or -hcp- is in the fqdn for some reason other than being auto-added by AKS
+	length := strings.Index(containerName, "-hcp-")
+
+	if length == -1 {
+		maxLength := len(containerName)
+		length = int(math.Min(float64(maxLength), float64(maxContainerNameLength)))
+	}
+
+	containerName = containerName[:length]
+	containerName = strings.TrimRight(containerName, "-")
+	return containerName, nil
+}
+
 
 // Export implements the interface method
 func (exporter *AzureBlobExporter) Export(producer interfaces.DataProducer) error {

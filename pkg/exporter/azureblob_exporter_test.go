@@ -1,0 +1,30 @@
+package exporter
+
+import (
+	. "github.com/onsi/gomega"
+	"testing"
+)
+
+var getStorageContainerNameTests = []struct {
+	apiServerFqdn string
+	containerName string
+}{
+	{"standard-aks-fqdn-dns-d0daedb9.hcp.eastus.azmk8s.io", "standard-aks-fqdn-dns-d0daedb9"},
+	{"aks-engine-fqdn.westeurope.cloudapp.azure.com", "aks-engine-fqdn-westeurope-cloudapp-azure-com"},
+	{"additional.aks-engine-fqdn.db839748.eastus.cloudapp.azure.com", "additional-aks-engine-fqdn-db839748-eastus-cloudapp-azure-com"},
+	{"10.255.255.5", "10-255-255-5"}, // aks-engine clusters will currently return an IPv4 address as what Periscope is calling the APIServerFQDN
+	{"extra.super.duper.long.apiserverfqdn.that.has.more.than.63.characters", "extra-super-duper-long-apiserverfqdn-that-has-more-than-63-char"},
+	{"kind-control-plane", "kind-control-plane"},
+}
+
+// TestGetAKSStorageContainerName get storage container name for non kind cluster
+func TestGetStorageContainerName(t *testing.T) {
+	g := NewWithT(t)
+	for _, tt := range getStorageContainerNameTests {
+		t.Run(tt.apiServerFqdn, func(t *testing.T) {
+			containerName, _ := getStorageContainerName(tt.apiServerFqdn)
+
+			g.Expect(containerName).To(Equal(tt.containerName))
+		})
+	}
+}

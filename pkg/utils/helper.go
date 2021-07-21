@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/hashicorp/go-multierror"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -132,26 +135,55 @@ func GetHostName() (string, error) {
 	return hostName.HostName, nil
 }
 
-// GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
-func GetAPIServerFQDN() (string, error) {
-	output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
-
-	if err != nil {
-		return "", fmt.Errorf("Can't open kubeconfig file: %+v", err)
-	}
-
+//ParseAPIServerFQDNFromKubeConfig parses a kubeConfig and returns the APIServerFQDN
+func ParseAPIServerFQDNFromKubeConfig(output string) (string, error) {
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		index := strings.Index(line, "server: ")
 		if index >= 0 {
 			fqdn := line[index+len("server: "):]
-			fqdn = strings.Replace(fqdn, "https://", "", -1)
-			fqdn = strings.Replace(fqdn, ":443", "", -1)
-			return fqdn, nil
+			fqdnurl, err := url.Parse(fqdn)
+			if err != nil {
+				return "", fmt.Errorf("parse url from fqdn: %s", fmt.Sprint(err)+": "+fqdn)
+			}
+
+			host, _, err := net.SplitHostPort(fqdnurl.Host)
+			if err != nil {
+				return "", fmt.Errorf("split host port from fqdnurl: %s: %w", fqdnurl, err)
+			}
+
+			return host, nil
 		}
 	}
-
 	return "", errors.New("Could not find server definitions in kubeconfig")
+}
+
+//ReadKubeletConfig reads the kubeletConfig from the node
+func ReadKubeletConfig() (string, error) {
+	var result error
+	output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
+	if err != nil {
+		result = multierror.Append(result, err)
+		output, err = RunCommandOnHost("cat", "/etc/kubernetes/kubelet.conf")
+		if err != nil {
+			result = multierror.Append(result, err)
+			return "", fmt.Errorf("open kubeconfig file at /etc/kubernetes/kubelet.conf or /var/lib/kubelet/kubeconfig\": %+v", result)
+		}
+	}
+	return output, nil
+}
+
+// GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
+func GetAPIServerFQDN() (string, error) {
+	output, err := ReadKubeletConfig()
+	if err != nil {
+		return "", err
+	}
+	fqdn, err := ParseAPIServerFQDNFromKubeConfig(output)
+	if err != nil {
+		return "", err
+	}
+	return fqdn, nil
 }
 
 // RunCommandOnHost runs a command on host system
