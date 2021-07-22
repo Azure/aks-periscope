@@ -136,7 +136,7 @@ func GetHostName() (string, error) {
 }
 
 //ParseAPIServerFQDNFromKubeConfig parses a kubeConfig and returns the APIServerFQDN
-func ParseAPIServerFQDNFromKubeConfig(output string) (string, error) {
+func parseAPIServerFQDNFromKubeConfig(output string) (string, error) {
 	lines := strings.Split(output, "\n")
 	for _, line := range lines {
 		index := strings.Index(line, "server: ")
@@ -158,28 +158,52 @@ func ParseAPIServerFQDNFromKubeConfig(output string) (string, error) {
 	return "", errors.New("Could not find server definitions in kubeconfig")
 }
 
-//ReadKubeletConfig reads the kubeletConfig from the node
-func ReadKubeletConfig() (string, error) {
+// Location of kubeconfig on nodes within cluster
+const AKSClusterKubeConfigLocation = "/var/lib/kubelet/kubeconfig"
+const KINDKubeadmClusterKubeletConfLocation = "/etc/kubernetes/kubelet.conf"
+
+func checkIfKubeConfigFileExist() (string, error) {
 	var result error
-	output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
+
+	_, err := RunCommandOnHost("ls", AKSClusterKubeConfigLocation)
 	if err != nil {
 		result = multierror.Append(result, err)
-		output, err = RunCommandOnHost("cat", "/etc/kubernetes/kubelet.conf")
-		if err != nil {
-			result = multierror.Append(result, err)
-			return "", fmt.Errorf("open kubeconfig file at /etc/kubernetes/kubelet.conf or /var/lib/kubelet/kubeconfig\": %+v", result)
-		}
+	} else {
+		return AKSClusterKubeConfigLocation, nil
 	}
+
+	_, err = RunCommandOnHost("ls", KINDKubeadmClusterKubeletConfLocation)
+	if err != nil {
+		result = multierror.Append(result, err)
+	} else {
+		return KINDKubeadmClusterKubeletConfLocation, nil
+	}
+
+	return "", result
+}
+
+//ReadKubeletConfig reads the kubeletConfig from the node
+func readKubeletConfig() (string, error) {
+	kubeConfigLocation, err := checkIfKubeConfigFileExist()
+	if err != nil {
+		return "", fmt.Errorf("Can't locate kubeconfig file: %+v", err)
+	}
+
+	output, err := RunCommandOnHost("cat", kubeConfigLocation)
+	if err != nil {
+		return "", fmt.Errorf("Can't open kubeconfig file: %+v", err)
+	}
+
 	return output, nil
 }
 
 // GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
 func GetAPIServerFQDN() (string, error) {
-	output, err := ReadKubeletConfig()
+	output, err := readKubeletConfig()
 	if err != nil {
 		return "", err
 	}
-	fqdn, err := ParseAPIServerFQDNFromKubeConfig(output)
+	fqdn, err := parseAPIServerFQDNFromKubeConfig(output)
 	if err != nil {
 		return "", err
 	}

@@ -1,11 +1,10 @@
-package main
+package utils
 
 import (
 	"errors"
 	"log"
 	"testing"
 
-	"github.com/Azure/aks-periscope/pkg/utils"
 	. "github.com/onsi/gomega"
 )
 
@@ -13,17 +12,17 @@ func TestGetHostNameSuccessCase(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	// Save current function and restore at the end:
-	old := utils.GetHostNameFunc
-	defer func() { utils.GetHostNameFunc = old }()
+	old := GetHostNameFunc
+	defer func() { GetHostNameFunc = old }()
 
-	utils.GetHostNameFunc = &utils.HostName{
+	GetHostNameFunc = &HostName{
 		HostName: "aks-agentpool-20752274-vmss000000",
 		Err:      nil,
 	}
 
 	// setup expectations
 	// call the code we are testing
-	hostname, _ := utils.GetHostName()
+	hostname, _ := GetHostName()
 
 	// assert that the expectations were met
 	g.Expect(hostname).To(BeElementOf("aks-agentpool-20752274-vmss000000"))
@@ -33,22 +32,21 @@ func TestGetHostNameFailureCase(t *testing.T) {
 	g := NewGomegaWithT(t)
 
 	// Save current function and restore at the end:
-	old := utils.GetHostNameFunc
-	defer func() { utils.GetHostNameFunc = old }()
+	old := GetHostNameFunc
+	defer func() { GetHostNameFunc = old }()
 
-	utils.GetHostNameFunc = &utils.HostName{
+	GetHostNameFunc = &HostName{
 		HostName: "",
 		Err:      errors.New("an error"),
 	}
 
 	// setup expectations
 	// call the code we are testing
-	_, err := utils.GetHostName()
+	_, err := GetHostName()
 	log.Printf("Error is %s", err)
 	// assert that the expectations were met
 	g.Expect(err).Should(HaveOccurred())
 	g.Expect(err).To(BeElementOf(errors.New("Fail to get host name: an error")))
-
 }
 
 //table of tests for utils.ParseAPIServerFQDNFromKubeConfig
@@ -103,7 +101,7 @@ func TestParseAPIServerFQDNFromKubeConfig(t *testing.T) {
 	for _, tt := range parseAPIServerFQDNFromKubeConfigTests {
 		t.Run(tt.APIServerFQDN, func(t *testing.T) {
 			//call the test function
-			APIServerFQDN, err := utils.ParseAPIServerFQDNFromKubeConfig(tt.kubeConfig)
+			APIServerFQDN, err := parseAPIServerFQDNFromKubeConfig(tt.kubeConfig)
 
 			//assert that no error was thrown and expected value was returned
 			g.Expect(err).Should(BeNil())
