@@ -9,18 +9,18 @@ import (
 )
 
 // ContainerLogsCollectorContainerD defines a ContainerLogs Collector struct for containerd clusters
-type ContainerLogsCollectorContainerD struct {
+type ContainerLogsContainerDCollector struct {
 	data map[string]string
 }
 
 // NewContainerLogsCollectorContainerD is a constructor
-func NewContainerLogsCollectorContainerD() *ContainerLogsCollectorContainerD {
-	return &ContainerLogsCollectorContainerD{
+func NewContainerLogsContainerDCollector() *ContainerLogsContainerDCollector {
+	return &ContainerLogsContainerDCollector{
 		data: make(map[string]string),
 	}
 }
 
-func (collector *ContainerLogsCollectorContainerD) GetName() string {
+func (collector *ContainerLogsContainerDCollector) GetName() string {
 	return "containerlogscontainerd"
 }
 
@@ -44,12 +44,12 @@ const allNamespacesSelector = "--all-namespaces"
 // where I assume # is incremented and a new log created for each container restart (starts at # == 0)
 const containerLogDirectory = "/var/log/containers"
 
-func (collector *ContainerLogsCollectorContainerD) GetData() map[string]string {
+func (collector *ContainerLogsContainerDCollector) GetData() map[string]string {
 	return collector.data
 }
 
 // Collect implements the interface method
-func (collector *ContainerLogsCollectorContainerD) Collect() error {
+func (collector *ContainerLogsContainerDCollector) Collect() error {
 	selectorStrings := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))
 
 	containerLogSelectors := parseContainerLogSelectors(selectorStrings)
