@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/aks-periscope/pkg/exporter"
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
+	restclient "k8s.io/client-go/rest"
 )
 
 func main() {
@@ -36,8 +37,13 @@ func main() {
 	// We need the cert in order to communicate with the storage account.
 	if utils.IsAzureStackCloud() {
 		if err := utils.CopyFileFromHost("/etc/ssl/certs/azsCertificate.pem", "/etc/ssl/certs/azsCertificate.pem"); err != nil {
-			log.Fatalf("cannot copy cert for Azure Stack Cloud environment: %v", err)
+			log.Fatalf("Cannot copy cert for Azure Stack Cloud environment: %v", err)
 		}
+	}
+
+	config, err := restclient.InClusterConfig()
+	if err != nil {
+		log.Fatalf("Cannot load kubeconfig: %v", err)
 	}
 
 	dataProducers := []interfaces.DataProducer{}
@@ -51,7 +57,7 @@ func main() {
 	nodeLogsCollector := collector.NewNodeLogsCollector()
 	kubeletCmdCollector := collector.NewKubeletCmdCollector()
 	systemPerfCollector := collector.NewSystemPerfCollector()
-	helmCollector := collector.NewHelmCollector()
+	helmCollector := collector.NewHelmCollector(config)
 	osmCollector := collector.NewOsmCollector()
 	smiCollector := collector.NewSmiCollector()
 
