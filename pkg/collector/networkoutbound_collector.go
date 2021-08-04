@@ -60,7 +60,7 @@ func (collector *NetworkOutboundCollector) Collect() error {
 	outboundTypes = append(outboundTypes,
 		networkOutboundType{
 			Type: "AKS Tunnel",
-			URL:  APIServerFQDN + ":9000",
+			URL:  APIServerFQDN + ":443",
 		},
 	)
 	outboundTypes = append(outboundTypes,
