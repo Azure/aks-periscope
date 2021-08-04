@@ -43,6 +43,7 @@ func main() {
 	dataProducers := []interfaces.DataProducer{}
 
 	containerLogsCollector := collector.NewContainerLogsCollector()
+	containerLogsContainerDCollector := collector.NewContainerLogsContainerDCollector()
 	networkOutboundCollector := collector.NewNetworkOutboundCollector()
 	dnsCollector := collector.NewDNSCollector()
 	kubeObjectsCollector := collector.NewKubeObjectsCollector()
@@ -60,6 +61,7 @@ func main() {
 		dnsCollector,
 		kubeObjectsCollector,
 		networkOutboundCollector,
+		containerLogsContainerDCollector,
 	}
 
 	if contains(collectorList, "connectedCluster") {
