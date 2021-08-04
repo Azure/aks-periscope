@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+env:
+  GO_VERSION: '1.15'
+  KIND_VERSION: v0.11.1
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Linter
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: latest
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Download modules
+        run: go mod download
+      - name: Build project
+        run: go build ./cmd/aks-periscope
+  tests:
+    runs-on: ubuntu-latest
+    # services:
+    #   registry:
+    #     image: registry:2
+    #     ports:
+    #       - 5000:5000
+    steps:
+      - uses: actions/checkout@v2
+      - uses: azure/setup-kubectl@v1
+      - name: Install Packages
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/${{ env.KIND_VERSION }}/kind-linux-amd64
+          chmod +x ./kind
+
+          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
+      - name: Start kind
+        run: |
+          docker run -d --restart=always -p "127.0.0.1:5000:5000" --name "registry" registry:2
+
+          # 3 nodes (two workers) cluster with the local registry enabled in containerd (https://kind.sigs.k8s.io/docs/user/local-registry/)
+          cat <<EOF | ./kind create cluster --config=-
+          kind: Cluster
+          apiVersion: kind.x-k8s.io/v1alpha4
+          nodes:
+          - role: control-plane
+          - role: worker
+          - role: worker
+          containerdConfigPatches:
+          - |-
+            [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
+              endpoint = ["http://registry:5000"]
+          EOF
+
+          docker network connect "kind" "registry" || true
+
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: local-registry-hosting
+            namespace: kube-public
+          data:
+            localRegistryHosting.v1: |
+              host: "localhost:5000"
+              help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
+          EOF
+        continue-on-error: false
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+        with:
+          driver-opts: network=host
+      - name: Build and push to local registry
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          push: true
+          tags: localhost:5000/periscope:foo
+          file: ./builder/Dockerfile
+      - name: Deploy AKS Periscope
+        run: |
+          (cd ./deployment && kustomize edit set image aksrepos.azurecr.io/staging/aks-periscope=localhost:5000/periscope:foo)
+          kubectl apply -f <(kustomize build ./deployment)
+          kubectl -n aks-periscope wait po --all --for condition=ready --timeout=60s
+      # TODO: run integration tests here
+      # To deploy HELM releases, use https://github.com/deliverybot/helm ex https://medium.com/swlh/deploying-to-kubernetes-with-helm-and-github-actions-14825e6df1f2
+      - name: Stop kind
+        run: kind delete cluster
+        continue-on-error: false
