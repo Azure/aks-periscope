@@ -1,10 +1,9 @@
 package collector
 
 import (
+	"io/ioutil"
 	"os"
 	"strings"
-
-	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // NodeLogsCollector defines a NodeLogs Collector struct
@@ -29,13 +28,19 @@ func (collector *NodeLogsCollector) Collect() error {
 
 	for _, nodeLog := range nodeLogs {
 
-		output, err := utils.RunCommandOnHost("cat", nodeLog)
+		output, err := os.Open(nodeLog)
 		if err != nil {
 			return err
 		}
 
-		collector.data["nodeLog"] = output
+		defer output.Close()
 
+		b, err := ioutil.ReadAll(output)
+		if err != nil {
+			return err
+		}
+
+		collector.data["nodeLog"] = string(b)
 	}
 
 	return nil
