@@ -41,6 +41,22 @@ type CommandOutputStreams struct {
 	Stderr string
 }
 
+func ReadFileContent(filename string) (string, error) {
+	output, err := os.Open(filename)
+	if err != nil {
+		return "", err
+	}
+
+	defer output.Close()
+
+	b, err := ioutil.ReadAll(output)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
+}
+
 // IsAzureStackCloud returns true if the application is running on Azure Stack Cloud
 func IsAzureStackCloud() bool {
 	azureFile, err := RunCommandOnHost("cat", "/etc/kubernetes/azure.json")
