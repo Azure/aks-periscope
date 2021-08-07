@@ -3,7 +3,6 @@ package utils
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -130,28 +129,6 @@ func GetHostName() (string, error) {
 	}
 
 	return hostName.HostName, nil
-}
-
-// GetAPIServerFQDN gets the API Server FQDN from the kubeconfig file
-func GetAPIServerFQDN() (string, error) {
-	output, err := RunCommandOnHost("cat", "/var/lib/kubelet/kubeconfig")
-
-	if err != nil {
-		return "", fmt.Errorf("Can't open kubeconfig file: %+v", err)
-	}
-
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		index := strings.Index(line, "server: ")
-		if index >= 0 {
-			fqdn := line[index+len("server: "):]
-			fqdn = strings.Replace(fqdn, "https://", "", -1)
-			fqdn = strings.Replace(fqdn, ":443", "", -1)
-			return fqdn, nil
-		}
-	}
-
-	return "", errors.New("Could not find server definitions in kubeconfig")
 }
 
 // RunCommandOnHost runs a command on host system

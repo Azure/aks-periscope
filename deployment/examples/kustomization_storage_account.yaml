@@ -1,14 +1,21 @@
+# This is an example file to use an Azure Storage Account to export data
+# 3 values are required:
+# - AZURE_BLOB_SAS_KEY
+# - AZURE_BLOB_ACCOUNT_NAME
+# - AZURE_BLOB_CONTAINER_NAME: name of the container where the data will be exported
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: aks-periscope
+
 resources:
-- https://github.com/Azure/aks-periscope/blob/master/deployment/kustomization.yaml
+- https://github.com/Azure/aks-periscope/deployment//
 
 secretGenerator:
 - name: azureblob-secret
   literals:
-  - AZURE_BLOB_SAS_KEY=<base 64 encoded value>
-
+  - AZURE_BLOB_SAS_KEY=<?sv=&ss=&srt=&sp=&se=&st=&spr=&sig=>
+       
 patches:
 - target:
     group: apps
@@ -17,10 +24,12 @@ patches:
     version: v1
   patch: |-
     - op: add
-      path: '/spec/template/spec/containers/0/env/-'
+      path: '/spec/template/spec/containers/0/env'
       value:
-        name: AZURE_BLOB_ACCOUNT_NAME
-        value: <name>
+        - name: AZURE_BLOB_ACCOUNT_NAME
+          value: <name>
+        - name: AZURE_BLOB_CONTAINER_NAME
+          value: <name>
 - target:
     group: apps
     kind: DaemonSet
