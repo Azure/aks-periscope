@@ -9,6 +9,7 @@ on:
 env:
   GO_VERSION: '1.15'
   KIND_VERSION: v0.11.1
+  HELM_VERSION: v3.4.0
 
 jobs:
   lint:
@@ -37,14 +38,17 @@ jobs:
         run: go build ./cmd/aks-periscope
   tests:
     runs-on: ubuntu-latest
-    # services:
-    #   registry:
-    #     image: registry:2
-    #     ports:
-    #       - 5000:5000
     steps:
       - uses: actions/checkout@v2
       - uses: azure/setup-kubectl@v1
+      - name: Set up Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.GO_VERSION }}
+      - name: Install Helm
+        uses: azure/setup-helm@v1
+        with:
+          version: ${{ env.HELM_VERSION }}
       - name: Install Packages
         run: |
           curl -Lo ./kind https://kind.sigs.k8s.io/dl/${{ env.KIND_VERSION }}/kind-linux-amd64
@@ -94,13 +98,19 @@ jobs:
           push: true
           tags: localhost:5000/periscope:foo
           file: ./builder/Dockerfile
+      - name: Deploy dummy helm chart for tests
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm repo update
+          helm install happy-panda bitnami/wordpress --namespace default
       - name: Deploy AKS Periscope
         run: |
           (cd ./deployment && kustomize edit set image aksrepos.azurecr.io/staging/aks-periscope=localhost:5000/periscope:foo)
           kubectl apply -f <(kustomize build ./deployment)
           kubectl -n aks-periscope wait po --all --for condition=ready --timeout=60s
-      # TODO: run integration tests here
-      # To deploy HELM releases, use https://github.com/deliverybot/helm ex https://medium.com/swlh/deploying-to-kubernetes-with-helm-and-github-actions-14825e6df1f2
+      - name: Go tests
+        run: |
+          go test -v ./...
       - name: Stop kind
         run: kind delete cluster
         continue-on-error: false
