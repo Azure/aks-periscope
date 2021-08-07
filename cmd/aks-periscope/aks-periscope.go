@@ -48,7 +48,6 @@ func main() {
 
 	dataProducers := []interfaces.DataProducer{}
 
-	containerLogsCollector := collector.NewContainerLogsCollector()
 	networkOutboundCollector := collector.NewNetworkOutboundCollector()
 	dnsCollector := collector.NewDNSCollector()
 	kubeObjectsCollector := collector.NewKubeObjectsCollector()
@@ -62,7 +61,6 @@ func main() {
 	smiCollector := collector.NewSmiCollector()
 
 	collectors := []interfaces.Collector{
-		containerLogsCollector,
 		dnsCollector,
 		kubeObjectsCollector,
 		networkOutboundCollector,
