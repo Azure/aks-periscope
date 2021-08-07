@@ -40,6 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+        with:
+            fetch-depth: 2
       - uses: azure/setup-kubectl@v1
       - name: Set up Go
         uses: actions/setup-go@v2
@@ -109,8 +111,9 @@ jobs:
           kubectl apply -f <(kustomize build ./deployment)
           kubectl -n aks-periscope wait po --all --for condition=ready --timeout=60s
       - name: Go tests
-        run: |
-          go test -v ./...
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      - name: Upload coverage to Codecov
+        run: bash <(curl -s https://codecov.io/bash) -C $(Build.SourceVersion)
       - name: Stop kind
         run: kind delete cluster
         continue-on-error: false

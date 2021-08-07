@@ -1,6 +1,9 @@
-[![CI](https://github.com/Azure/aks-periscope/actions/workflows/ci-pipeline.yml/badge.svg?branch=master)](https://github.com/Azure/aks-periscope/actions/workflows/ci-pipeline.yml) [![Go Report Card](https://goreportcard.com/badge/github.com/Azure/aks-periscope)](https://goreportcard.com/report/github.com/Azure/aks-periscope)
-
 # AKS Periscope
+
+[![CI](https://github.com/Azure/aks-periscope/actions/workflows/ci-pipeline.yaml/badge.svg?branch=master)](https://github.com/Azure/aks-periscope/actions/workflows/ci-pipeline.yaml)
+[![codecov](https://codecov.io/gh/Azure/aks-periscope/branch/master/graph/badge.svg)](https://codecov.io/gh/Azure/aks-periscope)
+[![GoDoc](https://godoc.org/github.com/Azure/aks-periscope?status.svg)](https://godoc.org/github.com/Azure/aks-periscope)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Azure/aks-periscope)](https://goreportcard.com/report/github.com/Azure/aks-periscope)
 
 Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster.
 
