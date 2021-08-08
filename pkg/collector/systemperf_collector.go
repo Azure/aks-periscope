@@ -18,14 +18,14 @@ type SystemPerfCollector struct {
 
 type NodeMetrics struct {
 	NodeName    string `json:"name"`
-	CPUUsage    int64  `json:"cpuusage"`
-	MemoryUsage int64  `json:"memoryusage"`
+	CPUUsage    int64  `json:"cpuUsage"`
+	MemoryUsage int64  `json:"memoryUsage"`
 }
 
 type PodMetrics struct {
 	ContainerName string `json:"name"`
-	CPUUsage      int64  `json:"cpuusage"`
-	MemoryUsage   int64  `json:"memoryusage"`
+	CPUUsage      int64  `json:"cpuUsage"`
+	MemoryUsage   int64  `json:"memoryUsage"`
 }
 
 // NewSystemPerfCollector is a constructor
@@ -47,7 +47,6 @@ func (collector *SystemPerfCollector) Collect() error {
 		return fmt.Errorf("metrics for config error: %w", err)
 	}
 
-	// Node Metrics collector
 	nodeMetrics, err := metric.MetricsV1beta1().NodeMetricses().List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("node metrics error: %w", err)
@@ -77,7 +76,6 @@ func (collector *SystemPerfCollector) Collect() error {
 
 	collector.data["nodes"] = string(jsonNodeResult)
 
-	// Pod Metrics collector
 	podMetrics, err := metric.MetricsV1beta1().PodMetricses(metav1.NamespaceAll).List(context.TODO(), metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("pod metrics failure: %w", err)
