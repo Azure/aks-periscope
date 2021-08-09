@@ -77,7 +77,7 @@ spec:
         beta.kubernetes.io/os: linux
       containers:
       - name: aks-periscope
-        image: aksrepos.azurecr.io/staging/aks-periscope:v0.3
+        image: aksrepos.azurecr.io/staging/aks-periscope:v0.4
         securityContext:
           privileged: true
         imagePullPolicy: Always
@@ -93,7 +93,7 @@ spec:
         - secretRef:
             name: azureblob-secret
         volumeMounts:
-         - mountPath: /aks-periscope
+         - mountPath: /var/log/
            name: aks-periscope-storage
         resources:
           requests:
@@ -105,7 +105,7 @@ spec:
       volumes:
        - name: aks-periscope-storage
          hostPath:
-           path: /var/log/aks-periscope
+           path: /var/log/
            type: DirectoryOrCreate
 ---
 apiVersion: v1
