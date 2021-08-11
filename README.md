@@ -35,123 +35,35 @@ AKS Periscope currently only work on Linux based agent nodes. Please use the scr
 
 It collects the following logs and metrics:
 
-1. Container logs (by default all containers in the `kube-system` namespace, can be config to take other namespace/containers).
-2. Docker and Kubelet system service logs.
-3. Network outbound connectivity, include checks for internet, API server, Tunnel, Azure Container Registry and Microsoft Container Registry.
-4. Node IP tables.
-5. All node level logs (by default cluster provision log and cloud init log, can be config to take other logs).
-6. VM and Kubernetes cluster level DNS settings.
-7. Describe Kubernetes objects (by default all pods/services/deployments in the `kube-system` namespace, can be config to take other namespace/objects).
-8. Kubelet command arguments.
-9. System performance (kubectl top nodes and kubectl top pods).
+1. Network outbound connectivity, include checks for internet, API server, Tunnel, Azure Container Registry and Microsoft Container Registry.
+1. Node IP tables.
+1. All node level logs (by default cluster provision log and cloud init log, can be config to take other logs).
+1. VM and Kubernetes cluster level DNS settings.
+1. Describe Kubernetes objects (by default all pods/services/deployments in the `kube-system` namespace, can be config to take other namespace/objects).
+1. Kubelet command arguments.
+1. System performance (kubectl top nodes and kubectl top pods).
+1. Helm charts status
+1. SMI & OSM deployments information
 
 It also generates the following diagnostic signals:
 
 1. Network outbound connectivity, reports the down period for a specific connection.
-2. Network configuration, includes Network Plugin, DNS, and Max Pods per Node settings.
+1. Network configuration, includes Network Plugin, DNS, and Max Pods per Node settings.
 
 ## User Guide
 
-AKS Periscope can be deployed by using Azure Command-Line tool (CLI). The steps are:
+AKS Periscope can be deployed by using Azure Command-Line tool (CLI). You will have to install the `aks-preview` extension to do so.  
+See [az cli aks-preview extension](https://github.com/Azure/azure-cli-extensions/tree/main/src/aks-preview/azext_aks_preview) for detailed information.
 
-0. If CLI extension aks-preview has been installed previously, uninstall it first.
-
-   ```sh
-   az extension remove --name aks-preview
-   ```
-
-1. Install CLI extension aks-preview.
-
-   ```sh
-   az extension add --name aks-preview
-   ```
-
-2. Run `az aks kollect` command to collect metrics and diagnostic information, and upload to an Azure storage account. Use `az aks kollect -h` to check command details. Some useful examples are also listed below:
-
-   1. Using storage account name and a shared access signature token with write permission
-
-      ```sh
-      az aks kollect \
-      -g MyResourceGroup \
-      -n MyManagedCluster \
-      --storage-account MyStorageAccount \
-      --sas-token "MySasToken"
-      ```
-
-   2. Using the resource id of a storage account resource you own.
-
-      ```sh
-      az aks kollect \
-      -g MyResourceGroup \
-      -n MyManagedCluster \
-      --storage-account "MyStorageAccountResourceId"
-      ```
-
-   3. Using a [pre-setup storage account](https://docs.microsoft.com/en-us/azure/azure-monitor/platform/diagnostic-logs-stream-log-store) in diagnostics settings for your managed cluster.
-
-      ```sh
-      az aks kollect \
-      -g MyResourceGroup \
-      -n MyManagedCluster
-      ```
-
-   4. Customize the container logs to collect. Its value can be either all containers in a namespace, for example, kube-system, or a specific container in a namespace, for example, kube-system/tunnelfront.
-
-      ```sh
-      az aks kollect \
-      -g MyResourceGroup \
-      -n MyManagedCluster \
-      --container-logs "mynamespace1/mypod1 myns2"
-      ```
-
-   5. Customize the kubernetes objects to collect. Its value can be either all objects of a type in a namespace, for example, kube-system/pod, or a specific object of a type in a namespace, for example, kube-system/deployment/tunnelfront.
-
-      ```sh
-      az aks kollect \
-      -g MyResourceGroup \
-      -n MyManagedCluster \
-      --kube-objects "mynamespace1/service myns2/deployment/deployment1"
-      ```
-
-   6. Customize the node log files to collect.
-
-      ```sh
-      az aks kollect \
-      -g MyResourceGroup \
-      -n MyManagedCluster \
-      --node-logs "/var/log/azure-vnet.log /var/log/azure-vnet-ipam.log"
-      ```
-
-All collected logs, metrics and node level diagnostic information is stored on host nodes under directory:  
-> `/var/log/aks-periscope`.
-
-This directory is also mounted to container as:  
-> `/aks-periscope`.
-
-After export, they will also be stored in Azure Blob Service under a container with its name equals to cluster API server FQDN. A zip file is also created for easy download.
-
-Alternatively, AKS Periscope can be deployed directly with `kubectl`. See instructions in [Appendix].
+AKS Periscope can also be deployed with kustomize (under [./deployment](./deployment) directory). Some examples of configurations can be found under [./deployment/examples](./deployment/examples) directory.
 
 ## Programming Guide
 
 To locally build this project from the root of this repository:
 
 ```sh
-CGO_ENABLED=0 GOOS=linux go build -mod=vendor github.com/Azure/aks-periscope/cmd/aks-periscope
+CGO_ENABLED=0 GOOS=linux go build ./cmd/aks-periscope
 ```
-
-**Tip**: In order to test local changes, user can build the local image via `Dockerfile` and then push it to your local hub. This way, user should be able to reference this test image in the `deployment\aks-periscope.yaml` `containers` property `image` attribute reference to your published test docker image. 
-
-For example:
-
-```sh
-docker build -f ./builder/Dockerfile -t <some_docker_repo_name>/<aks-periscope-user-selected-test-name> .
-docker push <some_docker_repo_name>/<aks-periscope-user-selected-test-name> 
-```
-
-## Dependent Consuming Tools and Working Contract
-
-`az-cli` and `vscode` both consume the `aks-periscope.yaml` file. If the `aks-periscope.yaml` file is changed, you will introduce breaking changes to `az-cli` and `vscode`.
 
 ## Debugging Guide
 
@@ -180,10 +92,10 @@ In order to debug the logs of `pods` of the `aks-periscope` namespace deployed i
 
 The following command will come handy:
 
-   * To get the pods in `aks-periscope` namespace.
-       * `kubectl get pods -n aks-periscope`
-   * To check the logs in of the each deployed pod, this command will come handy:
-       * `kubectl logs <name-of-pod> -n aks-periscope`
+* To get the pods in `aks-periscope` namespace.
+  * `kubectl get pods -n aks-periscope`
+* To check the logs in of the each deployed pod, this command will come handy:
+  * `kubectl logs <name-of-pod> -n aks-periscope`
 
 Feel free to contact aksperiscope@microsoft.com or open an issue with any feedback or questions about AKS Periscope. This is currently a work in progress, but look out for more capabilities to come!
 
@@ -200,6 +112,3 @@ provided by the bot. You will only need to do this once across all repos using o
 This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
 For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
 contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
-
-[programming guide]: docs/programmingguide.md
-[appendix]: docs/appendix.md
