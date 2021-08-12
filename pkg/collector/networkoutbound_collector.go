@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"net"
 	"time"
-
-	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 type networkOutboundType struct {
@@ -39,11 +37,6 @@ func (collector *NetworkOutboundCollector) GetName() string {
 
 // Collect implements the interface method
 func (collector *NetworkOutboundCollector) Collect() error {
-	APIServerFQDN, err := utils.GetAPIServerFQDN()
-	if err != nil {
-		return err
-	}
-
 	outboundTypes := []networkOutboundType{}
 	outboundTypes = append(outboundTypes,
 		networkOutboundType{
@@ -55,12 +48,6 @@ func (collector *NetworkOutboundCollector) Collect() error {
 		networkOutboundType{
 			Type: "AKS API Server",
 			URL:  "kubernetes.default.svc.cluster.local:443",
-		},
-	)
-	outboundTypes = append(outboundTypes,
-		networkOutboundType{
-			Type: "AKS Tunnel",
-			URL:  APIServerFQDN + ":443",
 		},
 	)
 	outboundTypes = append(outboundTypes,
@@ -78,7 +65,7 @@ func (collector *NetworkOutboundCollector) Collect() error {
 
 	for _, outboundType := range outboundTypes {
 		timeout := time.Duration(5 * time.Second)
-		_, err = net.DialTimeout("tcp", outboundType.URL, timeout)
+		_, err := net.DialTimeout("tcp", outboundType.URL, timeout)
 
 		status := "Connected"
 		if err != nil {

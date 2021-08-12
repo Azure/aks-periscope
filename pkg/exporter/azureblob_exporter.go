@@ -15,10 +15,6 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 )
 
-const (
-	maxContainerNameLength = 63
-)
-
 // AzureBlobExporter defines an Azure Blob Exporter
 type AzureBlobExporter struct {
 	hostname     string
@@ -33,23 +29,18 @@ func NewAzureBlobExporter(creationTime, hostname string) *AzureBlobExporter {
 }
 
 func createContainerURL() (azblob.ContainerURL, error) {
-	APIServerFQDN, err := utils.GetAPIServerFQDN()
-	if err != nil {
-		return azblob.ContainerURL{}, err
-	}
+	accountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
+	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
+	containerName := os.Getenv("AZURE_BLOB_CONTAINER_NAME")
 
-	containerName := strings.Replace(APIServerFQDN, ".", "-", -1)
-	containerLen := strings.Index(containerName, "-hcp-")
-	if containerLen == -1 {
-		containerLen = maxContainerNameLength
+	if accountName == "" || sasKey == "" || containerName == "" {
+		log.Print("Storage Account information were not provided. Export to Azure Storage Account will be skiped.")
+		return azblob.ContainerURL{}, nil
 	}
-	containerName = strings.TrimRight(containerName[:containerLen], "-")
 
 	ctx := context.Background()
 
 	pipeline := azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{})
-	accountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
-	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
 
 	ses := utils.GetStorageEndpointSuffix()
 	url, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, ses, containerName, sasKey))
