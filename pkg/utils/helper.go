@@ -216,36 +216,6 @@ func GetUrlWithRetries(url string, maxRetries int) ([]byte, error) {
 	}
 }
 
-// CreateKubeConfigFromServiceAccount creates kubeconfig based on creds in service account
-func CreateKubeConfigFromServiceAccount() error {
-	token, err := RunCommandOnContainer("cat", "/var/run/secrets/kubernetes.io/serviceaccount/token")
-	if err != nil {
-		return err
-	}
-
-	_, err = RunCommandOnContainer("kubectl", "config", "set-credentials", "aks-periscope-service-account", "--token="+token)
-	if err != nil {
-		return err
-	}
-
-	_, err = RunCommandOnContainer("kubectl", "config", "set-cluster", "aks-periscope-cluster", "--server=https://kubernetes.default.svc.cluster.local:443", "--certificate-authority=/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
-	if err != nil {
-		return err
-	}
-
-	_, err = RunCommandOnContainer("kubectl", "config", "set-context", "aks-periscope-context", "--user=aks-periscope-service-account", "--cluster=aks-periscope-cluster")
-	if err != nil {
-		return err
-	}
-
-	_, err = RunCommandOnContainer("kubectl", "config", "use-context", "aks-periscope-context")
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 // GetCreationTimeStamp returns a create timestamp
 func GetCreationTimeStamp() (string, error) {
 	creationTimeStamp, err := RunCommandOnContainer("kubectl", "get", "pods", "--all-namespaces", "-l", "app=aks-periscope", "-o", "jsonpath=\"{.items[0].metadata.creationTimestamp}\"")

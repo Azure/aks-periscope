@@ -55,7 +55,7 @@ func main() {
 	ipTablesCollector := collector.NewIPTablesCollector()
 	nodeLogsCollector := collector.NewNodeLogsCollector()
 	kubeletCmdCollector := collector.NewKubeletCmdCollector()
-	systemPerfCollector := collector.NewSystemPerfCollector()
+	systemPerfCollector := collector.NewSystemPerfCollector(config)
 	helmCollector := collector.NewHelmCollector(config)
 	osmCollector := collector.NewOsmCollector()
 	smiCollector := collector.NewSmiCollector()
