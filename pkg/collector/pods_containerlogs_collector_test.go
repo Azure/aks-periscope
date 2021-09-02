@@ -8,7 +8,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func TestPODSContainerLogsCollector(t *testing.T) {
+func TestPodsContainerLogsCollector(t *testing.T) {
 	tests := []struct {
 		name    string
 		want    int
@@ -33,7 +33,7 @@ func TestPODSContainerLogsCollector(t *testing.T) {
 		t.Fatalf("Cannot load kube config: %v", err)
 	}
 
-	c := NewPODSContainerLogs(config)
+	c := NewPodsContainerLogs(config)
 
 	if err := os.Setenv("DIAGNOSTIC_CONTAINERLOGS_LIST", "kube-system"); err != nil {
 		t.Fatalf("Setenv: %v", err)

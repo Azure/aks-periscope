@@ -15,42 +15,42 @@ import (
 	restclient "k8s.io/client-go/rest"
 )
 
-// PODSContainerLogsCollector defines a Pods Container Logs Collector struct
-type PODSContainerLogsCollector struct {
+// PodsContainerLogsCollector defines a Pods Container Logs Collector struct
+type PodsContainerLogsCollector struct {
 	kubeconfig *restclient.Config
 	data       map[string]string
 }
 
-type PODSContainerStruct struct {
-	Name          string
-	Ready         string
-	Status        string
-	Restart       int32
-	Age           time.Duration
-	ContainerName string
-	ContainerLog  string
+type PodsContainerStruct struct {
+	Name          string        `json:"name"`
+	Ready         string        `json:"ready"`
+	Status        string        `json:"status"`
+	Restart       int32         `json:"restart"`
+	Age           time.Duration `json:"age"`
+	ContainerName string        `json:"containerName"`
+	ContainerLog  string        `json:"containerLog"`
 }
 
-// NewPODSContainerLogs is a constructor
-func NewPODSContainerLogs(config *restclient.Config) *PODSContainerLogsCollector {
-	return &PODSContainerLogsCollector{
+// NewPodsContainerLogs is a constructor
+func NewPodsContainerLogs(config *restclient.Config) *PodsContainerLogsCollector {
+	return &PodsContainerLogsCollector{
 		data:       make(map[string]string),
 		kubeconfig: config,
 	}
 }
 
-func (collector *PODSContainerLogsCollector) GetName() string {
+func (collector *PodsContainerLogsCollector) GetName() string {
 	return "podscontainerlogs"
 }
 
 // Collect implements the interface method
-func (collector *PODSContainerLogsCollector) Collect() error {
+func (collector *PodsContainerLogsCollector) Collect() error {
 	containerNamespaces := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))
 
 	// Creates the clientset
 	clientset, err := kubernetes.NewForConfig(collector.kubeconfig)
 	if err != nil {
-		return fmt.Errorf("error in getting access to K8S: %v", err)
+		return fmt.Errorf("getting access to K8S failed: %w", err)
 	}
 
 	for _, namespace := range containerNamespaces {
@@ -58,7 +58,7 @@ func (collector *PODSContainerLogsCollector) Collect() error {
 		podList, err := getPods(clientset, namespace)
 
 		if err != nil {
-			return fmt.Errorf("error while getting pods: %v", err)
+			return fmt.Errorf("getting pods failed: %w", err)
 		}
 
 		// List all the pods similar to kubectl get pods -n <my namespace>
@@ -86,10 +86,10 @@ func (collector *PODSContainerLogsCollector) Collect() error {
 			containerLogs, err := getPodContainerLogs(namespace, pod.Name, containerName, clientset)
 
 			if err != nil {
-				return fmt.Errorf("error while getting container logs: %v", err)
+				return fmt.Errorf("getting container logs failed: %w", err)
 			}
 
-			podsContainerData := &PODSContainerStruct{
+			podsContainerData := &PodsContainerStruct{
 				Name:          pod.Name,
 				Ready:         fmt.Sprintf("%v/%v", containerReady, len(pod.Spec.Containers)),
 				Status:        string(podStatus.Phase),
@@ -101,7 +101,7 @@ func (collector *PODSContainerLogsCollector) Collect() error {
 
 			data, err := json.Marshal(podsContainerData)
 			if err != nil {
-				return fmt.Errorf("error in marshalling podsContainerData: %v", err)
+				return fmt.Errorf("marshalling podsContainerData: %w", err)
 			}
 
 			// Append this to data to be printed in a table
@@ -112,7 +112,7 @@ func (collector *PODSContainerLogsCollector) Collect() error {
 	return nil
 }
 
-func (collector *PODSContainerLogsCollector) GetData() map[string]string {
+func (collector *PodsContainerLogsCollector) GetData() map[string]string {
 	return collector.data
 }
 
@@ -124,7 +124,7 @@ func getPods(clientset *kubernetes.Clientset, namespace string) (*v1.PodList, er
 	podList, err := podInterface.List(context.TODO(), metav1.ListOptions{})
 
 	if err != nil {
-		return nil, fmt.Errorf("error in getting pods: %v", err)
+		return nil, fmt.Errorf("getting pods failed: %w", err)
 	}
 
 	return podList, nil
@@ -148,7 +148,7 @@ func getPodContainerLogs(
 	stream, err := podLogRequest.Stream(context.Background())
 
 	if err != nil {
-		return "", fmt.Errorf("error in getting pod logs request: %v", err)
+		return "", fmt.Errorf("getting pod logs request failed: %w", err)
 	}
 	defer stream.Close()
 	returnData := ""
@@ -161,7 +161,7 @@ func getPodContainerLogs(
 		}
 
 		if err != nil {
-			return "", fmt.Errorf("error in pod logs stream read: %v", err)
+			return "", fmt.Errorf("pod logs stream read failure: %w", err)
 		}
 		returnData = string(buf[:numBytes])
 	}

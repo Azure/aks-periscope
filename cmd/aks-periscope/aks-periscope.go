@@ -59,7 +59,7 @@ func main() {
 	helmCollector := collector.NewHelmCollector(config)
 	osmCollector := collector.NewOsmCollector()
 	smiCollector := collector.NewSmiCollector()
-	podsCollector := collector.NewPODSContainerLogs(config)
+	podsCollector := collector.NewPodsContainerLogs(config)
 
 	collectors := []interfaces.Collector{
 		dnsCollector,
