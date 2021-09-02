@@ -59,6 +59,7 @@ func main() {
 	helmCollector := collector.NewHelmCollector(config)
 	osmCollector := collector.NewOsmCollector()
 	smiCollector := collector.NewSmiCollector()
+	podsCollector := collector.NewPODSContainerLogs(config)
 
 	collectors := []interfaces.Collector{
 		dnsCollector,
@@ -68,6 +69,7 @@ func main() {
 
 	if contains(collectorList, "connectedCluster") {
 		collectors = append(collectors, helmCollector)
+		collectors = append(collectors, podsCollector)
 	} else {
 		collectors = append(collectors, systemLogsCollector)
 		collectors = append(collectors, ipTablesCollector)
