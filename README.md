@@ -4,6 +4,7 @@
 [![codecov](https://codecov.io/gh/Azure/aks-periscope/branch/master/graph/badge.svg)](https://codecov.io/gh/Azure/aks-periscope)
 [![GoDoc](https://godoc.org/github.com/Azure/aks-periscope?status.svg)](https://godoc.org/github.com/Azure/aks-periscope)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Azure/aks-periscope)](https://goreportcard.com/report/github.com/Azure/aks-periscope)
+[![CodeQL](https://github.com/Azure/aks-periscope/actions/workflows/codeql-analysis.yml/badge.svg?branch=master)](https://github.com/Azure/aks-periscope/actions/workflows/codeql-analysis.yml)
 
 Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster.
 
