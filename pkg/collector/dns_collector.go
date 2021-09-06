@@ -22,14 +22,14 @@ func (collector *DNSCollector) GetName() string {
 
 // Collect implements the interface method
 func (collector *DNSCollector) Collect() error {
-	output, err := utils.ReadFileContent("/etc/resolv.conf")
+	output, err := utils.ReadFileContent("/run/systemd/resolve/resolv.conf")
 	if err != nil {
 		return err
 	}
 
 	collector.data["virtualmachine"] = output
 
-	output, err = utils.RunCommandOnContainer("cat", "/etc/resolv.conf")
+	output, err = utils.ReadFileContent("/etc/resolv.conf")
 	if err != nil {
 		return err
 	}

@@ -34,6 +34,8 @@ spec:
         volumeMounts:
         - name: varlog
           mountPath: /var/log
+        - name: resolvlog
+          mountPath: /run/systemd/resolve
         resources:
           requests:
             memory: "500Mi"
@@ -45,3 +47,6 @@ spec:
       - name: varlog
         hostPath:
           path: /var/log
+      - name: resolvlog
+        hostPath:
+          path: /run/systemd/resolve
