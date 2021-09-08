@@ -87,6 +87,31 @@ jobs:
             localRegistryHosting.v1: |
               host: "localhost:5000"
               help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: coredns
+            namespace: kube-system
+          data:
+            Corefile: |
+              .:53 {
+                  errors
+                  health {
+                      lameduck 5s
+                  }
+                  ready
+                  kubernetes cluster.local in-addr.arpa ip6.arpa {
+                      pods insecure
+                      fallthrough in-addr.arpa ip6.arpa
+                      ttl 30
+                  }
+                  prometheus :9153
+                  forward . /etc/resolv.conf
+                  cache 30
+                  loop
+                  reload
+                  loadbalance
+              }    
           EOF
         continue-on-error: false
       - name: Set up Docker Buildx
