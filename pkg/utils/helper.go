@@ -332,3 +332,19 @@ func writeDiagnosticCRD(crdName string) error {
 
 	return nil
 }
+
+func ReadFileContent(filename string) (string, error) {
+	output, err := os.Open(filename)
+	if err != nil {
+		return "", err
+	}
+
+	defer output.Close()
+
+	b, err := ioutil.ReadAll(output)
+	if err != nil {
+		return "", err
+	}
+
+	return string(b), nil
+}
