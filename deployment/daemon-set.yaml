@@ -37,7 +37,7 @@ spec:
         - name: resolvlog
           mountPath: /run/systemd/resolve
         - name: etcvmlog
-          mountPath: /etcvmlogs
+          mountPath: /etchostlogs
         resources:
           requests:
             memory: "500Mi"

@@ -22,7 +22,7 @@ func (collector *DNSCollector) GetName() string {
 
 // Collect implements the interface method
 func (collector *DNSCollector) Collect() error {
-	output, err := utils.ReadFileContent("/etcvmlogs/resolv.conf")
+	output, err := utils.ReadFileContent("/etchostlogs/resolv.conf")
 	if err != nil {
 		return err
 	}
