@@ -6,6 +6,7 @@ import (
 	"path"
 	"testing"
 
+	restclient "k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -22,16 +23,9 @@ func TestHelmCollector(t *testing.T) {
 		},
 	}
 
-	dirname, err := os.UserHomeDir()
+	config, err := getConfig()
 	if err != nil {
-		t.Fatalf("Cannot get user home dir: %v", err)
-	}
-
-	master := ""
-	kubeconfig := path.Join(dirname, ".kube/config")
-	config, err := clientcmd.BuildConfigFromFlags(master, kubeconfig)
-	if err != nil {
-		t.Fatalf("Cannot load kube config: %v", err)
+		t.Errorf("cannot get kube config: %w", err)
 	}
 
 	c := NewHelmCollector(config)
@@ -55,4 +49,31 @@ func TestHelmCollector(t *testing.T) {
 			}
 		})
 	}
+}
+
+func getConfig() (*restclient.Config, error) {
+	inCluster := os.Getenv("IN_CLUSTER")
+
+	var config *restclient.Config
+	if inCluster == "1" {
+		var err error
+		config, err = restclient.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		dirname, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+
+		master := ""
+		kubeconfig := path.Join(dirname, ".kube/config")
+		config, err = clientcmd.BuildConfigFromFlags(master, kubeconfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return config, nil
 }

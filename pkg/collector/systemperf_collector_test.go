@@ -3,10 +3,7 @@ package collector
 import (
 	"encoding/json"
 	"os"
-	"path"
 	"testing"
-
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func TestSystemperfCollector(t *testing.T) {
@@ -22,16 +19,9 @@ func TestSystemperfCollector(t *testing.T) {
 		},
 	}
 
-	dirname, err := os.UserHomeDir()
+	config, err := getConfig()
 	if err != nil {
-		t.Fatalf("Cannot get user home dir: %v", err)
-	}
-
-	master := ""
-	kubeconfig := path.Join(dirname, ".kube/config")
-	config, err := clientcmd.BuildConfigFromFlags(master, kubeconfig)
-	if err != nil {
-		t.Fatalf("Cannot load kube config: %v", err)
+		t.Errorf("cannot get kube config: %w", err)
 	}
 
 	c := NewSystemPerfCollector(config)

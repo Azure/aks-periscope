@@ -1,0 +1,21 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: aks-periscope
+
+resources:
+- job.yaml
+- ../../deployment/namespace.yaml
+- ../../deployment/cluster-role.yaml
+- ../../deployment/cluster-role-binding.yaml
+- ../../deployment/config-map.yaml
+- ../../deployment/crd.yaml
+- ../../deployment/service-account.yaml
+
+patches:
+- path: patch-command.yaml
+  target:
+    kind: Job
+    name: aks-periscope
+    version: v1
+    group: batch

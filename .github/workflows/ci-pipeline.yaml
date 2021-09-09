@@ -24,6 +24,7 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: latest
+          args: --timeout 3m0s
   build:
     runs-on: ubuntu-latest
     steps:
@@ -43,10 +44,6 @@ jobs:
         with:
             fetch-depth: 2
       - uses: azure/setup-kubectl@v1
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ env.GO_VERSION }}
       - name: Install Helm
         uses: azure/setup-helm@v1
         with:
@@ -68,7 +65,13 @@ jobs:
           nodes:
           - role: control-plane
           - role: worker
+            extraMounts:
+              - hostPath: ${PWD}
+                containerPath: /runner
           - role: worker
+            extraMounts:
+              - hostPath: ${PWD}
+                containerPath: /runner
           containerdConfigPatches:
           - |-
             [plugins."io.containerd.grpc.v1.cri".registry.mirrors."localhost:5000"]
@@ -98,8 +101,8 @@ jobs:
         with:
           context: .
           push: true
-          tags: localhost:5000/periscope:foo
-          file: ./builder/Dockerfile
+          tags: localhost:5000/go-test-runner:latest
+          file: ./builder/Dockerfile.tests
       - name: Deploy dummy helm chart for tests
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -107,14 +110,22 @@ jobs:
           helm install happy-panda bitnami/wordpress --namespace default
       - name: Deploy AKS Periscope
         run: |
-          (cd ./deployment && kustomize edit set image aksrepos.azurecr.io/staging/aks-periscope=localhost:5000/periscope:foo)
-          kubectl apply -f <(kustomize build ./deployment)
-          kubectl -n aks-periscope describe ds aks-periscope
-          kubectl -n aks-periscope wait po --all --for condition=ready --timeout=60s
-      - name: Go tests
-        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-      - name: Upload coverage to Codecov
-        run: bash <(curl -s https://codecov.io/bash) -C $(Build.SourceVersion)
+          cat <<EOF >>./.github/kustomize/patch-command.yaml
+          - op: add
+            path: '/spec/template/spec/containers/0/command'
+            value: [ "go", "test", "-coverprofile=/runner/coverage.out", "-covermode=atomic", "./..." ]
+          EOF
+
+          (cd ./.github/kustomize && kustomize edit set image go-test-runner=localhost:5000/go-test-runner:latest)
+
+          kubectl apply -f <(kustomize build ./.github/kustomize --load-restrictor LoadRestrictionsNone)
+          
+          if ! kubectl -n aks-periscope wait job aks-periscope --for condition=complete --timeout=300s; then
+            kubectl -n aks-periscope logs -l app=aks-periscope
+            exit 1
+          fi
+      - name: Upload coverage to codecov
+        run: bash <(curl -s https://codecov.io/bash)
       - name: Stop kind
         run: kind delete cluster
         continue-on-error: false

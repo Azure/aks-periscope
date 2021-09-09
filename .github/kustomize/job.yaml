@@ -1,0 +1,51 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: aks-periscope
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        app: aks-periscope
+    spec:
+      serviceAccountName: aks-periscope-service-account
+      restartPolicy: Never
+      containers:
+      - name: go-test-runner
+        image: go-test-runner
+        securityContext:
+          privileged: true
+        envFrom:
+        - configMapRef:
+            name: containerlogs-config
+        - configMapRef:
+            name: kubeobjects-config
+        - configMapRef:
+            name: nodelogs-config
+        env:
+        - name: IN_CLUSTER
+          value: "1" # To indicate the tests run from within the cluster
+        volumeMounts:
+        - name: varlog
+          mountPath: /var/log
+        - name: resolvlog
+          mountPath: /run/systemd/resolve
+        - name: etcvmlog
+          mountPath: /etchostlogs
+        - name: runner
+          mountPath: /runner
+      volumes:
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: resolvlog
+        hostPath:
+          path: /run/systemd/resolve
+      - name: etcvmlog
+        hostPath:
+          path: /etc
+      - name: runner
+        hostPath: 
+          path: /runner
+          type: Directory

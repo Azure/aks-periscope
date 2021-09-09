@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"log"
 	"os"
 	"strings"
 
@@ -28,6 +29,10 @@ func (collector *NodeLogsCollector) Collect() error {
 	nodeLogs := strings.Fields(os.Getenv("DIAGNOSTIC_NODELOGS_LIST"))
 
 	for _, nodeLog := range nodeLogs {
+		if _, err := os.Stat(nodeLog); os.IsNotExist(err) {
+			log.Printf("File %v does not exist", nodeLog)
+			continue
+		}
 
 		output, err := utils.ReadFileContent(nodeLog)
 		if err != nil {
