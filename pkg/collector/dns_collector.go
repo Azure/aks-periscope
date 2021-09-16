@@ -24,14 +24,14 @@ func (collector *DNSCollector) GetName() string {
 func (collector *DNSCollector) Collect() error {
 	output, err := utils.ReadFileContent("/etchostlogs/resolv.conf")
 	if err != nil {
-		return err
+		output = err.Error()
 	}
 
 	collector.data["virtualmachine"] = output
 
 	output, err = utils.ReadFileContent("/etc/resolv.conf")
 	if err != nil {
-		return err
+		output = err.Error()
 	}
 
 	collector.data["kubernetes"] = output
