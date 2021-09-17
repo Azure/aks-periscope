@@ -58,7 +58,7 @@ func collectSmiCrds(collector *SmiCollector, smiCrdsList []string) {
 		if err != nil {
 			log.Printf("Skipping: unable to collect yaml definition of %s: %+v", smiCrd, err)
 		}
-		collector.data["smi_crd_definition_"+smiCrd] = yamlDefinition
+		collector.data["smi/crd_"+strings.TrimSuffix(smiCrd, ".io")] = yamlDefinition
 	}
 }
 
@@ -90,7 +90,7 @@ func collectSmiCustomResourcesFromNamespace(collector *SmiCollector, smiCrdsList
 			if err != nil {
 				log.Printf("Skipping: unable to collect yaml definition of %s (custom resource type: %s): %+v", customResourceName, smiCrdType, err)
 			}
-			collector.data["namespace_"+namespace+"_"+smiCrdType+"_custom_resource_"+customResourceName] = yamlDefinition
+			collector.data["smi/namespace_"+namespace+"/"+smiCrdType+"_"+customResourceName+"_custom_resource"] = yamlDefinition
 		}
 	}
 }
