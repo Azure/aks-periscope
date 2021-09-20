@@ -29,7 +29,7 @@ func (collector *NodeLogsCollector) Collect() error {
 
 	for _, nodeLog := range nodeLogs {
 
-		output, err := utils.RunCommandOnHost("cat", nodeLog)
+		output, err := utils.ReadFileContent(nodeLog)
 		if err != nil {
 			return err
 		}

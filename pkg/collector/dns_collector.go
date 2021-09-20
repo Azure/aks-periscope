@@ -22,18 +22,16 @@ func (collector *DNSCollector) GetName() string {
 
 // Collect implements the interface method
 func (collector *DNSCollector) Collect() error {
-	result := make(map[string]string)
-
-	output, err := utils.RunCommandOnHost("cat", "/etc/resolv.conf")
+	output, err := utils.ReadFileContent("/etchostlogs/resolv.conf")
 	if err != nil {
-		return err
+		output = err.Error()
 	}
 
-	result["virtualmachine"] = output
+	collector.data["virtualmachine"] = output
 
-	output, err = utils.RunCommandOnContainer("cat", "/etc/resolv.conf")
+	output, err = utils.ReadFileContent("/etc/resolv.conf")
 	if err != nil {
-		return err
+		output = err.Error()
 	}
 
 	collector.data["kubernetes"] = output
