@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -13,6 +14,10 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
 )
 
 const (
@@ -347,4 +352,18 @@ func ReadFileContent(filename string) (string, error) {
 	}
 
 	return string(b), nil
+}
+
+func GetPods(clientset *kubernetes.Clientset, namespace string) (*v1.PodList, error) {
+	// Create a pod interface for the given namespace
+	podInterface := clientset.CoreV1().Pods(namespace)
+
+	// List the pods in the given namespace
+	podList, err := podInterface.List(context.TODO(), metav1.ListOptions{})
+
+	if err != nil {
+		return nil, fmt.Errorf("getting pods failed: %w", err)
+	}
+
+	return podList, nil
 }
