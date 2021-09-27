@@ -50,7 +50,7 @@ func main() {
 
 	networkOutboundCollector := collector.NewNetworkOutboundCollector()
 	dnsCollector := collector.NewDNSCollector()
-	kubeObjectsCollector := collector.NewKubeObjectsCollector()
+	kubeObjectsCollector := collector.NewKubeObjectsCollector(config)
 	systemLogsCollector := collector.NewSystemLogsCollector()
 	ipTablesCollector := collector.NewIPTablesCollector()
 	nodeLogsCollector := collector.NewNodeLogsCollector()
