@@ -10,14 +10,16 @@ import (
 
 func TestNewKubeObjectsCollector(t *testing.T) {
 	tests := []struct {
-		name    string
-		want    int
-		wantErr bool
+		name          string
+		want          int
+		wantErr       bool
+		collectorName string
 	}{
 		{
-			name:    "get kube objects logs",
-			want:    1,
-			wantErr: false,
+			name:          "get kube objects logs",
+			want:          1,
+			wantErr:       false,
+			collectorName: "kubeobjects",
 		},
 	}
 
@@ -50,6 +52,11 @@ func TestNewKubeObjectsCollector(t *testing.T) {
 
 			if len(raw) < tt.want {
 				t.Errorf("len(GetData()) = %v, want %v", len(raw), tt.want)
+			}
+
+			name := c.GetName()
+			if name != tt.collectorName {
+				t.Errorf("GetName()) = %v, want %v", name, tt.collectorName)
 			}
 		})
 	}

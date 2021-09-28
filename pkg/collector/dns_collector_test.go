@@ -6,14 +6,16 @@ import (
 
 func TestNewDNSCollector(t *testing.T) {
 	tests := []struct {
-		name    string
-		want    int
-		wantErr bool
+		name          string
+		want          int
+		wantErr       bool
+		collectorName string
 	}{
 		{
-			name:    "get dns logs",
-			want:    1,
-			wantErr: false,
+			name:          "get dns logs",
+			want:          1,
+			wantErr:       false,
+			collectorName: "dns",
 		},
 	}
 
@@ -28,6 +30,11 @@ func TestNewDNSCollector(t *testing.T) {
 			raw := c.GetData()
 			if len(raw) < tt.want {
 				t.Errorf("len(GetData()) = %v, want %v", len(raw), tt.want)
+			}
+
+			name := c.GetName()
+			if name != tt.collectorName {
+				t.Errorf("GetName()) = %v, want %v", name, tt.collectorName)
 			}
 		})
 	}
