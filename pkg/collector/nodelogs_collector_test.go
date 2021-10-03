@@ -7,14 +7,16 @@ import (
 
 func TestNodeLogsCollector(t *testing.T) {
 	tests := []struct {
-		name    string
-		want    int
-		wantErr bool
+		name          string
+		want          int
+		wantErr       bool
+		collectorName string
 	}{
 		{
-			name:    "get node logs",
-			want:    1,
-			wantErr: false,
+			name:          "get node logs",
+			want:          1,
+			wantErr:       false,
+			collectorName: "nodelogs",
 		},
 	}
 
@@ -35,6 +37,11 @@ func TestNodeLogsCollector(t *testing.T) {
 
 			if len(raw) < tt.want {
 				t.Errorf("len(GetData()) = %v, want %v", len(raw), tt.want)
+			}
+
+			name := c.GetName()
+			if name != tt.collectorName {
+				t.Errorf("GetName()) = %v, want %v", name, tt.collectorName)
 			}
 		})
 	}
