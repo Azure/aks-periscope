@@ -11,14 +11,16 @@ import (
 
 func TestHelmCollector(t *testing.T) {
 	tests := []struct {
-		name    string
-		want    int
-		wantErr bool
+		name          string
+		want          int
+		wantErr       bool
+		collectorName string
 	}{
 		{
-			name:    "get release history",
-			want:    1,
-			wantErr: false,
+			name:          "get release history",
+			want:          1,
+			wantErr:       false,
+			collectorName: "helm",
 		},
 	}
 
@@ -52,6 +54,11 @@ func TestHelmCollector(t *testing.T) {
 
 			if len(releases) < tt.want {
 				t.Errorf("len(GetData()) = %v, want %v", len(releases), tt.want)
+			}
+
+			name := c.GetName()
+			if name != tt.collectorName {
+				t.Errorf("GetName()) = %v, want %v", name, tt.collectorName)
 			}
 		})
 	}
