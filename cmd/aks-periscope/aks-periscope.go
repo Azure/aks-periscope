@@ -58,7 +58,7 @@ func main() {
 	systemPerfCollector := collector.NewSystemPerfCollector(config)
 	helmCollector := collector.NewHelmCollector(config)
 	osmCollector := collector.NewOsmCollector()
-	smiCollector := collector.NewSmiCollector()
+	smiCollector := collector.NewSmiCollector(config)
 	podsCollector := collector.NewPodsContainerLogs(config)
 
 	collectors := []interfaces.Collector{
