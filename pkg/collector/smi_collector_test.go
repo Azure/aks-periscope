@@ -16,9 +16,9 @@ func TestNewSmiCollector(t *testing.T) {
 		collectorName string
 	}{
 		{
-			name:          "get smi crd logs",
+			name:          "cluster does not contain any SMI CRDs",
 			want:          1,
-			wantErr:       false,
+			wantErr:       true,
 			collectorName: "smi",
 		},
 	}
