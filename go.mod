@@ -6,11 +6,12 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.7.0
 	github.com/Azure/go-autorest/autorest/adal v0.9.14 // indirect
 	github.com/BurntSushi/toml v0.4.1 // indirect
+	github.com/containerd/containerd v1.4.11 // indirect
 	github.com/fatih/color v1.13.0 // indirect
 	github.com/imdario/mergo v0.3.12 // indirect
-	github.com/kr/pretty v0.2.1 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/onsi/gomega v1.15.0 // indirect
+	github.com/opencontainers/runc v1.0.0-rc95 // indirect
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d // indirect
 	golang.org/x/sys v0.0.0-20210817190340-bfb29a6856f2 // indirect
 	google.golang.org/appengine v1.6.7 // indirect

@@ -50,22 +50,22 @@ func (collector *OsmCollector) Collect() error {
 // callNamespaceCollectors calls functions to collect data for osm-controller namespace and namespaces monitored by a given mesh
 func (collector *OsmCollector) callNamespaceCollectors(monitoredNamespaces []string, controllerNamespaces []string, meshName string) {
 	for _, namespace := range monitoredNamespaces {
-		if err := collector.collectDataFromEnvoys(namespace); err != nil {
+		if err := collector.collectDataFromEnvoys(namespace, meshName); err != nil {
 			log.Printf("Failed to collect Envoy configs in OSM monitored namespace %s: %+v", namespace, err)
 		}
-		collector.collectNamespaceResources(namespace)
+		collector.collectNamespaceResources(namespace, meshName)
 	}
 	for _, namespace := range controllerNamespaces {
-		if err := collector.collectPodLogs(namespace); err != nil {
+		if err := collector.collectPodLogs(namespace, meshName); err != nil {
 			log.Printf("Failed to collect pod logs for controller namespace %s: %+v", namespace, err)
 		}
-		collector.collectNamespaceResources(namespace)
+		collector.collectNamespaceResources(namespace, meshName)
 	}
 }
 
 // collectNamespaceResources collects information about general resources in a given namespace
-func (collector *OsmCollector) collectNamespaceResources(namespace string) {
-	if err := collector.collectPodConfigs(namespace); err != nil {
+func (collector *OsmCollector) collectNamespaceResources(namespace string, meshName string) {
+	if err := collector.collectPodConfigs(namespace, meshName); err != nil {
 		log.Printf("Failed to collect pod configs for ns %s: %+v", namespace, err)
 	}
 
@@ -140,23 +140,23 @@ func (collector *OsmCollector) collectNamespaceResources(namespace string) {
 		podList = fmt.Sprintf("Failed to collect pod list for namespace %s: %v", namespace, err)
 		log.Print(podList)
 	}
-
-	collector.data[namespace+"_metadata"] = metadata
-	collector.data[namespace+"_services_list"] = servicesList
-	collector.data[namespace+"_services"] = services
-	collector.data[namespace+"_endpoints_list"] = endpointList
-	collector.data[namespace+"_endpoints"] = endpoints
-	collector.data[namespace+"_configmaps_list"] = configmapsList
-	collector.data[namespace+"_configmaps"] = configmaps
-	collector.data[namespace+"_ingresses_list"] = ingressList
-	collector.data[namespace+"_ingresses"] = ingresses
-	collector.data[namespace+"_service_accounts_list"] = svcAccountList
-	collector.data[namespace+"_service_accounts"] = svcAccounts
-	collector.data[namespace+"_pods_list"] = podList
+	filePath := meshName + "/" + namespace
+	collector.data[filePath+"_metadata"] = metadata
+	collector.data[filePath+"_services_list"] = servicesList
+	collector.data[filePath+"_services"] = services
+	collector.data[filePath+"_endpoints_list"] = endpointList
+	collector.data[filePath+"_endpoints"] = endpoints
+	collector.data[filePath+"_configmaps_list"] = configmapsList
+	collector.data[filePath+"_configmaps"] = configmaps
+	collector.data[filePath+"_ingresses_list"] = ingressList
+	collector.data[filePath+"_ingresses"] = ingresses
+	collector.data[filePath+"_service_accounts_list"] = svcAccountList
+	collector.data[filePath+"_service_accounts"] = svcAccounts
+	collector.data[filePath+"_pods_list"] = podList
 }
 
 // collectPodConfigs collects configs for pods in given namespace
-func (collector *OsmCollector) collectPodConfigs(namespace string) error {
+func (collector *OsmCollector) collectPodConfigs(namespace string, meshName string) error {
 	pods, err := utils.GetResourceList([]string{"get", "pods", "-n", namespace, "-o", "jsonpath={..metadata.name}"}, " ")
 	if err != nil {
 		return err
@@ -168,14 +168,15 @@ func (collector *OsmCollector) collectPodConfigs(namespace string) error {
 			output = fmt.Sprintf("Failed to collect config for pod %s in OSM monitored namespace %s: %v", podName, namespace, err)
 			log.Print(output)
 		}
-		collector.data[podName] = output
+		filePath := meshName + "/" + podName + "_podConfig"
+		collector.data[filePath] = output
 	}
 
 	return nil
 }
 
 // collectDataFromEnvoys collects Envoy proxy config for pods in monitored namespace: port-forward and curl config dump
-func (collector *OsmCollector) collectDataFromEnvoys(namespace string) error {
+func (collector *OsmCollector) collectDataFromEnvoys(namespace string, meshName string) error {
 	pods, err := utils.GetResourceList([]string{"get", "pods", "-n", namespace, "-o", "jsonpath={..metadata.name}"}, " ")
 	if err != nil {
 		return err
@@ -197,8 +198,8 @@ func (collector *OsmCollector) collectDataFromEnvoys(namespace string) error {
 			// Remove certificate secrets from Envoy config i.e., "inline_bytes" field from response
 			re := regexp.MustCompile("(?m)[\r\n]+^.*inline_bytes.*$")
 			secretRemovedResponse := re.ReplaceAllString(string(responseBody), "---redacted---")
-
-			collector.data[query+"_"+podName] = secretRemovedResponse
+			filePath := meshName + "/envoy/"+ podName + query
+			collector.data[filePath] = secretRemovedResponse
 		}
 		if err = utils.KillProcess(pid); err != nil {
 			log.Printf("Failed to kill process: %+v", err)
@@ -209,7 +210,7 @@ func (collector *OsmCollector) collectDataFromEnvoys(namespace string) error {
 }
 
 // collectPodLogs collects logs of every pod in a given namespace
-func (collector *OsmCollector) collectPodLogs(namespace string) error {
+func (collector *OsmCollector) collectPodLogs(namespace string, meshName string) error {
 	pods, err := utils.GetResourceList([]string{"get", "pods", "-n", namespace, "-o", "jsonpath={..metadata.name}"}, " ")
 	if err != nil {
 		return err
@@ -220,8 +221,8 @@ func (collector *OsmCollector) collectPodLogs(namespace string) error {
 			output = fmt.Sprintf("Failed to collect logs for pod %s: %+v", podName, err)
 			log.Print(output)
 		}
-
-		collector.data[podName+"_logs"] = output
+		filePath := meshName + "/" + podName + "_podLogs"
+		collector.data[filePath] = output
 	}
 	return nil
 }
@@ -242,7 +243,7 @@ func (collector *OsmCollector) collectGroundTruth(meshName string) {
 
 	mutationWebhookConfig, err := utils.RunCommandOnContainer("kubectl", "get", "MutatingWebhookConfiguration", "--all-namespaces", "-l", "app.kubernetes.io/instance="+meshName, "-o", "json")
 	if err != nil {
-		mutationWebhookConfig = fmt.Sprintf("Failed to collect mutation webhook config for mesh %s: %v", meshName, err)
+		mutationWebhookConfig = fmt.Sprintf("Failed to collect mutating webhook config for mesh %s: %v", meshName, err)
 		log.Print(mutationWebhookConfig)
 	}
 
@@ -252,10 +253,17 @@ func (collector *OsmCollector) collectGroundTruth(meshName string) {
 		log.Print(validatingWebhookConfig)
 	}
 
-	collector.data[meshName+"_all_resources_list"] = allResourcesList
-	collector.data[meshName+"_all_resources_configs"] = allResourcesConfigs
-	collector.data[meshName+"_mutating_webhook_configurations"] = mutationWebhookConfig
-	collector.data[meshName+"_validating_webhook_configurations"] = validatingWebhookConfig
+	meshConfig, err := utils.RunCommandOnContainer("kubectl", "get", "meshconfigs", "--all-namespaces", "-o", "json")
+	if err != nil {
+		meshConfig = fmt.Sprintf("Failed to collect meshconfigs for mesh %s: %v", meshName, err)
+		log.Print(meshConfig)
+	}
+	filePath := meshName + "/control_plane/"
+	collector.data[filePath+"/all_resources_list"] = allResourcesList
+	collector.data[filePath+"/all_resources_configs"] = allResourcesConfigs
+	collector.data[filePath+"/mutating_webhook_configurations"] = mutationWebhookConfig
+	collector.data[filePath+"/validating_webhook_configurations"] = validatingWebhookConfig
+	collector.data[filePath+"/mesh_configs"] = meshConfig
 }
 
 func (collector *OsmCollector) GetData() map[string]string {
