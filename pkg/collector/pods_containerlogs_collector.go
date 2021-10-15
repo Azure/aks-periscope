@@ -107,7 +107,7 @@ func (collector *PodsContainerLogsCollector) Collect() error {
 				}
 
 				// Append this to data to be printed in a table
-				collector.data[pod.Name] = string(data)
+				collector.data[pod.Name+"-"+containerName] = string(data)
 			}
 		}
 	}
