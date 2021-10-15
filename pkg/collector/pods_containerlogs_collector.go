@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -81,31 +82,33 @@ func (collector *PodsContainerLogsCollector) Collect() error {
 					containerReady++
 				}
 			}
-			containerName := pod.Spec.Containers[0].Name
-			// Get pods container logs
-			containerLogs, err := getPodContainerLogs(namespace, pod.Name, containerName, clientset)
+			for _, containerItem := range pod.Spec.Containers {
+				containerName := containerItem.Name
+				// Get pods container logs
+				containerLogs, err := getPodContainerLogs(namespace, pod.Name, containerName, clientset)
 
-			if err != nil {
-				return fmt.Errorf("getting container logs failed: %w", err)
+				if err != nil {
+					return fmt.Errorf("getting container logs failed: %w", err)
+				}
+
+				podsContainerData := &PodsContainerStruct{
+					Name:          pod.Name,
+					Ready:         fmt.Sprintf("%v/%v", containerReady, len(pod.Spec.Containers)),
+					Status:        string(podStatus.Phase),
+					Restart:       containerRestarts,
+					Age:           age,
+					ContainerName: containerName,
+					ContainerLog:  containerLogs,
+				}
+
+				data, err := json.Marshal(podsContainerData)
+				if err != nil {
+					return fmt.Errorf("marshalling podsContainerData: %w", err)
+				}
+
+				// Append this to data to be printed in a table
+				collector.data[pod.Name] = string(data)
 			}
-
-			podsContainerData := &PodsContainerStruct{
-				Name:          pod.Name,
-				Ready:         fmt.Sprintf("%v/%v", containerReady, len(pod.Spec.Containers)),
-				Status:        string(podStatus.Phase),
-				Restart:       containerRestarts,
-				Age:           age,
-				ContainerName: containerName,
-				ContainerLog:  containerLogs,
-			}
-
-			data, err := json.Marshal(podsContainerData)
-			if err != nil {
-				return fmt.Errorf("marshalling podsContainerData: %w", err)
-			}
-
-			// Append this to data to be printed in a table
-			collector.data[pod.Name] = string(data)
 		}
 	}
 
@@ -138,19 +141,15 @@ func getPodContainerLogs(
 	}
 	defer stream.Close()
 	returnData := ""
-	for {
-		buf := make([]byte, 2000)
-		numBytes, err := stream.Read(buf)
 
-		if err == io.EOF {
-			break
-		}
+	buf := new(bytes.Buffer)
+	_, err = io.Copy(buf, stream)
 
-		if err != nil {
-			return "", fmt.Errorf("pod logs stream read failure: %w", err)
-		}
-		returnData = string(buf[:numBytes])
+	if err != nil {
+		return "", fmt.Errorf("pod logs stream read failure: %w", err)
 	}
+
+	returnData = buf.String()
 
 	return returnData, err
 }
