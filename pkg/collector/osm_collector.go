@@ -258,7 +258,7 @@ func (collector *OsmCollector) collectGroundTruth(meshName string) {
 		meshConfig = fmt.Sprintf("Failed to collect meshconfigs for mesh %s: %v", meshName, err)
 		log.Print(meshConfig)
 	}
-	filePath := meshName + "/control_plane/"
+	filePath := meshName + "/control_plane"
 	collector.data[filePath+"/all_resources_list"] = allResourcesList
 	collector.data[filePath+"/all_resources_configs"] = allResourcesConfigs
 	collector.data[filePath+"/mutating_webhook_configurations"] = mutationWebhookConfig
