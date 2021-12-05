@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -139,21 +140,21 @@ func main() {
 
 	diagnoserGrp.Wait()
 
-	zip, err := exporter.Zip(dataProducers)
+	exporterGrp := new(sync.WaitGroup)
+	exporterGrp.Add(1)
+
+	zip, err := exporter.Zip(exporterGrp, dataProducers)
 	if err != nil {
 		log.Printf("Could not zip data: %v", err)
 	} else {
-		if err := exp.ExportReader(hostname+".zip", bytes.NewReader(zip.Bytes())); err != nil {
+		exporterGrp.Add(1)
+		if err := exp.ExportReader(exporterGrp, hostname+".zip", bytes.NewReader(zip.Bytes())); err != nil {
 			log.Printf("Could not export zip archive: %v", err)
 		}
 	}
-
-	// TODO: Hack: for now AKS-Periscope is running as a deamonset so it shall not stop (or the pod will be restarted)
-	// Revert from https://github.com/Azure/aks-periscope/blob/b98d66a238e942158ef2628a9315b58937ff9c8f/cmd/aks-periscope/aks-periscope.go#L70
-	select {}
-
-	// TODO: remove this //nolint comment once the select{} has been removed
-	//nolint:govet
+	exporterGrp.Wait()
+	log.Printf("Main: Completed")
+	fmt.Println("Main: Completed")
 }
 
 func contains(flagsList []string, flag string) bool {

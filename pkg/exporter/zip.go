@@ -3,11 +3,13 @@ package exporter
 import (
 	"archive/zip"
 	"bytes"
+	"sync"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 )
 
-func Zip(data []interfaces.DataProducer) (*bytes.Buffer, error) {
+func Zip(wg *sync.WaitGroup, data []interfaces.DataProducer) (*bytes.Buffer, error) {
+	defer wg.Done()
 	buffer := new(bytes.Buffer)
 	z := zip.NewWriter(buffer)
 	defer z.Close()

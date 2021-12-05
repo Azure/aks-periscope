@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
@@ -121,7 +122,8 @@ func (exporter *AzureBlobExporter) Export(producer interfaces.DataProducer) erro
 	return nil
 }
 
-func (exporter *AzureBlobExporter) ExportReader(name string, reader io.ReadSeeker) error {
+func (exporter *AzureBlobExporter) ExportReader(wg *sync.WaitGroup, name string, reader io.ReadSeeker) error {
+	defer wg.Done()
 	containerURL, err := createContainerURL()
 	if err != nil {
 		return err
