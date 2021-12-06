@@ -86,11 +86,6 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 
 	diagnoser.data["networkoutbound"] = string(dataBytes)
 
-	err = utils.WriteToCRD(string(dataBytes), diagnoser.GetName())
-	if err != nil {
-		return fmt.Errorf("write data from NetworkOutbound Diagnoser to CRD: %w", err)
-	}
-
 	return nil
 }
 
