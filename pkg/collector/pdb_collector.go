@@ -43,13 +43,15 @@ func (collector *PDBCollector) Collect() error {
 		return fmt.Errorf("getting access to K8S failed: %w", err)
 	}
 
-	namespacesList, err := clientset.CoreV1().Namespaces().List(context.Background(), metav1.ListOptions{})
+	ctxBackground := context.Background()
+
+	namespacesList, err := clientset.CoreV1().Namespaces().List(ctxBackground, metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("unable to list namespaces in the cluster: %w", err)
 	}
 
 	for _, namespace := range namespacesList.Items {
-		podDistInterface, err := clientset.PolicyV1beta1().PodDisruptionBudgets(namespace.Name).List(context.Background(), metav1.ListOptions{})
+		podDistInterface, err := clientset.PolicyV1beta1().PodDisruptionBudgets(namespace.Name).List(ctxBackground, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("PDB error cluster: %w", err)
 		}
