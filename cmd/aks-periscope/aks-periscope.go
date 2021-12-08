@@ -60,7 +60,6 @@ func main() {
 	osmCollector := collector.NewOsmCollector()
 	smiCollector := collector.NewSmiCollector()
 	podsCollector := collector.NewPodsContainerLogs(config)
-	pdbCollector := collector.NewPDBCollector(config)
 
 	collectors := []interfaces.Collector{
 		dnsCollector,
@@ -77,7 +76,6 @@ func main() {
 		collectors = append(collectors, nodeLogsCollector)
 		collectors = append(collectors, kubeletCmdCollector)
 		collectors = append(collectors, systemPerfCollector)
-		collectors = append(collectors, pdbCollector)
 	}
 
 	// OSM and SMI flags are mutually exclusive
@@ -161,6 +159,7 @@ func main() {
 
 	// TODO: remove this //nolint comment once the select{} has been removed
 	//nolint:govet}
+}
 
 func contains(flagsList []string, flag string) bool {
 	for _, f := range flagsList {
