@@ -79,12 +79,12 @@ func (exporter *AzureBlobExporter) Export(producer interfaces.DataProducer) erro
 	for key, data := range producer.GetData() {
 		appendBlobURL := containerURL.NewAppendBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, key))
 
-		if _, err := appendBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{}); err != nil {
+		if _, err := appendBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{}, azblob.ClientProvidedKeyOptions{}); err != nil {
 			storageError, ok := err.(azblob.StorageError)
 			if ok {
 				switch storageError.ServiceCode() {
 				case azblob.ServiceCodeBlobNotFound:
-					_, err = appendBlobURL.Create(ctx, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
+					_, err = appendBlobURL.Create(ctx, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{}, azblob.BlobTagsMap{}, azblob.ClientProvidedKeyOptions{})
 					if err != nil {
 						return fmt.Errorf("create blob for file %s: %w", key, err)
 					}
@@ -110,7 +110,7 @@ func (exporter *AzureBlobExporter) Export(producer interfaces.DataProducer) erro
 			w := bData[start : start+lengthToWrite]
 			log.Printf("\tAppend blob file: %s (%d bytes), write from %d to %d (%d bytes)", key, size, start, start+lengthToWrite, len(w))
 
-			if _, err = appendBlobURL.AppendBlock(ctx, bytes.NewReader(w), azblob.AppendBlobAccessConditions{}, nil); err != nil {
+			if _, err = appendBlobURL.AppendBlock(ctx, bytes.NewReader(w), azblob.AppendBlobAccessConditions{}, nil, azblob.ClientProvidedKeyOptions{}); err != nil {
 				return fmt.Errorf("append file %s to blob: %w", key, err)
 			}
 
@@ -128,7 +128,9 @@ func (exporter *AzureBlobExporter) ExportReader(name string, reader io.ReadSeeke
 	}
 
 	blob := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, name))
-	_, err = blob.Upload(context.Background(), reader, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
+	// _, err = blob.Upload(context.Background(), reader, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{}, azblob.DefaultAccessTier, azblob.BlobTagsMap{}, azblob.ClientProvidedKeyOptions{})
+	fmt.Printf("Uploading the file with blob name: %s\n", name)
+	_, err = azblob.UploadStreamToBlockBlob(context.Background(), reader, blob, azblob.UploadStreamToBlockBlobOptions{})
 
 	return err
 }
