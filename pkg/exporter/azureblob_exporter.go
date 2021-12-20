@@ -127,10 +127,9 @@ func (exporter *AzureBlobExporter) ExportReader(name string, reader io.ReadSeeke
 		return err
 	}
 
-	blob := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, name))
-	// _, err = blob.Upload(context.Background(), reader, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{}, azblob.DefaultAccessTier, azblob.BlobTagsMap{}, azblob.ClientProvidedKeyOptions{})
+	blobUrl := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, name))
 	fmt.Printf("Uploading the file with blob name: %s\n", name)
-	_, err = azblob.UploadStreamToBlockBlob(context.Background(), reader, blob, azblob.UploadStreamToBlockBlobOptions{})
+	_, err = azblob.UploadStreamToBlockBlob(context.Background(), reader, blobUrl, azblob.UploadStreamToBlockBlobOptions{})
 
 	return err
 }
