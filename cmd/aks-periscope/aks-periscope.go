@@ -150,6 +150,12 @@ func main() {
 		}
 	}
 
+	// TODO: Hack: for now AKS-Periscope is running as a deamonset so it shall not stop (or the pod will be restarted)
+	// Revert from https://github.com/Azure/aks-periscope/blob/b98d66a238e942158ef2628a9315b58937ff9c8f/cmd/aks-periscope/aks-periscope.go#L70
+	select {}
+
+	// TODO: remove this //nolint comment once the select{} has been removed
+	//nolint:govet
 }
 
 func contains(flagsList []string, flag string) bool {
