@@ -1,4 +1,4 @@
-apiVersion: apiextensions.k8s.io/v1beta1
+apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   name: diagnostics.aks-periscope.azure.github.com
@@ -8,17 +8,17 @@ spec:
   - name: v1
     served: true
     storage: true
-  validation:
-    openAPIV3Schema:
-      type: object
-      properties:
-        spec:
-          type: object
-          properties:
-            dns:
-              type: string
-            networkoutbound:
-              type: string
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              dns:
+                type: string
+              networkoutbound:
+                type: string
   scope: Namespaced
   names:
     plural: diagnostics
