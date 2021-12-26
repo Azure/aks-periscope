@@ -18,6 +18,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	restclient "k8s.io/client-go/rest"
 )
 
 const (
@@ -222,53 +223,25 @@ func GetUrlWithRetries(url string, maxRetries int) ([]byte, error) {
 }
 
 // GetCreationTimeStamp returns a create timestamp
-func GetCreationTimeStamp() (string, error) {
-	creationTimeStamp, err := RunCommandOnContainer("kubectl", "get", "pods", "--all-namespaces", "-l", "app=aks-periscope", "-o", "jsonpath=\"{.items[0].metadata.creationTimestamp}\"")
+func GetCreationTimeStamp(config *restclient.Config) (string, error) {
+	// Creates the clientset
+	creationTimeStamp := ""
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return "", fmt.Errorf("getting access to K8S failed: %w", err)
+	}
+	podList, err := GetPods(clientset, "aks-periscope")
+
 	if err != nil {
 		return "", err
 	}
 
-	return creationTimeStamp[1 : len(creationTimeStamp)-1], nil
-}
-
-// WriteToCRD writes diagnostic data to CRD
-func WriteToCRD(crdContent string, key string) error {
-	hostName, err := GetHostName()
-	if err != nil {
-		return err
+	// List all the pods similar to kubectl get pods -n <my namespace>
+	for _, pod := range podList.Items {
+		creationTimeStamp = pod.CreationTimestamp.Format(time.RFC3339Nano)
 	}
 
-	crdName := "aks-periscope-diagnostic" + "-" + hostName
-
-	patchContent := fmt.Sprintf("{\"spec\":{%q:%q}}", key, crdContent)
-
-	_, err = RunCommandOnContainer("kubectl", "-n", "aks-periscope", "patch", "apd", crdName, "-p", patchContent, "--type=merge")
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// CreateCRD creates a CRD object
-func CreateCRD() error {
-	hostName, err := GetHostName()
-	if err != nil {
-		return err
-	}
-
-	crdName := "aks-periscope-diagnostic" + "-" + hostName
-
-	if err = writeDiagnosticCRD(crdName); err != nil {
-		return err
-	}
-
-	_, err = RunCommandOnContainer("kubectl", "apply", "-f", "aks-periscope-diagnostic-crd.yaml")
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return creationTimeStamp, nil
 }
 
 // GetResourceList gets a list of all resources of given type in a specified namespace
@@ -286,56 +259,6 @@ func GetResourceList(kubeCmds []string, separator string) ([]string, error) {
 	}
 
 	return strings.Split(strings.Trim(resourceList, "\""), separator), nil
-}
-
-func writeDiagnosticCRD(crdName string) error {
-	f, err := os.Create("aks-periscope-diagnostic-crd.yaml")
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.WriteString("apiVersion: \"aks-periscope.azure.github.com/v1\"\n")
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString("kind: Diagnostic\n")
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString("metadata:\n")
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString("  name: " + crdName + "\n")
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString("  namespace: aks-periscope\n")
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString("spec:\n")
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString("  networkconfig: \"\"\n")
-	if err != nil {
-		return err
-	}
-
-	_, err = f.WriteString("  networkoutbound: \"\"\n")
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func ReadFileContent(filename string) (string, error) {
