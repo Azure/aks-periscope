@@ -19,6 +19,8 @@ spec:
                 type: string
               networkoutbound:
                 type: string
+              networkconfig:
+                type: string
   scope: Namespaced
   names:
     plural: diagnostics
