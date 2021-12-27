@@ -91,10 +91,6 @@ func (diagnoser *NetworkConfigDiagnoser) Diagnose() error {
 
 	diagnoser.data["networkconfig"] = string(dataBytes)
 
-	if err = utils.WriteToCRD(string(dataBytes), diagnoser.GetName()); err != nil {
-		return fmt.Errorf("write data from NetworkConfig Diagnoser to CRD: %w", err)
-	}
-
 	return nil
 }
 

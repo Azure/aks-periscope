@@ -1,7 +1,6 @@
 package exporter
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -74,47 +73,12 @@ func (exporter *AzureBlobExporter) Export(producer interfaces.DataProducer) erro
 		return err
 	}
 
-	ctx := context.Background()
-
 	for key, data := range producer.GetData() {
-		appendBlobURL := containerURL.NewAppendBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, key))
+		blobURL := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, key))
 
-		if _, err := appendBlobURL.GetProperties(ctx, azblob.BlobAccessConditions{}); err != nil {
-			storageError, ok := err.(azblob.StorageError)
-			if ok {
-				switch storageError.ServiceCode() {
-				case azblob.ServiceCodeBlobNotFound:
-					_, err = appendBlobURL.Create(ctx, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
-					if err != nil {
-						return fmt.Errorf("create blob for file %s: %w", key, err)
-					}
-				default:
-					return fmt.Errorf("create blob with storage error: %w", err)
-				}
-			} else {
-				return fmt.Errorf("create blob: %w", err)
-			}
-		}
-
-		bData := []byte(data)
-		start := 0
-		size := len(bData)
-
-		for size-start > 0 {
-			lengthToWrite := size - start
-
-			if lengthToWrite > azblob.AppendBlobMaxAppendBlockBytes {
-				lengthToWrite = azblob.AppendBlobMaxAppendBlockBytes
-			}
-
-			w := bData[start : start+lengthToWrite]
-			log.Printf("\tAppend blob file: %s (%d bytes), write from %d to %d (%d bytes)", key, size, start, start+lengthToWrite, len(w))
-
-			if _, err = appendBlobURL.AppendBlock(ctx, bytes.NewReader(w), azblob.AppendBlobAccessConditions{}, nil); err != nil {
-				return fmt.Errorf("append file %s to blob: %w", key, err)
-			}
-
-			start += lengthToWrite + 1
+		log.Printf("\tAppend blob file: %s (of size %d bytes)", key, len(data))
+		if _, err = azblob.UploadStreamToBlockBlob(context.Background(), strings.NewReader(data), blobURL, azblob.UploadStreamToBlockBlobOptions{}); err != nil {
+			return fmt.Errorf("append file %s to blob: %w", key, err)
 		}
 	}
 
@@ -127,8 +91,9 @@ func (exporter *AzureBlobExporter) ExportReader(name string, reader io.ReadSeeke
 		return err
 	}
 
-	blob := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, name))
-	_, err = blob.Upload(context.Background(), reader, azblob.BlobHTTPHeaders{}, azblob.Metadata{}, azblob.BlobAccessConditions{})
+	blobUrl := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, name))
+	log.Printf("Uploading the file with blob name: %s\n", name)
+	_, err = azblob.UploadStreamToBlockBlob(context.Background(), reader, blobUrl, azblob.UploadStreamToBlockBlobOptions{})
 
 	return err
 }
