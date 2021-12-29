@@ -51,7 +51,7 @@ func (collector *PDBCollector) Collect() error {
 	}
 
 	for _, namespace := range namespacesList.Items {
-		podDistInterface, err := clientset.PolicyV1beta1().PodDisruptionBudgets(namespace.Name).List(ctxBackground, metav1.ListOptions{})
+		podDistInterface, err := clientset.PolicyV1().PodDisruptionBudgets(namespace.Name).List(ctxBackground, metav1.ListOptions{})
 		if err != nil {
 			return fmt.Errorf("PDB error cluster: %w", err)
 		}
