@@ -98,7 +98,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: localhost:5000/periscope:v1
+          tags: localhost:5000/periscope:${{ github.run_id }}
           file: ./builder/Dockerfile
       - name: Deploy dummy helm chart for tests
         run: |
@@ -107,7 +107,7 @@ jobs:
           helm install happy-panda bitnami/wordpress --namespace default
       - name: Deploy AKS Periscope
         run: |
-          (cd ./deployment && kustomize edit set image mcr.microsoft.com/aks/periscope=localhost:5000/periscope:v1)
+          (cd ./deployment && kustomize edit set image mcr.microsoft.com/aks/periscope=localhost:5000/periscope:${{ github.run_id }})
           kubectl apply -f <(kustomize build ./deployment)
           kubectl -n aks-periscope describe ds aks-periscope
           kubectl -n aks-periscope wait po --all --for condition=ready --timeout=240s
