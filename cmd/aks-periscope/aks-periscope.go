@@ -16,7 +16,12 @@ import (
 )
 
 func main() {
-	creationTimeStamp, err := utils.GetCreationTimeStamp()
+	config, err := restclient.InClusterConfig()
+	if err != nil {
+		log.Fatalf("Cannot load kubeconfig: %v", err)
+	}
+
+	creationTimeStamp, err := utils.GetCreationTimeStamp(config)
 	if err != nil {
 		log.Fatalf("Failed to get creation timestamp: %v", err)
 	}
@@ -24,10 +29,6 @@ func main() {
 	hostname, err := utils.GetHostName()
 	if err != nil {
 		log.Fatalf("Failed to get the hostname on which AKS Periscope is running: %v", err)
-	}
-
-	if err := utils.CreateCRD(); err != nil {
-		log.Fatalf("Failed to create CRD: %v", err)
 	}
 
 	collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))
@@ -39,11 +40,6 @@ func main() {
 		if err := utils.CopyFileFromHost("/etc/ssl/certs/azsCertificate.pem", "/etc/ssl/certs/azsCertificate.pem"); err != nil {
 			log.Fatalf("Cannot copy cert for Azure Stack Cloud environment: %v", err)
 		}
-	}
-
-	config, err := restclient.InClusterConfig()
-	if err != nil {
-		log.Fatalf("Cannot load kubeconfig: %v", err)
 	}
 
 	dataProducers := []interfaces.DataProducer{}
@@ -60,6 +56,7 @@ func main() {
 	osmCollector := collector.NewOsmCollector()
 	smiCollector := collector.NewSmiCollector(config)
 	podsCollector := collector.NewPodsContainerLogs(config)
+	pdbCollector := collector.NewPDBCollector(config)
 
 	collectors := []interfaces.Collector{
 		dnsCollector,
@@ -76,6 +73,7 @@ func main() {
 		collectors = append(collectors, nodeLogsCollector)
 		collectors = append(collectors, kubeletCmdCollector)
 		collectors = append(collectors, systemPerfCollector)
+		collectors = append(collectors, pdbCollector)
 	}
 
 	// OSM and SMI flags are mutually exclusive
