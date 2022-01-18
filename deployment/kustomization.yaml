@@ -13,5 +13,5 @@ resources:
 - service-account.yaml
 
 images:
-  - name: aksrepos.azurecr.io/staging/aks-periscope
-    newTag: v0.3
+  - name: mcr.microsoft.com/aks/periscope
+    newTag: v0.6
