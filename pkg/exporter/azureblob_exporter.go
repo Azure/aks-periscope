@@ -20,6 +20,16 @@ type AzureBlobExporter struct {
 	creationTime string
 }
 
+type StorageKeyType string
+
+const (
+	Container StorageKeyType = "Container"
+)
+
+var storageKeyTypes = map[string]StorageKeyType{
+	"Container": Container,
+}
+
 func NewAzureBlobExporter(creationTime, hostname string) *AzureBlobExporter {
 	return &AzureBlobExporter{
 		hostname:     hostname,
@@ -31,6 +41,7 @@ func createContainerURL() (azblob.ContainerURL, error) {
 	accountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
 	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
 	containerName := os.Getenv("AZURE_BLOB_CONTAINER_NAME")
+	keyType := os.Getenv("AZURE_STORAGE_SAS_KEY_TYPE")
 
 	if accountName == "" || sasKey == "" || containerName == "" {
 		log.Print("Storage Account information were not provided. Export to Azure Storage Account will be skiped.")
@@ -48,6 +59,10 @@ func createContainerURL() (azblob.ContainerURL, error) {
 	}
 
 	containerURL := azblob.NewContainerURL(*url, pipeline)
+
+	if _, ok := storageKeyTypes[keyType]; ok {
+		return containerURL, nil
+	}
 
 	_, err = containerURL.Create(ctx, azblob.Metadata{}, azblob.PublicAccessNone)
 	if err != nil {
