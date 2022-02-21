@@ -36,7 +36,12 @@ jobs:
         run: go mod download
       - name: Build project
         run: go build ./cmd/aks-periscope
-
+      - name: Run the changelog reader
+        id: changelog_reader
+        uses: ./
+      - name: Display output
+        run: |
+          echo "Version: ${{ steps.changelog_reader.outputs.version }}"
       # Lowercase my github ownername.
       - name: Set Environment Variables
         run: |
@@ -56,5 +61,5 @@ jobs:
           docker build -f ./builder/Dockerfile -t aks/periscope .
           echo "start docker build done"
           echo "start docker tag"
-          docker tag aks/periscope ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:test-image-tag-live-demo
-          docker push $(registryLoginServerName)/public/aks/periscope:test-image-tag-live-demo
+          docker tag aks/periscope ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          docker push $(registryLoginServerName)/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
