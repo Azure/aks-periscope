@@ -54,8 +54,8 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
-          password: ${{ secrets.GHCR_PASSWORD }} # requires you to have a GH token and place it in a secret "GHCR_PASSWORD"
-      - name: Porter publish to ghcr.io 
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to ghcr.io 
       # Note the below automatically sets the registry to the local GH registry of the org name. 
       # Currently, for pure gitops reconstructing this runtime setting will require looking at the repository owner of the commit
         run: |
@@ -63,4 +63,4 @@ jobs:
           echo "start docker build done"
           echo "start docker tag"
           docker tag aks/periscope ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}
-          docker push $(registryLoginServerName)/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          docker push ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}
