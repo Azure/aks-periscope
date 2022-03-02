@@ -60,7 +60,5 @@ jobs:
       # Currently, for pure gitops reconstructing this runtime setting will require looking at the repository owner of the commit
         run: |
           docker build -f ./builder/Dockerfile -t aks/periscope .
-          echo "start docker build done"
-          echo "start docker tag"
           docker tag aks/periscope ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}
           docker push ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}
