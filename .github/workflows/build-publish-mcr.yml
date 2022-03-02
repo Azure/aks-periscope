@@ -40,7 +40,7 @@ jobs:
       - name: 'Run Azure CLI commands'
         run: |
           docker build -f ./builder/Dockerfile -t public/aks/periscope .
-          docker tag public/aks/periscope ${{ secrets.AZURE_REGISTRY_NAME }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
-          az acr login -n ${{ secrets.AZURE_REGISTRY_NAME }}
-          docker push ${{ secrets.AZURE_REGISTRY_NAME }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          docker tag public/aks/periscope ${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          az acr login -n ${{ secrets.AZURE_REGISTRY_SERVER }}
+          docker push ${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
           echo "acr push done"
