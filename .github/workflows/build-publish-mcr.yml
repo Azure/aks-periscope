@@ -1,4 +1,4 @@
-name: Run Azure Login with OpenID Connect
+name: Building and pushing mcr
 on: [workflow_dispatch]
 
 permissions:
@@ -30,7 +30,7 @@ jobs:
       - name: Display output
         run: |
            echo "Version: ${{ steps.changelog_reader.outputs.version }}"
-           echo "Version: ${{ steps.changelog_reader.outputs.changes }}"
+           echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
       - name: 'Az CLI login'
         uses: azure/login@v1
         with:
