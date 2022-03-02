@@ -21,12 +21,16 @@ jobs:
         run: go mod download
       - name: Build project
         run: go build ./cmd/aks-periscope
-      - name: Run the changelog reader
+      - name: Get Changelog Entry
         id: changelog_reader
-        uses: ./
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          validation_depth: 10
+          path: ./CHANGELOG.md
       - name: Display output
         run: |
            echo "Version: ${{ steps.changelog_reader.outputs.version }}"
+           echo "Version: ${{ steps.changelog_reader.outputs.changes }}"
       - name: 'Az CLI login'
         uses: azure/login@v1
         with:
@@ -37,9 +41,6 @@ jobs:
         run: |
           docker build -f ./builder/Dockerfile -t public/aks/periscope .
           docker tag public/aks/periscope ${{ secrets.AZURE_REGISTRY_NAME }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
-          echo "acr login attempt"
-          az acr login -n tatstest
-          echo "acr login attempt success"
-          echo "acr push"
-          docker push ${{ secrets.AZURE_REGISTRY_NAME }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          az acr login -n ${{ secrets.AZURE_REGISTRY_NAME }}
+          docker push ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
           echo "acr push done"
