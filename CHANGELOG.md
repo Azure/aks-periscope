@@ -1,6 +1,6 @@
 # Change Log
 
-## [v0.8]
+## [0.8]
 
 * A few minor edits to README.md by @davefellows in #147
 * Add pod disrupution budget information collector. by @Tatsinnit in #135
