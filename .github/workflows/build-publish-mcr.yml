@@ -42,5 +42,5 @@ jobs:
           docker build -f ./builder/Dockerfile -t public/aks/periscope .
           docker tag public/aks/periscope ${{ secrets.AZURE_REGISTRY_NAME }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
           az acr login -n ${{ secrets.AZURE_REGISTRY_NAME }}
-          docker push ${{ secrets.AZURE_REGISTRY_NAME }}.azurecr.io/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          docker push ${{ secrets.AZURE_REGISTRY_NAME }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
           echo "acr push done"
