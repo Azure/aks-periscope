@@ -2,6 +2,7 @@ package exporter
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -44,8 +45,8 @@ func createContainerURL() (azblob.ContainerURL, error) {
 	keyType := os.Getenv("AZURE_STORAGE_SAS_KEY_TYPE")
 
 	if accountName == "" || sasKey == "" || containerName == "" {
-		log.Print("Storage Account information were not provided. Export to Azure Storage Account will be skiped.")
-		return azblob.ContainerURL{}, nil
+		log.Print("Storage Account information were not provided. Export to Azure Storage Account will be skipped.")
+		return azblob.ContainerURL{}, errors.New("Storage not configured.")
 	}
 
 	ctx := context.Background()
