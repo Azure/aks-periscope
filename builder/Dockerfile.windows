@@ -1,5 +1,6 @@
 # Builder
-FROM golang:1.18.0-windowsservercore-ltsc2022 AS builder
+# FROM golang:1.18.0-windowsservercore-ltsc2022 AS builder
+FROM golang:1.18.0-windowsservercore-1809 AS builder
 # FROM --platform=linux/amd64 golang:alpine as builder
 
 ENV GO111MODULE=on \
