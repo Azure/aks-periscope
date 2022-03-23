@@ -1,0 +1,32 @@
+# Builder
+FROM golang:1.18.0-windowsservercore-ltsc2022 AS builder
+# FROM --platform=linux/amd64 golang:alpine as builder
+
+ENV GO111MODULE=on \
+    CGO_ENABLED=0 \
+    GOOS=windows \
+    GOARCH=amd64
+
+WORKDIR /build
+
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
+COPY . .
+
+RUN go build ./cmd/aks-periscope
+
+# Runner
+# FROM --platform=windows/amd64 mcr.microsoft.com/windows/servercore:ltsc2022
+# FROM mcr.microsoft.com/windows/servercore:ltsc2022
+FROM mcr.microsoft.com/windows/servercore:1809
+
+# RUN apk --no-cache add ca-certificates curl openssl bash
+
+# ADD https://storage.googleapis.com/kubernetes-release/release/v1.16.0/bin/linux/amd64/kubectl /usr/local/bin/kubectl
+# RUN chmod +x /usr/local/bin/kubectl
+
+COPY --from=builder /build/aks-periscope.exe /
+
+ENTRYPOINT ["/aks-periscope.exe"]

@@ -112,7 +112,9 @@ var once sync.Once
 // GetHostNameSingleton get host name singleton use
 func GetHostNameSingleton() *HostName {
 	once.Do(func() {
-		hostname, err := RunCommandOnHost("cat", "/etc/hostname")
+		// TODO: check, is this equivalent?
+		hostname, err := os.Hostname()
+		// hostname, err := RunCommandOnHost("cat", "/etc/hostname")
 
 		if hostname != "" {
 			hostname = strings.TrimSuffix(string(hostname), "\n")
