@@ -81,6 +81,11 @@ spec:
         securityContext:
           privileged: true
         imagePullPolicy: Always
+        env:
+        - name: HOST_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
         envFrom:
         - configMapRef:
             name: containerlogs-config

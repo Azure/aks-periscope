@@ -1,16 +1,16 @@
 package main
 
 import (
-	// "bytes"
+	"bytes"
 	"log"
-	// "os"
+	"os"
 	"strings"
-	// "sync"
+	"sync"
 
-	// "github.com/Azure/aks-periscope/pkg/collector"
-	// "github.com/Azure/aks-periscope/pkg/diagnoser"
-	// "github.com/Azure/aks-periscope/pkg/exporter"
-	// "github.com/Azure/aks-periscope/pkg/interfaces"
+	"github.com/Azure/aks-periscope/pkg/collector"
+	"github.com/Azure/aks-periscope/pkg/diagnoser"
+	"github.com/Azure/aks-periscope/pkg/exporter"
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 	restclient "k8s.io/client-go/rest"
 )
@@ -34,120 +34,126 @@ func main() {
 	log.Printf("Creation timestamp: %s", creationTimeStamp)
 	log.Printf("Hostname: %s", hostname)
 
-	// collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))
-	// exp := exporter.NewAzureBlobExporter(creationTimeStamp, hostname)
+	collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))
+	exp := exporter.NewAzureBlobExporter(creationTimeStamp, hostname)
 
-	// // Copies self-signed cert information to container if application is running on Azure Stack Cloud.
-	// // We need the cert in order to communicate with the storage account.
-	// if utils.IsAzureStackCloud() {
-	// 	if err := utils.CopyFileFromHost("/etc/ssl/certs/azsCertificate.pem", "/etc/ssl/certs/azsCertificate.pem"); err != nil {
-	// 		log.Fatalf("Cannot copy cert for Azure Stack Cloud environment: %v", err)
-	// 	}
-	// }
+	// Copies self-signed cert information to container if application is running on Azure Stack Cloud.
+	// We need the cert in order to communicate with the storage account.
+	if utils.IsAzureStackCloud() {
+		if err := utils.CopyFileFromHost("/etc/ssl/certs/azsCertificate.pem", "/etc/ssl/certs/azsCertificate.pem"); err != nil {
+			log.Fatalf("Cannot copy cert for Azure Stack Cloud environment: %v", err)
+		}
+	}
 
-	// dataProducers := []interfaces.DataProducer{}
+	dataProducers := []interfaces.DataProducer{}
 
-	// networkOutboundCollector := collector.NewNetworkOutboundCollector()
-	// dnsCollector := collector.NewDNSCollector()
-	// kubeObjectsCollector := collector.NewKubeObjectsCollector(config)
-	// systemLogsCollector := collector.NewSystemLogsCollector()
-	// ipTablesCollector := collector.NewIPTablesCollector()
-	// nodeLogsCollector := collector.NewNodeLogsCollector()
-	// kubeletCmdCollector := collector.NewKubeletCmdCollector()
-	// systemPerfCollector := collector.NewSystemPerfCollector(config)
-	// helmCollector := collector.NewHelmCollector(config)
-	// osmCollector := collector.NewOsmCollector()
-	// smiCollector := collector.NewSmiCollector()
-	// podsCollector := collector.NewPodsContainerLogs(config)
-	// pdbCollector := collector.NewPDBCollector(config)
+	networkOutboundCollector := collector.NewNetworkOutboundCollector()
+	dnsCollector := collector.NewDNSCollector()
+	kubeObjectsCollector := collector.NewKubeObjectsCollector(config)
+	systemLogsCollector := collector.NewSystemLogsCollector()
+	ipTablesCollector := collector.NewIPTablesCollector()
+	nodeLogsCollector := collector.NewNodeLogsCollector()
+	kubeletCmdCollector := collector.NewKubeletCmdCollector()
+	systemPerfCollector := collector.NewSystemPerfCollector(config)
+	helmCollector := collector.NewHelmCollector(config)
+	osmCollector := collector.NewOsmCollector()
+	smiCollector := collector.NewSmiCollector()
+	podsCollector := collector.NewPodsContainerLogs(config)
+	pdbCollector := collector.NewPDBCollector(config)
 
-	// collectors := []interfaces.Collector{
-	// 	dnsCollector,
-	// 	kubeObjectsCollector,
-	// 	networkOutboundCollector,
-	// }
+	collectors := []interfaces.Collector{
+		dnsCollector,
+		kubeObjectsCollector,
+		networkOutboundCollector,
+	}
 
-	// if contains(collectorList, "connectedCluster") {
-	// 	collectors = append(collectors, helmCollector)
-	// 	collectors = append(collectors, podsCollector)
-	// } else {
-	// 	collectors = append(collectors, systemLogsCollector)
-	// 	collectors = append(collectors, ipTablesCollector)
-	// 	collectors = append(collectors, nodeLogsCollector)
-	// 	collectors = append(collectors, kubeletCmdCollector)
-	// 	collectors = append(collectors, systemPerfCollector)
-	// 	collectors = append(collectors, pdbCollector)
-	// }
+	if contains(collectorList, "connectedCluster") {
+		collectors = append(collectors, helmCollector)
+		collectors = append(collectors, podsCollector)
+	} else {
+		collectors = append(collectors, systemLogsCollector)
+		collectors = append(collectors, ipTablesCollector)
+		collectors = append(collectors, nodeLogsCollector)
+		collectors = append(collectors, kubeletCmdCollector)
+		collectors = append(collectors, systemPerfCollector)
+		collectors = append(collectors, pdbCollector)
+	}
 
-	// // OSM and SMI flags are mutually exclusive
-	// if contains(collectorList, "OSM") {
-	// 	collectors = append(collectors, osmCollector)
-	// 	collectors = append(collectors, smiCollector)
-	// } else if contains(collectorList, "SMI") {
-	// 	collectors = append(collectors, smiCollector)
-	// }
+	// OSM and SMI flags are mutually exclusive
+	if contains(collectorList, "OSM") {
+		collectors = append(collectors, osmCollector)
+		collectors = append(collectors, smiCollector)
+	} else if contains(collectorList, "SMI") {
+		collectors = append(collectors, smiCollector)
+	}
 
-	// collectorGrp := new(sync.WaitGroup)
+	collectorGrp := new(sync.WaitGroup)
 
-	// for _, c := range collectors {
-	// 	dataProducers = append(dataProducers, c)
-	// 	collectorGrp.Add(1)
-	// 	go func(c interfaces.Collector) {
-	// 		defer collectorGrp.Done()
+	for _, c := range collectors {
+		if err := c.CheckSupported(); err != nil {
+			// Log the reason why this collector is not supported, and skip to the next
+			log.Printf("Skipping unsupported collector %s: %v", c.GetName(), err)
+			continue
+		}
 
-	// 		log.Printf("Collector: %s, collect data", c.GetName())
-	// 		err := c.Collect()
-	// 		if err != nil {
-	// 			log.Printf("Collector: %s, collect data failed: %v", c.GetName(), err)
-	// 			return
-	// 		}
+		dataProducers = append(dataProducers, c)
+		collectorGrp.Add(1)
+		go func(c interfaces.Collector) {
+			defer collectorGrp.Done()
 
-	// 		log.Printf("Collector: %s, export data", c.GetName())
-	// 		if err = exp.Export(c); err != nil {
-	// 			log.Printf("Collector: %s, export data failed: %v", c.GetName(), err)
-	// 		}
-	// 	}(c)
-	// }
+			log.Printf("Collector: %s, collect data", c.GetName())
+			err := c.Collect()
+			if err != nil {
+				log.Printf("Collector: %s, collect data failed: %v", c.GetName(), err)
+				return
+			}
 
-	// collectorGrp.Wait()
+			log.Printf("Collector: %s, export data", c.GetName())
+			if err = exp.Export(c); err != nil {
+				log.Printf("Collector: %s, export data failed: %v", c.GetName(), err)
+			}
+		}(c)
+	}
 
-	// diagnosers := []interfaces.Diagnoser{
-	// 	diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector),
-	// 	diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector),
-	// }
+	collectorGrp.Wait()
 
-	// diagnoserGrp := new(sync.WaitGroup)
+	diagnosers := []interfaces.Diagnoser{
+		diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector),
+		diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector),
+	}
 
-	// for _, d := range diagnosers {
-	// 	dataProducers = append(dataProducers, d)
-	// 	diagnoserGrp.Add(1)
-	// 	go func(d interfaces.Diagnoser) {
-	// 		defer diagnoserGrp.Done()
+	diagnoserGrp := new(sync.WaitGroup)
 
-	// 		log.Printf("Diagnoser: %s, diagnose data", d.GetName())
-	// 		err := d.Diagnose()
-	// 		if err != nil {
-	// 			log.Printf("Diagnoser: %s, diagnose data failed: %v", d.GetName(), err)
-	// 			return
-	// 		}
+	for _, d := range diagnosers {
+		dataProducers = append(dataProducers, d)
+		diagnoserGrp.Add(1)
+		go func(d interfaces.Diagnoser) {
+			defer diagnoserGrp.Done()
 
-	// 		log.Printf("Diagnoser: %s, export data", d.GetName())
-	// 		if err = exp.Export(d); err != nil {
-	// 			log.Printf("Diagnoser: %s, export data failed: %v", d.GetName(), err)
-	// 		}
-	// 	}(d)
-	// }
+			log.Printf("Diagnoser: %s, diagnose data", d.GetName())
+			err := d.Diagnose()
+			if err != nil {
+				log.Printf("Diagnoser: %s, diagnose data failed: %v", d.GetName(), err)
+				return
+			}
 
-	// diagnoserGrp.Wait()
+			log.Printf("Diagnoser: %s, export data", d.GetName())
+			if err = exp.Export(d); err != nil {
+				log.Printf("Diagnoser: %s, export data failed: %v", d.GetName(), err)
+			}
+		}(d)
+	}
 
-	// zip, err := exporter.Zip(dataProducers)
-	// if err != nil {
-	// 	log.Printf("Could not zip data: %v", err)
-	// } else {
-	// 	if err := exp.ExportReader(hostname+".zip", bytes.NewReader(zip.Bytes())); err != nil {
-	// 		log.Printf("Could not export zip archive: %v", err)
-	// 	}
-	// }
+	diagnoserGrp.Wait()
+
+	zip, err := exporter.Zip(dataProducers)
+	if err != nil {
+		log.Printf("Could not zip data: %v", err)
+	} else {
+		if err := exp.ExportReader(hostname+".zip", bytes.NewReader(zip.Bytes())); err != nil {
+			log.Printf("Could not export zip archive: %v", err)
+		}
+	}
 
 	// TODO: Hack: for now AKS-Periscope is running as a deamonset so it shall not stop (or the pod will be restarted)
 	// Revert from https://github.com/Azure/aks-periscope/blob/b98d66a238e942158ef2628a9315b58937ff9c8f/cmd/aks-periscope/aks-periscope.go#L70

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"runtime"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
@@ -22,6 +23,16 @@ func NewOsmCollector() *OsmCollector {
 
 func (collector *OsmCollector) GetName() string {
 	return "osm"
+}
+
+func (collector *OsmCollector) CheckSupported() error {
+	// This is not currently supported on Windows because it launches `kubectl` as a separate process (within GetResourceList).
+	// If/when it is reimplemented using the go client API for k8s, we can re-enable this.
+	if runtime.GOOS != "linux" {
+		return fmt.Errorf("Unsupported OS: %s", runtime.GOOS)
+	}
+
+	return nil
 }
 
 // Collect implements the interface method
@@ -198,7 +209,7 @@ func (collector *OsmCollector) collectDataFromEnvoys(namespace string, meshName 
 			// Remove certificate secrets from Envoy config i.e., "inline_bytes" field from response
 			re := regexp.MustCompile("(?m)[\r\n]+^.*inline_bytes.*$")
 			secretRemovedResponse := re.ReplaceAllString(string(responseBody), "---redacted---")
-			filePath := meshName + "/envoy/"+ podName + query
+			filePath := meshName + "/envoy/" + podName + query
 			collector.data[filePath] = secretRemovedResponse
 		}
 		if err = utils.KillProcess(pid); err != nil {

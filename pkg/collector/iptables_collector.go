@@ -1,6 +1,9 @@
 package collector
 
 import (
+	"fmt"
+	"runtime"
+
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -18,6 +21,15 @@ func NewIPTablesCollector() *IPTablesCollector {
 
 func (collector *IPTablesCollector) GetName() string {
 	return "iptables"
+}
+
+func (collector *IPTablesCollector) CheckSupported() error {
+	// There's no obvious alternative to `iptables` on Windows.
+	if runtime.GOOS != "linux" {
+		return fmt.Errorf("Unsupported OS: %s", runtime.GOOS)
+	}
+
+	return nil
 }
 
 // Collect implements the interface method

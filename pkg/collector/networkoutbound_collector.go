@@ -35,6 +35,10 @@ func (collector *NetworkOutboundCollector) GetName() string {
 	return "networkoutbound"
 }
 
+func (collector *NetworkOutboundCollector) CheckSupported() error {
+	return nil
+}
+
 // Collect implements the interface method
 func (collector *NetworkOutboundCollector) Collect() error {
 	outboundTypes := []networkOutboundType{}

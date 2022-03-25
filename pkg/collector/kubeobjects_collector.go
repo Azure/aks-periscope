@@ -29,6 +29,10 @@ func (collector *KubeObjectsCollector) GetName() string {
 	return "kubeobjects"
 }
 
+func (collector *KubeObjectsCollector) CheckSupported() error {
+	return nil
+}
+
 // Collect implements the interface method
 func (collector *KubeObjectsCollector) Collect() error {
 	kubernetesObjects := strings.Fields(os.Getenv("DIAGNOSTIC_KUBEOBJECTS_LIST"))
