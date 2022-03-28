@@ -35,6 +35,8 @@ spec:
             name: kubeobjects-config
         - configMapRef:
             name: nodelogs-config
+        - secretRef:
+            name: azureblob-secret
         volumeMounts:
         - name: varlog
           mountPath: /var/log

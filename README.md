@@ -150,6 +150,22 @@ docker build -f ./builder/Dockerfile -t <some_docker_repo_name>/<aks-periscope-u
 docker push <some_docker_repo_name>/<aks-periscope-user-selected-test-name> 
 ```
 
+**Tip**: To avoid the need to push to a container registry, and to also avoid making edits to source-controlled files, Periscope can also be run against a local Docker image in a `Kind` cluster.
+
+```sh
+# Build
+docker build -f ./builder/Dockerfile -t periscope-local .
+
+# Load the image in kind so that it can be found without pulling from a registry.
+# Include a --name argument here if not using the default kind cluster.
+kind load docker-image periscope-local
+
+# Ensure kubectl has the right cluster context
+export KUBECONFIG=...
+
+kubectl apply -k ./deployment/overlays/dev
+```
+
 ## Dependent Consuming Tools and Working Contract
 
 `az-cli` and `vscode` both consume the `aks-periscope.yaml` file. If the `aks-periscope.yaml` file is changed, you will introduce breaking changes to `az-cli` and `vscode`.

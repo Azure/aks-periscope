@@ -12,6 +12,11 @@ resources:
 - daemon-set.yaml
 - service-account.yaml
 
-images:
-  - name: mcr.microsoft.com/aks/periscope
-    newTag: v0.6
+secretGenerator:
+- name: azureblob-secret
+  literals:
+  # AZURE_BLOB_SAS_KEY: ?sv=&ss=&srt=&sp=&se=&st=&spr=&sig=
+  - AZURE_BLOB_SAS_KEY=
+
+generatorOptions:
+  disableNameSuffixHash: true
