@@ -16,14 +16,12 @@ jobs:
         - os: ubuntu-latest
           file: ./builder/Dockerfile.linux
           imagename: 'aks/periscope'
-          shell: bash
         - os: windows-2022
           file: ./builder/Dockerfile.windows
           imagename: 'aks/periscope-win'
-          shell: msys2
     defaults:
       run:
-        shell: ${{ matrix.shell }}
+        shell: pwsh
     steps:
       - uses: actions/checkout@v2
       - name: Get Changelog Entry
@@ -39,8 +37,8 @@ jobs:
       # Lowercase my github ownername.
       - name: Set Environment Variables
         run: |
-          OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
-          echo "REPO-OWNER=${OWNER}" >> $GITHUB_ENV
+          $owner="${{ github.repository_owner }}".ToLower()
+          echo "REPO-OWNER=$owner" >> $GITHUB_ENV
       - name: 'Az CLI login'
         uses: azure/login@v1
         with:
