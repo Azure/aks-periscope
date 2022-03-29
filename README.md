@@ -160,9 +160,35 @@ docker build -f ./builder/Dockerfile -t periscope-local .
 # Include a --name argument here if not using the default kind cluster.
 kind load docker-image periscope-local
 
+# Create a SAS
+sub_id=...
+stg_account=...
+blob_container=...
+sas_expiry=`date -u -d "30 minutes" '+%Y-%m-%dT%H:%MZ'`
+sas=$(az storage account generate-sas \
+    --account-name $stg_account \
+    --subscription $sub_id \
+    --permissions rwdlacup \
+    --services b \
+    --resource-types sco \
+    --expiry $sas_expiry \
+    -o tsv)
+
+# Set up configuration data for Kustomize
+# (for further customization, the variables in the .env.config.* files can be configured to override the defaults)
+touch ./deployment/overlays/dev/.env.config.common
+touch ./deployment/overlays/dev/.env.config.linux
+touch ./deployment/overlays/dev/.env.config.windows
+cat <<EOF > ./deployment/overlays/dev/.env.secret.azureblob
+AZURE_BLOB_ACCOUNT_NAME=${stg_account}
+AZURE_BLOB_SAS_KEY=?${sas}
+AZURE_BLOB_CONTAINER_NAME=${blob_container}
+EOF
+
 # Ensure kubectl has the right cluster context
 export KUBECONFIG=...
 
+# Deploy
 kubectl apply -k ./deployment/overlays/dev
 ```
 

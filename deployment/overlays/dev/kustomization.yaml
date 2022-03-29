@@ -1,5 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
 resources:
 - ../../base
 
 patchesStrategicMerge:
 - daemon-set.yaml
+
+secretGenerator:
+- name: azureblob-secret
+  behavior: replace
+  envs:
+  - .env.secret.azureblob
+
+configMapGenerator:
+- name: common-config
+  behavior: merge
+  envs:
+  - .env.config.common
+- name: linux-config
+  behavior: merge
+  envs:
+  - .env.config.linux
+- name: windows-config
+  behavior: merge
+  envs:
+  - .env.config.windows

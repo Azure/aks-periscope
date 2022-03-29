@@ -7,16 +7,28 @@ resources:
 - namespace.yaml
 - cluster-role.yaml
 - cluster-role-binding.yaml
-- config-map.yaml
 - crd.yaml
 - daemon-set.yaml
 - service-account.yaml
 
+configMapGenerator:
+- name: common-config
+  literals:
+  - DIAGNOSTIC_CONTAINERLOGS_LIST=kube-system
+  - DIAGNOSTIC_KUBEOBJECTS_LIST=kube-system/pod kube-system/service kube-system/deployment
+- name: linux-config
+  literals:
+  - DIAGNOSTIC_NODELOGS_LIST="/var/log/azure/cluster-provision.log /var/log/cloud-init.log"
+- name: windows-config
+  literals:
+  - DIAGNOSTIC_NODELOGS_LIST="C:\AzureData\CustomDataSetupScript.log"
+
 secretGenerator:
 - name: azureblob-secret
   literals:
-  # AZURE_BLOB_SAS_KEY: ?sv=&ss=&srt=&sp=&se=&st=&spr=&sig=
-  - AZURE_BLOB_SAS_KEY=
+  - AZURE_BLOB_ACCOUNT_NAME="# <accountName, base64 encoded>"
+  - AZURE_BLOB_SAS_KEY="# <saskey, base64 encoded>"
+  - AZURE_BLOB_CONTAINER_NAME="# <containerName, string>"
 
 generatorOptions:
   disableNameSuffixHash: true

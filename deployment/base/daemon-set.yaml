@@ -16,7 +16,7 @@ spec:
       serviceAccountName: aks-periscope-service-account
       hostPID: true
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
       containers:
       - name: aks-periscope
         image: mcr.microsoft.com/aks/periscope
@@ -30,11 +30,9 @@ spec:
               fieldPath: spec.nodeName
         envFrom:
         - configMapRef:
-            name: containerlogs-config
+            name: common-config
         - configMapRef:
-            name: kubeobjects-config
-        - configMapRef:
-            name: nodelogs-config
+            name: linux-config
         - secretRef:
             name: azureblob-secret
         volumeMounts:
@@ -61,3 +59,58 @@ spec:
       - name: etcvmlog
         hostPath:
           path: /etc
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aks-periscope-win
+  labels:
+    app: aks-periscope
+spec:
+  selector:
+    matchLabels:
+      app: aks-periscope
+  template:
+    metadata:
+      labels:
+        app: aks-periscope
+    spec:
+      serviceAccountName: aks-periscope-service-account
+      hostPID: true
+      nodeSelector:
+        kubernetes.io/os: windows
+      containers:
+      - name: aks-periscope
+        image: mcr.microsoft.com/aks/periscope
+        imagePullPolicy: Always
+        env:
+        - name: HOST_NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        envFrom:
+        - configMapRef:
+            name: common-config
+        - configMapRef:
+            name: windows-config
+        - secretRef:
+            name: azureblob-secret
+        volumeMounts:
+        - name: k
+          mountPath: /k
+        - name: azuredata
+          mountPath: /AzureData
+        resources:
+          requests:
+            memory: "500Mi"
+            cpu: "250m"
+          limits:
+            memory: "2000Mi"
+            cpu: "1000m"
+      volumes:
+      - name: k
+        hostPath:
+          path: /k
+      - name: azuredata
+        hostPath:
+          path: /AzureData

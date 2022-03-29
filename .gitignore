@@ -335,8 +335,10 @@ ASALocalRun/
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
 
+**/.env
+**/.env.*
+
 helm
 kind
 kustomize
 *.tar.gz
-deployment.yaml
