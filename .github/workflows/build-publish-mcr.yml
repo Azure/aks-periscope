@@ -38,7 +38,7 @@ jobs:
       - name: Set Environment Variables
         run: |
           $owner="${{ github.repository_owner }}".ToLower()
-          echo "REPO-OWNER=$owner" >> $GITHUB_ENV
+          Add-Content -Path $env:GITHUB_ENV -Value "REPO-OWNER=$owner"
       - name: 'Az CLI login'
         uses: azure/login@v1
         with:
