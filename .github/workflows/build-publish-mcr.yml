@@ -16,9 +16,14 @@ jobs:
         - os: ubuntu-latest
           file: ./builder/Dockerfile.linux
           imagename: 'aks/periscope'
-        - os: windows-2019
+          shell: bash
+        - os: windows-2022
           file: ./builder/Dockerfile.windows
           imagename: 'aks/periscope-win'
+          shell: msys2
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
     steps:
       - uses: actions/checkout@v2
       - name: Get Changelog Entry
