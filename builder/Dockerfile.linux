@@ -1,6 +1,9 @@
 # Builder
 FROM golang:alpine AS builder
 
+# https://stackoverflow.com/questions/36044275/golang-go-get-command-showing-go-missing-git-command-error
+RUN apk add git
+
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
     GOOS=linux \
