@@ -97,7 +97,7 @@ jobs:
           context: .
           push: true
           tags: localhost:5000/periscope:${{ github.run_id }}
-          file: ./builder/Dockerfile
+          file: ./builder/Dockerfile.linux
       - name: Deploy dummy helm chart for tests
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami

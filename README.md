@@ -141,12 +141,12 @@ To locally build this project from the root of this repository:
 CGO_ENABLED=0 GOOS=linux go build -mod=vendor github.com/Azure/aks-periscope/cmd/aks-periscope
 ```
 
-**Tip**: In order to test local changes, user can build the local image via `Dockerfile` and then push it to your local hub. This way, a user should be able to reference this test image in the `deployment\aks-periscope.yaml` `containers` property `image` attribute reference to your published test docker image. 
+**Tip**: In order to test local changes, user can build the local image via `Dockerfile.linux` and then push it to your local hub. This way, a user should be able to reference this test image in the `deployment\aks-periscope.yaml` `containers` property `image` attribute reference to your published test docker image. 
 
 For example:
 
 ```sh
-docker build -f ./builder/Dockerfile -t <some_docker_repo_name>/<aks-periscope-user-selected-test-name> .
+docker build -f ./builder/Dockerfile.linux -t <some_docker_repo_name>/<aks-periscope-user-selected-test-name> .
 docker push <some_docker_repo_name>/<aks-periscope-user-selected-test-name> 
 ```
 
@@ -154,7 +154,7 @@ docker push <some_docker_repo_name>/<aks-periscope-user-selected-test-name>
 
 ```sh
 # Build
-docker build -f ./builder/Dockerfile -t periscope-local .
+docker build -f ./builder/Dockerfile.linux -t periscope-local .
 
 # Load the image in kind so that it can be found without pulling from a registry.
 # Include a --name argument here if not using the default kind cluster.

@@ -8,8 +8,8 @@ permissions:
 env:
   GO_VERSION: '1.16.1'
 
-jobs: 
-  build-and-deploy:
+jobs:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -21,6 +21,21 @@ jobs:
         run: go mod download
       - name: Build project
         run: go build ./cmd/aks-periscope
+  publish:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-latest, windows-2022]
+        include:
+        - os: ubuntu-latest
+          file: ./builder/Dockerfile.linux
+          imagename: 'aks/periscope'
+        - os: windows-2019
+          file: ./builder/Dockerfile.windows
+          imagename: 'aks/periscope-win'
+    steps:
+      - uses: actions/checkout@v2
       - name: Get Changelog Entry
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
@@ -29,8 +44,13 @@ jobs:
           path: ./CHANGELOG.md
       - name: Display output
         run: |
-           echo "Version: ${{ steps.changelog_reader.outputs.version }}"
-           echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
+          echo "Version: ${{ steps.changelog_reader.outputs.version }}"
+          echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
+      # Lowercase my github ownername.
+      - name: Set Environment Variables
+        run: |
+          OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          echo "REPO-OWNER=${OWNER}" >> $GITHUB_ENV
       - name: 'Az CLI login'
         uses: azure/login@v1
         with:
@@ -39,8 +59,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: 'Run Azure CLI commands'
         run: |
-          docker build -f ./builder/Dockerfile -t public/aks/periscope .
-          docker tag public/aks/periscope ${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          docker build -f ${{ matrix.file }} -t ${{ secrets.AZURE_REGISTRY_SERVER }}/public/${{ matrix.imagename }}:${{ steps.changelog_reader.outputs.version }} .
           az acr login -n ${{ secrets.AZURE_REGISTRY_SERVER }}
-          docker push ${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          docker push ${{ secrets.AZURE_REGISTRY_SERVER }}/public/${{ matrix.imagename }}:${{ steps.changelog_reader.outputs.version }}
           echo "acr push done"
