@@ -12,12 +12,12 @@ jobs:
     strategy:
       max-parallel: 2
       matrix:
-        os: [ubuntu-latest, windows-2022]
+        os: [ubuntu-latest, windows-2019]
         include:
         - os: ubuntu-latest
           file: ./builder/Dockerfile.linux
           imagename: 'aks/periscope'
-        - os: windows-2022
+        - os: windows-2019
           file: ./builder/Dockerfile.windows
           imagename: 'aks/periscope-win'
     defaults:
