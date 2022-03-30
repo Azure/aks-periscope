@@ -141,58 +141,13 @@ To locally build this project from the root of this repository:
 CGO_ENABLED=0 GOOS=linux go build -mod=vendor github.com/Azure/aks-periscope/cmd/aks-periscope
 ```
 
-**Tip**: In order to test local changes, user can build the local image via `Dockerfile.linux` and then push it to your local hub. This way, a user should be able to reference this test image in the `deployment\aks-periscope.yaml` `containers` property `image` attribute reference to your published test docker image. 
+**Tip**: to test local changes, there are instructions for running Periscope in a `Kind` cluster in the ['dev' Kustomize overlay notes](./deployment/overlays/dev/README.md). This allows for altering the configuration without touching any source-controlled files.
 
-For example:
-
-```sh
-docker build -f ./builder/Dockerfile.linux -t <some_docker_repo_name>/<aks-periscope-user-selected-test-name> .
-docker push <some_docker_repo_name>/<aks-periscope-user-selected-test-name> 
-```
-
-**Tip**: To avoid the need to push to a container registry, and to also avoid making edits to source-controlled files, Periscope can also be run against a local Docker image in a `Kind` cluster.
-
-```sh
-# Build
-docker build -f ./builder/Dockerfile.linux -t periscope-local .
-
-# Load the image in kind so that it can be found without pulling from a registry.
-# Include a --name argument here if not using the default kind cluster.
-kind load docker-image periscope-local
-
-# Create a SAS
-sub_id=...
-stg_account=...
-blob_container=...
-sas_expiry=`date -u -d "30 minutes" '+%Y-%m-%dT%H:%MZ'`
-sas=$(az storage account generate-sas \
-    --account-name $stg_account \
-    --subscription $sub_id \
-    --permissions rwdlacup \
-    --services b \
-    --resource-types sco \
-    --expiry $sas_expiry \
-    -o tsv)
-
-# Set up configuration data for Kustomize
-# (for further customization, the variables in the .env.config file can be configured to override the defaults)
-touch ./deployment/overlays/dev/.env.config
-cat <<EOF > ./deployment/overlays/dev/.env.secret.azureblob
-AZURE_BLOB_ACCOUNT_NAME=${stg_account}
-AZURE_BLOB_SAS_KEY=?${sas}
-AZURE_BLOB_CONTAINER_NAME=${blob_container}
-EOF
-
-# Ensure kubectl has the right cluster context
-export KUBECONFIG=...
-
-# Deploy
-kubectl apply -k ./deployment/overlays/dev
-```
+**Tip**: to test changes in a GitHub branch, there are instructions for running images published to a local GHCR registry in the ['ghcr' Kustomize overlay notes](./deployment/overlays/ghcr/README.md). This is especially useful for verifying Windows images.
 
 ## Dependent Consuming Tools and Working Contract
 
-`az-cli` and `vscode` both consume the `aks-periscope.yaml` file. If the `aks-periscope.yaml` file is changed, you will introduce breaking changes to `az-cli` and `vscode`.
+`az-cli` and `vscode` both require the Periscope resource definitions in a particular format. Rather than maintaining a consistent `aks-periscope.yaml` file for these tools, the ['mcr' Kustomize overlay notes](./deployment/overlays/mcr/README.md) give directions on how to build this.
 
 ## Debugging Guide
 

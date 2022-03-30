@@ -22,9 +22,9 @@ configMapGenerator:
 secretGenerator:
 - name: azureblob-secret
   literals:
-  - AZURE_BLOB_ACCOUNT_NAME="# <accountName, base64 encoded>"
-  - AZURE_BLOB_SAS_KEY="# <saskey, base64 encoded>"
-  - AZURE_BLOB_CONTAINER_NAME="# <containerName, string>"
+  - AZURE_BLOB_ACCOUNT_NAME=
+  - AZURE_BLOB_SAS_KEY=
+  - AZURE_BLOB_CONTAINER_NAME=
 
 generatorOptions:
   disableNameSuffixHash: true
