@@ -175,10 +175,8 @@ sas=$(az storage account generate-sas \
     -o tsv)
 
 # Set up configuration data for Kustomize
-# (for further customization, the variables in the .env.config.* files can be configured to override the defaults)
-touch ./deployment/overlays/dev/.env.config.common
-touch ./deployment/overlays/dev/.env.config.linux
-touch ./deployment/overlays/dev/.env.config.windows
+# (for further customization, the variables in the .env.config file can be configured to override the defaults)
+touch ./deployment/overlays/dev/.env.config
 cat <<EOF > ./deployment/overlays/dev/.env.secret.azureblob
 AZURE_BLOB_ACCOUNT_NAME=${stg_account}
 AZURE_BLOB_SAS_KEY=?${sas}

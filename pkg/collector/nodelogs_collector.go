@@ -2,6 +2,7 @@ package collector
 
 import (
 	"os"
+	"runtime"
 	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
@@ -31,7 +32,12 @@ func (collector *NodeLogsCollector) CheckSupported() error {
 
 // Collect implements the interface method
 func (collector *NodeLogsCollector) Collect() error {
-	nodeLogs := strings.Fields(os.Getenv("DIAGNOSTIC_NODELOGS_LIST"))
+	var nodeLogs []string
+	if runtime.GOOS == "linux" {
+		nodeLogs = strings.Fields(os.Getenv("DIAGNOSTIC_NODELOGS_LIST_LINUX"))
+	} else {
+		nodeLogs = strings.Fields(os.Getenv("DIAGNOSTIC_NODELOGS_LIST_WINDOWS"))
+	}
 
 	for _, nodeLog := range nodeLogs {
 

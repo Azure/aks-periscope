@@ -30,9 +30,7 @@ spec:
               fieldPath: spec.nodeName
         envFrom:
         - configMapRef:
-            name: common-config
-        - configMapRef:
-            name: linux-config
+            name: diagnostic-config
         - secretRef:
             name: azureblob-secret
         volumeMounts:
@@ -90,9 +88,7 @@ spec:
               fieldPath: spec.nodeName
         envFrom:
         - configMapRef:
-            name: common-config
-        - configMapRef:
-            name: windows-config
+            name: diagnostic-config
         - secretRef:
             name: azureblob-secret
         volumeMounts:

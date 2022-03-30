@@ -12,16 +12,12 @@ resources:
 - service-account.yaml
 
 configMapGenerator:
-- name: common-config
+- name: diagnostic-config
   literals:
   - DIAGNOSTIC_CONTAINERLOGS_LIST=kube-system
   - DIAGNOSTIC_KUBEOBJECTS_LIST=kube-system/pod kube-system/service kube-system/deployment
-- name: linux-config
-  literals:
-  - DIAGNOSTIC_NODELOGS_LIST="/var/log/azure/cluster-provision.log /var/log/cloud-init.log"
-- name: windows-config
-  literals:
-  - DIAGNOSTIC_NODELOGS_LIST="C:\AzureData\CustomDataSetupScript.log"
+  - DIAGNOSTIC_NODELOGS_LIST_LINUX="/var/log/azure/cluster-provision.log /var/log/cloud-init.log"
+  - DIAGNOSTIC_NODELOGS_LIST_WINDOWS="C:\AzureData\CustomDataSetupScript.log"
 
 secretGenerator:
 - name: azureblob-secret

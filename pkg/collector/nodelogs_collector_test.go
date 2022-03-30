@@ -22,7 +22,11 @@ func TestNodeLogsCollector(t *testing.T) {
 
 	c := NewNodeLogsCollector()
 
-	if err := os.Setenv("DIAGNOSTIC_NODELOGS_LIST", "/var/log/cloud-init.log"); err != nil {
+	if err := os.Setenv("DIAGNOSTIC_NODELOGS_LIST_LINUX", "/var/log/cloud-init.log"); err != nil {
+		t.Fatalf("Setenv: %v", err)
+	}
+
+	if err := os.Setenv("DIAGNOSTIC_NODELOGS_LIST_WINDOWS", "C:\\AzureData\\CustomDataSetupScript.log"); err != nil {
 		t.Fatalf("Setenv: %v", err)
 	}
 

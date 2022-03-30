@@ -11,18 +11,10 @@ secretGenerator:
 - name: azureblob-secret
   behavior: replace
   envs:
-  - .env.secret.azureblob
+  - .env.secret
 
 configMapGenerator:
-- name: common-config
+- name: diagnostic-config
   behavior: merge
   envs:
-  - .env.config.common
-- name: linux-config
-  behavior: merge
-  envs:
-  - .env.config.linux
-- name: windows-config
-  behavior: merge
-  envs:
-  - .env.config.windows
+  - .env.config
