@@ -2,6 +2,8 @@
 
 This overlay produces the Periscope resource specification for the production images in MCR. The output of this will be consumed by other tools, like VS Code and AZ CLI.
 
+**NOTE**: If the consuming tools are altered so that they use `Kustomize` directly, this overlay will not be needed.
+
 The storage account data is not known at this time. The consuming tools are responsible for substituting all configuration data into the output, so this ensures we produce well-known placeholders for the various settings.
 
 ```sh
