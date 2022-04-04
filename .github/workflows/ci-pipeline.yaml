@@ -110,7 +110,7 @@ jobs:
           resources:
           - ../../base
           images:
-          - name: mcr.microsoft.com/aks/periscope
+          - name: periscope-linux
             newName: localhost:5000/periscope
             newTag: "${{ github.run_id }}"
           EOF
