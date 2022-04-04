@@ -50,6 +50,7 @@ To make both the Windows and Linux images available to the cluster, they must be
 1. Push the branch you want to deploy to your local fork of the Periscope repository.
 2. Run the [Building and Pushing to GHCR](../../../.github/workflows/build-and-publish.yml) workflow in GitHub Actions (making sure to select the correct branch).
 3. Take note of the published image tag (e.g. '0.0.8').
+4. [First time only] Under Package Settings in GitHub, set the package visibility to 'public'.
 
 ## Setting up Configuration Data
 
