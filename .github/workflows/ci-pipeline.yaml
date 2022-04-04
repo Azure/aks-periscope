@@ -112,7 +112,7 @@ jobs:
           images:
           - name: mcr.microsoft.com/aks/periscope
             newName: localhost:5000/periscope
-            newTag: ${{ github.run_id }}
+            newTag: "${{ github.run_id }}"
           EOF
           kubectl apply -k ./deployment/overlays/ci
           kubectl -n aks-periscope describe ds aks-periscope
