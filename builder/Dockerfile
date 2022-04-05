@@ -1,5 +1,6 @@
 # Builder
 FROM golang:alpine AS builder
+RUN apk add git
 
 ENV GO111MODULE=on \
     CGO_ENABLED=0 \
