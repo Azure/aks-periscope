@@ -40,6 +40,10 @@ sas=$(az storage account generate-sas \
     --resource-types sco \
     --expiry $sas_expiry \
     -o tsv)
+
+# Create a clean overlay folder
+rm -rf ./deployment/overlays/temp && mkdir ./deployment/overlays/temp
+
 # Set up storage configuration data for Kustomize
 cat <<EOF > ./deployment/overlays/temp/.env.secret
 AZURE_BLOB_ACCOUNT_NAME=${stg_account}
@@ -64,12 +68,10 @@ export IMAGE_TAG=...
 export IMAGE_NAME=ghcr.io/${REPO_USERNAME}/aks/periscope
 ```
 
-We then generate a clean overlay in `overlays/temp`:
+We then generate the `kustomization.yaml` and dependencies in `overlays/temp`:
 
 ```sh
-rm -rf ./deployment/overlays/temp && mkdir ./deployment/overlays/temp
-touch ./deployment/overlays/temp/.env.config
-
+touch ./deployment/overlays/temp/.env.config # In case it doesn't exist already
 cat ./deployment/overlays/dynamic-image/kustomization.template.yaml | envsubst > ./deployment/overlays/temp/kustomization.yaml
 ```
 
