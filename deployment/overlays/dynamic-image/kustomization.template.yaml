@@ -1,0 +1,22 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+bases:
+- ../../base
+
+images:
+- name: periscope
+  newName: ${IMAGE_NAME}
+  newTag: ${IMAGE_TAG}
+
+secretGenerator:
+- name: azureblob-secret
+  behavior: replace
+  envs:
+  - .env.secret
+
+configMapGenerator:
+- name: diagnostic-config
+  behavior: merge
+  envs:
+  - .env.config

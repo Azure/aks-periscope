@@ -1,0 +1,29 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: aks-periscope
+
+resources:
+- namespace.yaml
+- cluster-role.yaml
+- cluster-role-binding.yaml
+- crd.yaml
+- daemon-set.yaml
+- service-account.yaml
+
+configMapGenerator:
+- name: diagnostic-config
+  literals:
+  - DIAGNOSTIC_CONTAINERLOGS_LIST=kube-system
+  - DIAGNOSTIC_KUBEOBJECTS_LIST=kube-system/pod kube-system/service kube-system/deployment
+  - DIAGNOSTIC_NODELOGS_LIST="/var/log/azure/cluster-provision.log /var/log/cloud-init.log"
+
+secretGenerator:
+- name: azureblob-secret
+  literals:
+  - AZURE_BLOB_ACCOUNT_NAME=
+  - AZURE_BLOB_SAS_KEY=
+  - AZURE_BLOB_CONTAINER_NAME=
+
+generatorOptions:
+  disableNameSuffixHash: true

@@ -1,26 +1,15 @@
-name: Building and pushing mcr
+name: Building and Pushing to MCR
 on: [workflow_dispatch]
 
 permissions:
       id-token: write
       contents: read
 
-env:
-  GO_VERSION: '1.16.1'
-
 jobs: 
   build-and-deploy:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: Download modules
-        run: go mod download
-      - name: Build project
-        run: go build ./cmd/aks-periscope
       - name: Get Changelog Entry
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
@@ -39,8 +28,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: 'Run Azure CLI commands'
         run: |
-          docker build -f ./builder/Dockerfile -t public/aks/periscope .
-          docker tag public/aks/periscope ${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          docker build -f ./builder/Dockerfile -t ${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }} .
           az acr login -n ${{ secrets.AZURE_REGISTRY_SERVER }}
           docker push ${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
           echo "acr push done"

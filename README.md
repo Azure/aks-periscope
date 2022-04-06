@@ -141,18 +141,36 @@ To locally build this project from the root of this repository:
 CGO_ENABLED=0 GOOS=linux go build -mod=vendor github.com/Azure/aks-periscope/cmd/aks-periscope
 ```
 
-**Tip**: In order to test local changes, user can build the local image via `Dockerfile` and then push it to your local hub. This way, a user should be able to reference this test image in the `deployment\aks-periscope.yaml` `containers` property `image` attribute reference to your published test docker image. 
+**Tip**: To test local changes, there are instructions for running Periscope in a `Kind` cluster in the ['dev' Kustomize overlay notes](./deployment/overlays/dev/README.md). This allows for altering the configuration without touching any source-controlled files.
 
-For example:
-
-```sh
-docker build -f ./builder/Dockerfile -t <some_docker_repo_name>/<aks-periscope-user-selected-test-name> .
-docker push <some_docker_repo_name>/<aks-periscope-user-selected-test-name> 
-```
+**Tip**: To test changes in a GitHub branch, there are instructions for running images published to a local GHCR registry in the ['dynamic-image' Kustomize overlay notes](./deployment/overlays/dynamic-image/README.md#ghcr).
 
 ## Dependent Consuming Tools and Working Contract
 
-`az-cli` and `vscode` both consume the `aks-periscope.yaml` file. If the `aks-periscope.yaml` file is changed, you will introduce breaking changes to `az-cli` and `vscode`.
+Dependent tools need access to an immutable, versioned Periscope resource definition. We provide two ways to obtain this:
+1. [Deprecated] Build the `external` overlay using instructions [here](./deployment/overlays/external/README.md) and include the output as a static resource in consuming tools. This will require runtime string substitution to configure appropriately for any given deployment, before being deployed using `kubectl -f`.
+2. Build a `Kustomize` overlay at runtime, referencing `https://github.com/azure/aks-periscope//deployment/base?ref={RELEASE_TAG}` as the base, and the appropriate MCR image tags for that release, as well as all configuration and secrets. This can then be deployed using `kubectl -k`. Example:
+```yaml
+resources:
+- https://github.com/azure/aks-periscope//deployment/base?ref={RELEASE_TAG}
+images:
+- name: periscope
+  newName: mcr.microsoft.com/aks/periscope
+  newTag: "{IMAGE_TAG}"
+secretGenerator:
+- name: azureblob-secret
+  behavior: replace
+  literals:
+  - AZURE_BLOB_ACCOUNT_NAME={STG_ACCOUNT}
+  - AZURE_BLOB_SAS_KEY=?{STG_SAS}
+  - AZURE_BLOB_CONTAINER_NAME={STG_CONTAINER}
+configMapGenerator:
+- name: diagnostic-config
+  behavior: merge
+  literals:
+  # Only specify those which should be overridden
+  - DIAGNOSTIC_KUBEOBJECTS_LIST={KUBEOBJECTS_OVERRIDE}
+```
 
 ## Debugging Guide
 
@@ -160,10 +178,10 @@ This section intends to add some tips for debugging pod logs using aks-periscope
 
 Scenario, where `user A` uses **expired** `sas-token` and converts into `base64` to be used in the deployment file.
 
-In the scenario above, the `kubectl apply -f deployment-file.yaml` will show no error but the output which will look like the one below.
+In the scenario above, the `kubectl apply -k ./deployment/overlays/dev` will show no error but the output which will look like the one below.
 
 ```sh
-❯ kubectl apply -f deployment/aks-periscope.yaml
+❯ kubectl apply -k ./deployment/overlays/dev
 namespace/aks-periscope created
 serviceaccount/aks-periscope-service-account created
 clusterrole.rbac.authorization.k8s.io/aks-periscope-role unchanged
@@ -171,18 +189,16 @@ clusterrolebinding.rbac.authorization.k8s.io/aks-periscope-role-binding unchange
 clusterrolebinding.rbac.authorization.k8s.io/aks-periscope-role-binding-view unchanged
 daemonset.apps/aks-periscope created
 secret/azureblob-secret created
-configmap/containerlogs-config created
-configmap/kubeobjects-config created
-configmap/nodelogs-config created
+configmap/diagnostic-config created
 customresourcedefinition.apiextensions.k8s.io/diagnostics.aks-periscope.azure.github.com unchanged
 ```
 
-To debug the `pod` logs in the `aks-periscope` namespace deployed in the cluster:
+To debug the `pod` logs in the `aks-periscope-dev` namespace deployed in the cluster:
 
-   * To get the pods in `aks-periscope` namespace:
-       * `kubectl get pods -n aks-periscope`
+   * To get the pods in `aks-periscope-dev` namespace:
+       * `kubectl get pods -n aks-periscope-dev`
    * To check the logs in each of the deployed pods:
-       * `kubectl logs <name-of-pod> -n aks-periscope`
+       * `kubectl logs <name-of-pod> -n aks-periscope-dev`
 
 Feel free to contact aksperiscope@microsoft.com or open an issue with any feedback or questions about AKS Periscope. This is currently a work in progress, but look out for more capabilities to come!
 

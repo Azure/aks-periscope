@@ -1,0 +1,34 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: aks-periscope-dev
+
+bases:
+- ../../base
+
+patches:
+- target:
+    group: apps
+    kind: DaemonSet
+    name: aks-periscope
+    version: v1
+  patch: |-
+    - op: replace
+      path: '/spec/template/spec/containers/0/imagePullPolicy'
+      value: Never
+images:
+- name: periscope
+  newName: periscope-local
+  newTag: latest
+
+secretGenerator:
+- name: azureblob-secret
+  behavior: replace
+  envs:
+  - .env.secret
+
+configMapGenerator:
+- name: diagnostic-config
+  behavior: merge
+  envs:
+  - .env.config
