@@ -112,8 +112,8 @@ jobs:
           export IMAGE_NAME=localhost:5000/periscope
           export IMAGE_TAG=${{ github.run_id }}
           cat ./deployment/overlays/dynamic-image/kustomization.template.yaml | envsubst > ./deployment/overlays/temp/kustomization.yaml
-          touch ./deployment/overlays/dynamic-image/.env.config
-          touch ./deployment/overlays/dynamic-image/.env.secret
+          touch ./deployment/overlays/temp/.env.config
+          touch ./deployment/overlays/temp/.env.secret
           kubectl apply -k ./deployment/overlays/temp
           kubectl -n aks-periscope describe ds aks-periscope
           kubectl -n aks-periscope wait po --all --for condition=ready --timeout=240s
