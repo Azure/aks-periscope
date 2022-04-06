@@ -108,12 +108,17 @@ jobs:
         # (placing the overlay in a gitignore'd location so this can be run locally
         # without editing source-controlled files).
         run: |
+          # Create Kustomize overlay folder
           mkdir -p ./deployment/overlays/temp
+          touch ./deployment/overlays/temp/.env.config
+          touch ./deployment/overlays/temp/.env.secret
+
+          # Build kustomization yaml
           export IMAGE_NAME=localhost:5000/periscope
           export IMAGE_TAG=${{ github.run_id }}
           cat ./deployment/overlays/dynamic-image/kustomization.template.yaml | envsubst > ./deployment/overlays/temp/kustomization.yaml
-          touch ./deployment/overlays/temp/.env.config
-          touch ./deployment/overlays/temp/.env.secret
+
+          # Deploy and wait for readiness
           kubectl apply -k ./deployment/overlays/temp
           kubectl -n aks-periscope describe ds aks-periscope
           kubectl -n aks-periscope wait po --all --for condition=ready --timeout=240s

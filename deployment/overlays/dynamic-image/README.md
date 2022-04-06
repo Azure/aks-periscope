@@ -41,7 +41,7 @@ sas=$(az storage account generate-sas \
     --expiry $sas_expiry \
     -o tsv)
 # Set up storage configuration data for Kustomize
-cat <<EOF > ./deployment/overlays/dynamic-image/.env.secret
+cat <<EOF > ./deployment/overlays/temp/.env.secret
 AZURE_BLOB_ACCOUNT_NAME=${stg_account}
 AZURE_BLOB_SAS_KEY=?${sas}
 AZURE_BLOB_CONTAINER_NAME=${blob_container}
@@ -51,7 +51,7 @@ EOF
 We can also override diagnostic configuration variables:
 
 ```sh
-echo "DIAGNOSTIC_KUBEOBJECTS_LIST=kube-system default" > ./deployment/overlays/dynamic-image/.env.config
+echo "DIAGNOSTIC_KUBEOBJECTS_LIST=kube-system default" > ./deployment/overlays/temp/.env.config
 ```
 
 ## Deploying Periscope
@@ -71,7 +71,6 @@ rm -rf ./deployment/overlays/temp && mkdir ./deployment/overlays/temp
 touch ./deployment/overlays/temp/.env.config
 
 cat ./deployment/overlays/dynamic-image/kustomization.template.yaml | envsubst > ./deployment/overlays/temp/kustomization.yaml
-cp ./deployment/overlays/dynamic-image/.env.* ./deployment/overlays/temp/
 ```
 
 And finally deploy the resources:
