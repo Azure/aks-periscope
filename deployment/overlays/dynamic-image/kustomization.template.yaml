@@ -7,7 +7,7 @@ bases:
 images:
 - name: periscope
   newName: ${IMAGE_NAME}
-  newTag: ${IMAGE_TAG}
+  newTag: "${IMAGE_TAG}"
 
 secretGenerator:
 - name: azureblob-secret

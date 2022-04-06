@@ -7,9 +7,9 @@ bases:
 - ../../base
 
 images:
-- name: periscope-linux
+- name: periscope
   newName: mcr.microsoft.com/aks/periscope
-  newTag: ${IMAGE_TAG}
+  newTag: "${IMAGE_TAG}"
 
 secretGenerator:
 - name: azureblob-secret
