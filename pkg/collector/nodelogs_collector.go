@@ -28,14 +28,17 @@ func (collector *NodeLogsCollector) Collect() error {
 	nodeLogs := strings.Fields(os.Getenv("DIAGNOSTIC_NODELOGS_LIST"))
 
 	for _, nodeLog := range nodeLogs {
+		normalizedNodeLog := strings.Replace(nodeLog, "/", "_", -1)
+		if normalizedNodeLog[0] == '_' {
+			normalizedNodeLog = normalizedNodeLog[1:]
+		}
 
 		output, err := utils.ReadFileContent(nodeLog)
 		if err != nil {
 			return err
 		}
 
-		collector.data["nodeLog"] = output
-
+		collector.data[normalizedNodeLog] = output
 	}
 
 	return nil
