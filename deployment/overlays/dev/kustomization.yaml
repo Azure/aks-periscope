@@ -16,9 +16,13 @@ patches:
     - op: replace
       path: '/spec/template/spec/containers/0/imagePullPolicy'
       value: Never
+
 images:
-- name: periscope
+- name: periscope-linux
   newName: periscope-local
+  newTag: latest
+- name: periscope-windows
+  newName: mcr.microsoft.com/aks/periscope-win
   newTag: latest
 
 secretGenerator:

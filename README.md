@@ -143,7 +143,7 @@ CGO_ENABLED=0 GOOS=linux go build -mod=vendor github.com/Azure/aks-periscope/cmd
 
 **Tip**: To test local changes, there are instructions for running Periscope in a `Kind` cluster in the ['dev' Kustomize overlay notes](./deployment/overlays/dev/README.md). This allows for altering the configuration without touching any source-controlled files.
 
-**Tip**: To test changes in a GitHub branch, there are instructions for running images published to a local GHCR registry in the ['dynamic-image' Kustomize overlay notes](./deployment/overlays/dynamic-image/README.md#ghcr).
+**Tip**: To test changes in a GitHub branch, there are instructions for running images published to a local GHCR registry in the ['dynamic-image' Kustomize overlay notes](./deployment/overlays/dynamic-image/README.md#ghcr).This is especially useful for verifying Windows images.
 
 ## Dependent Consuming Tools and Working Contract
 

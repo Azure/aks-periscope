@@ -35,6 +35,10 @@ func (collector *PDBCollector) GetName() string {
 	return "poddisruptionbudget"
 }
 
+func (collector *PDBCollector) CheckSupported() error {
+	return nil
+}
+
 // Collect implements the interface method
 func (collector *PDBCollector) Collect() error {
 	// Creates the clientset

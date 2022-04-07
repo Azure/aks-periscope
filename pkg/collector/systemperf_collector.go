@@ -40,6 +40,10 @@ func (collector *SystemPerfCollector) GetName() string {
 	return "systemperf"
 }
 
+func (collector *SystemPerfCollector) CheckSupported() error {
+	return nil
+}
+
 // Collect implements the interface method
 func (collector *SystemPerfCollector) Collect() error {
 	metric, err := metrics.NewForConfig(collector.kubeconfig)

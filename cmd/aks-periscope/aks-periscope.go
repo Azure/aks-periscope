@@ -87,6 +87,12 @@ func main() {
 	collectorGrp := new(sync.WaitGroup)
 
 	for _, c := range collectors {
+		if err := c.CheckSupported(); err != nil {
+			// Log the reason why this collector is not supported, and skip to the next
+			log.Printf("Skipping unsupported collector %s: %v", c.GetName(), err)
+			continue
+		}
+
 		dataProducers = append(dataProducers, c)
 		collectorGrp.Add(1)
 		go func(c interfaces.Collector) {

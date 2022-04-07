@@ -7,8 +7,11 @@ bases:
 - ../../base
 
 images:
-- name: periscope
+- name: periscope-linux
   newName: mcr.microsoft.com/aks/periscope
+  newTag: "${IMAGE_TAG}"
+- name: periscope-windows
+  newName: mcr.microsoft.com/aks/periscope-win
   newTag: "${IMAGE_TAG}"
 
 secretGenerator:
@@ -30,6 +33,17 @@ patches:
     group: apps
     kind: DaemonSet
     name: aks-periscope
+    version: v1
+  patch: |-
+    - op: add
+      path: '/spec/template/spec/containers/0/envFrom/-'
+      value:
+        configMapRef:
+          name: storage-config
+- target:
+    group: apps
+    kind: DaemonSet
+    name: aks-periscope-win
     version: v1
   patch: |-
     - op: add

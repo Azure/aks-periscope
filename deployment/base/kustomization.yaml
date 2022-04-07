@@ -16,7 +16,8 @@ configMapGenerator:
   literals:
   - DIAGNOSTIC_CONTAINERLOGS_LIST=kube-system
   - DIAGNOSTIC_KUBEOBJECTS_LIST=kube-system/pod kube-system/service kube-system/deployment
-  - DIAGNOSTIC_NODELOGS_LIST="/var/log/azure/cluster-provision.log /var/log/cloud-init.log"
+  - DIAGNOSTIC_NODELOGS_LIST_LINUX="/var/log/azure/cluster-provision.log /var/log/cloud-init.log"
+  - DIAGNOSTIC_NODELOGS_LIST_WINDOWS="C:\AzureData\CustomDataSetupScript.log"
 
 secretGenerator:
 - name: azureblob-secret

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -29,8 +31,6 @@ const (
 	AzureStackCloudName = "AzureStackCloud"
 )
 
-var GetHostNameFunc = GetHostNameSingleton()
-
 // Azure defines Azure configuration
 type Azure struct {
 	Cloud string `json:"cloud"`
@@ -46,9 +46,47 @@ type CommandOutputStreams struct {
 	Stderr string
 }
 
+type KnownFilePaths struct {
+	AzureJson           string
+	AzureStackCloudJson string
+	Err                 error
+}
+
+var knownFilePaths = GetKnownPathsSingleton()
+
+// GetKnownPathsSingleton get known file paths
+func GetKnownPathsSingleton() *KnownFilePaths {
+	var once sync.Once
+	var knownFilePaths *KnownFilePaths
+	once.Do(func() {
+		os := runtime.GOOS
+		switch os {
+		case "windows":
+			knownFilePaths = &KnownFilePaths{
+				AzureJson:           "/k/azure.json",
+				AzureStackCloudJson: "/k/azurestackcloud.json",
+			}
+		case "linux":
+			knownFilePaths = &KnownFilePaths{
+				AzureJson:           "/etc/kubernetes/azure.json",
+				AzureStackCloudJson: "/etc/kubernetes/azurestackcloud.json",
+			}
+		default:
+			knownFilePaths = &KnownFilePaths{
+				Err: fmt.Errorf("Unexpected OS: %s", os),
+			}
+		}
+	})
+
+	return knownFilePaths
+}
+
 // IsAzureStackCloud returns true if the application is running on Azure Stack Cloud
 func IsAzureStackCloud() bool {
-	azureFile, err := RunCommandOnHost("cat", "/etc/kubernetes/azure.json")
+	if knownFilePaths.Err != nil {
+		return false
+	}
+	azureFile, err := os.ReadFile(knownFilePaths.AzureJson)
 	if err != nil {
 		return false
 	}
@@ -87,54 +125,36 @@ func CopyFileFromHost(source, destination string) error {
 
 // GetStorageEndpointSuffix returns the SES url from the JSON file as a string
 func GetStorageEndpointSuffix() string {
+	if knownFilePaths.Err != nil {
+		log.Fatalf("Unable to determine configuration file paths: %v", knownFilePaths.Err)
+	}
+
 	if IsAzureStackCloud() {
-		ascFile, err := RunCommandOnHost("cat", "/etc/kubernetes/azurestackcloud.json")
+		ascFile, err := os.ReadFile(knownFilePaths.AzureStackCloudJson)
 		if err != nil {
-			log.Fatalf("unable to locate azurestackcloud.json to extract storage endpoint suffix: %v", err)
+			log.Fatalf("unable to locate %s to extract storage endpoint suffix: %v", knownFilePaths.AzureStackCloudJson, err)
 		}
 		var azurestackcloud AzureStackCloud
 		if err = json.Unmarshal([]byte(ascFile), &azurestackcloud); err != nil {
-			log.Fatalf("unable to read azurestackcloud.json file: %v", err)
+			log.Fatalf("unable to read %s file: %v", knownFilePaths.AzureStackCloudJson, err)
 		}
 		return azurestackcloud.StorageEndpointSuffix
 	}
 	return PublicAzureStorageEndpointSuffix
 }
 
-type HostName struct {
-	HostName string
-	Err      error
-}
-
-var singletonHostName *HostName
-var once sync.Once
-
-// GetHostNameSingleton get host name singleton use
-func GetHostNameSingleton() *HostName {
-	once.Do(func() {
-		hostname, err := RunCommandOnHost("cat", "/etc/hostname")
-
-		if hostname != "" {
-			hostname = strings.TrimSuffix(string(hostname), "\n")
-		}
-
-		singletonHostName = &HostName{
-			HostName: hostname,
-			Err:      err,
-		}
-	})
-
-	return singletonHostName
-}
-
 // GetHostName get host name
 func GetHostName() (string, error) {
-	hostName := GetHostNameFunc
-	if hostName.Err != nil {
-		return "", fmt.Errorf("Fail to get host name: %+v", hostName.Err)
+	// We can't use `os.Hostname` for this, because this gives us the _container_ hostname (i.e. the pod name, by default).
+	// An earlier approach was to `cat /etc/hostname` but that will not work for Windows containers.
+	// Instead we expect the host node name to be exposed to the pod in an environment variable, via the 'downward API', see:
+	// https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#use-pod-fields-as-values-for-environment-variables
+	hostName := os.Getenv("HOST_NODE_NAME")
+	if len(hostName) == 0 {
+		return "", errors.New("HOST_NODE_NAME value not set for container.")
 	}
 
-	return hostName.HostName, nil
+	return hostName, nil
 }
 
 // RunCommandOnHost runs a command on host system

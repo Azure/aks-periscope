@@ -44,6 +44,10 @@ func (collector *PodsContainerLogsCollector) GetName() string {
 	return "podscontainerlogs"
 }
 
+func (collector *PodsContainerLogsCollector) CheckSupported() error {
+	return nil
+}
+
 // Collect implements the interface method
 func (collector *PodsContainerLogsCollector) Collect() error {
 	containerNamespaces := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))

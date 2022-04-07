@@ -46,6 +46,10 @@ func (collector *HelmCollector) GetName() string {
 	return "helm"
 }
 
+func (collector *HelmCollector) CheckSupported() error {
+	return nil
+}
+
 // Collect implements the interface method
 func (collector *HelmCollector) Collect() error {
 	cliOpt := &genericclioptions.ConfigFlags{

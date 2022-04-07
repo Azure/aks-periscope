@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"runtime"
 	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
@@ -23,6 +24,16 @@ func NewSmiCollector() *SmiCollector {
 
 func (collector *SmiCollector) GetName() string {
 	return "smi"
+}
+
+func (collector *SmiCollector) CheckSupported() error {
+	// This is not currently supported on Windows because it launches `kubectl` as a separate process (within GetResourceList).
+	// If/when it is reimplemented using the go client API for k8s, we can re-enable this.
+	if runtime.GOOS != "linux" {
+		return fmt.Errorf("Unsupported OS: %s", runtime.GOOS)
+	}
+
+	return nil
 }
 
 func (collector *SmiCollector) GetData() map[string]string {

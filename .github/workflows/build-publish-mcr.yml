@@ -7,7 +7,21 @@ permissions:
 
 jobs: 
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-latest, windows-2019]
+        include:
+        - os: ubuntu-latest
+          file: ./builder/Dockerfile.linux
+          imagename: 'aks/periscope'
+        - os: windows-2019
+          file: ./builder/Dockerfile.windows
+          imagename: 'aks/periscope-win'
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v2
       - name: Get Changelog Entry
@@ -28,7 +42,7 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: 'Run Azure CLI commands'
         run: |
-          docker build -f ./builder/Dockerfile -t ${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }} .
+          docker build -f ${{ matrix.file }} -t ${{ secrets.AZURE_REGISTRY_SERVER }}/public/${{ matrix.imagename }}:${{ steps.changelog_reader.outputs.version }} .
           az acr login -n ${{ secrets.AZURE_REGISTRY_SERVER }}
-          docker push ${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          docker push ${{ secrets.AZURE_REGISTRY_SERVER }}/public/${{ matrix.imagename }}:${{ steps.changelog_reader.outputs.version }}
           echo "acr push done"

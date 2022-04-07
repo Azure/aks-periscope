@@ -1,6 +1,9 @@
 package collector
 
 import (
+	"fmt"
+	"runtime"
+
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -18,6 +21,17 @@ func NewSystemLogsCollector() *SystemLogsCollector {
 
 func (collector *SystemLogsCollector) GetName() string {
 	return "systemlogs"
+}
+
+func (collector *SystemLogsCollector) CheckSupported() error {
+	// This uses `journalctl` to retrieve system logs, which is not available on Windows.
+	// It may be possible in future to identify useful Windows log files and configure this to
+	// output those.
+	if runtime.GOOS != "linux" {
+		return fmt.Errorf("Unsupported OS: %s", runtime.GOOS)
+	}
+
+	return nil
 }
 
 // Collect implements the interface method
