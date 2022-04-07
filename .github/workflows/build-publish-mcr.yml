@@ -6,7 +6,7 @@ permissions:
       contents: read
 
 jobs: 
-  build-and-deploy:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
