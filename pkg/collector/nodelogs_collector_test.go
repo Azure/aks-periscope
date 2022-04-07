@@ -7,11 +7,14 @@ import (
 )
 
 func TestNodeLogsCollector(t *testing.T) {
-	file1 := "/var/log/cloud-init.log"
-	file1Key := "var_log_cloud-init.log"
+	// TODO: Avoid using real files for testing. These are chosen because they happen to exist in
+	// common Linux distros (including Ubuntu on WSL) as well as the Ubuntu GitHub workflow host,
+	// but they won't exist in every environment we might wish to run tests.
+	file1 := "/var/log/alternatives.log"
+	file1Key := "var_log_alternatives.log"
 
-	file2 := "/var/log/dockerd.log"
-	file2Key := "var_log_dockerd.log"
+	file2 := "/var/log/dpkg.log"
+	file2Key := "var_log_dpkg.log"
 
 	tests := []struct {
 		name          string

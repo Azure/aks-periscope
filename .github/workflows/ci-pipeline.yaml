@@ -39,42 +39,24 @@ jobs:
   tests:
     runs-on: ubuntu-latest
     steps:
-      - name: REMOVE ME 1
-        run: |
-          ls -al /var/log/
       - uses: actions/checkout@v2
         with:
             fetch-depth: 2
-      - name: REMOVE ME 2
-        run: |
-          ls -al /var/log/
       - uses: azure/setup-kubectl@v1
-      - name: REMOVE ME 3
-        run: |
-          ls -al /var/log/
       - name: Set up Go
         uses: actions/setup-go@v2
         with:
           go-version: ${{ env.GO_VERSION }}
-      - name: REMOVE ME 4
-        run: |
-          ls -al /var/log/
       - name: Install Helm
         uses: azure/setup-helm@v1
         with:
           version: ${{ env.HELM_VERSION }}
-      - name: REMOVE ME 5
-        run: |
-          ls -al /var/log/
       - name: Install Packages
         run: |
           curl -Lo ./kind https://kind.sigs.k8s.io/dl/${{ env.KIND_VERSION }}/kind-linux-amd64
           chmod +x ./kind
 
           curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
-      - name: REMOVE ME 6
-        run: |
-          ls -al /var/log/
       - name: Start kind
         run: |
           docker run -d --restart=always -p "127.0.0.1:5000:5000" --name "registry" registry:2
@@ -107,16 +89,10 @@ jobs:
               help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
           EOF
         continue-on-error: false
-      - name: REMOVE ME 7
-        run: |
-          ls -al /var/log/
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
         with:
           driver-opts: network=host
-      - name: REMOVE ME 8
-        run: |
-          ls -al /var/log/
       - name: Build and push to local registry
         uses: docker/build-push-action@v2
         with:
@@ -124,31 +100,19 @@ jobs:
           push: true
           tags: localhost:5000/periscope:${{ github.run_id }}
           file: ./builder/Dockerfile
-      - name: REMOVE ME 9
-        run: |
-          ls -al /var/log/
       - name: Deploy dummy helm chart for tests
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update
           helm install happy-panda bitnami/wordpress --namespace default
-      - name: REMOVE ME 10
-        run: |
-          ls -al /var/log/
       - name: Deploy AKS Periscope
         run: |
           (cd ./deployment && kustomize edit set image mcr.microsoft.com/aks/periscope=localhost:5000/periscope:${{ github.run_id }})
           kubectl apply -f <(kustomize build ./deployment)
           kubectl -n aks-periscope describe ds aks-periscope
           kubectl -n aks-periscope wait po --all --for condition=ready --timeout=240s
-      - name: REMOVE ME 11
-        run: |
-          ls -al /var/log/
       - name: Go tests
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-      - name: REMOVE ME 12
-        run: |
-          ls -al /var/log/
       - name: Upload coverage to Codecov
         run: bash <(curl -s https://codecov.io/bash) -C $(Build.SourceVersion)
       - name: Stop kind
