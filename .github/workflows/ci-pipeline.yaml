@@ -55,8 +55,6 @@ jobs:
         run: |
           curl -Lo ./kind https://kind.sigs.k8s.io/dl/${{ env.KIND_VERSION }}/kind-linux-amd64
           chmod +x ./kind
-
-          curl -s "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh" | bash
       - name: Start kind
         run: |
           docker run -d --restart=always -p "127.0.0.1:5000:5000" --name "registry" registry:2
@@ -106,9 +104,22 @@ jobs:
           helm repo update
           helm install happy-panda bitnami/wordpress --namespace default
       - name: Deploy AKS Periscope
+        # Deploy using the Kustomize functionality built in to kubectl
+        # (placing the overlay in a gitignore'd location so this can be run locally
+        # without editing source-controlled files).
         run: |
-          (cd ./deployment && kustomize edit set image mcr.microsoft.com/aks/periscope=localhost:5000/periscope:${{ github.run_id }})
-          kubectl apply -f <(kustomize build ./deployment)
+          # Create Kustomize overlay folder
+          mkdir -p ./deployment/overlays/temp
+          touch ./deployment/overlays/temp/.env.config
+          touch ./deployment/overlays/temp/.env.secret
+
+          # Build kustomization yaml
+          export IMAGE_NAME=localhost:5000/periscope
+          export IMAGE_TAG=${{ github.run_id }}
+          cat ./deployment/overlays/dynamic-image/kustomization.template.yaml | envsubst > ./deployment/overlays/temp/kustomization.yaml
+
+          # Deploy and wait for readiness
+          kubectl apply -k ./deployment/overlays/temp
           kubectl -n aks-periscope describe ds aks-periscope
           kubectl -n aks-periscope wait po --all --for condition=ready --timeout=240s
       - name: Go tests

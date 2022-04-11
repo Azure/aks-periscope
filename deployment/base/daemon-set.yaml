@@ -16,21 +16,18 @@ spec:
       serviceAccountName: aks-periscope-service-account
       hostPID: true
       nodeSelector:
-        beta.kubernetes.io/os: linux
+        kubernetes.io/os: linux
       containers:
       - name: aks-periscope
-        image: mcr.microsoft.com/aks/periscope
+        image: periscope
         securityContext:
           privileged: true
         imagePullPolicy: Always
-        env: []
         envFrom:
         - configMapRef:
-            name: containerlogs-config
-        - configMapRef:
-            name: kubeobjects-config
-        - configMapRef:
-            name: nodelogs-config
+            name: diagnostic-config
+        - secretRef:
+            name: azureblob-secret
         volumeMounts:
         - name: varlog
           mountPath: /var/log

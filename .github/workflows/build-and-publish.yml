@@ -1,39 +1,16 @@
 # This is a basic workflow to help you get started with Actions
-name: Bundle building and pushing
+name: Building and Pushing to GHCR
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the main branch
 on: [workflow_dispatch]
 
-env:
-  GO_VERSION: '1.16.1'
-
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  lint:
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: Linter
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: latest
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - name: Set up Go
-        uses: actions/setup-go@v2
-        with:
-          go-version: ${{ env.GO_VERSION }}
-      - name: Download modules
-        run: go mod download
-      - name: Build project
-        run: go build ./cmd/aks-periscope
       - name: Get Changelog Entry
         id: changelog_reader
         uses: mindsers/changelog-reader-action@v2
@@ -43,6 +20,7 @@ jobs:
       - name: Display output
         run: |
           echo "Version: ${{ steps.changelog_reader.outputs.version }}"
+          echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
       # Lowercase my github ownername.
       - name: Set Environment Variables
         run: |
@@ -59,6 +37,5 @@ jobs:
       # Note the below automatically sets the registry to the local GH registry of the org name. 
       # Currently, for pure gitops reconstructing this runtime setting will require looking at the repository owner of the commit
         run: |
-          docker build -f ./builder/Dockerfile -t aks/periscope .
-          docker tag aks/periscope ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          docker build -f ./builder/Dockerfile -t ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }} .
           docker push ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}

@@ -334,3 +334,13 @@ ASALocalRun/
 
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
+
+# CI files
+helm
+kind
+*.tar.gz
+deployment/overlays/temp
+
+# Local deployment configuration files
+**/.env
+**/.env.*
