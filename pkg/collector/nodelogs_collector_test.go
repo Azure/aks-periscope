@@ -1,64 +1,100 @@
 package collector
 
 import (
-	"fmt"
-	"os"
 	"testing"
+
+	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
-func TestNodeLogsCollector(t *testing.T) {
-	// TODO: Avoid using real files for testing. These are chosen because they happen to exist in
-	// common Linux distros (including Ubuntu on WSL) as well as the Ubuntu GitHub workflow host,
-	// but they won't exist in every environment we might wish to run tests.
-	file1 := "/var/log/alternatives.log"
-	file1Key := "var_log_alternatives.log"
+func TestNodeLogsCollectorGetName(t *testing.T) {
+	const expectedName = "nodelogs"
 
-	file2 := "/var/log/dpkg.log"
-	file2Key := "var_log_dpkg.log"
+	c := NewNodeLogsCollector(nil, nil)
+	actualName := c.GetName()
+	if actualName != expectedName {
+		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+	}
+}
+
+func TestNodeLogsCollectorCheckSupported(t *testing.T) {
+	c := NewNodeLogsCollector(nil, nil)
+	err := c.CheckSupported()
+	if err != nil {
+		t.Errorf("Error checking supported: %v", err)
+	}
+}
+
+func TestNodeLogsCollectorCollect(t *testing.T) {
+	const (
+		file1Name        = "/var/log/test1.log"
+		file1ExpectedKey = "var_log_test1.log"
+		file1Content     = "Test 1 Content"
+
+		file2Name        = "/var/log/test2.log"
+		file2ExpectedKey = "var_log_test2.log"
+		file2Content     = "Test 2 Content"
+	)
+
+	testLogFiles := map[string]string{
+		file1Name: file1Content,
+		file2Name: file2Content,
+	}
 
 	tests := []struct {
-		name          string
-		wantKeys      []string
-		wantErr       bool
-		collectorName string
+		name      string
+		filePaths []string
+		wantData  map[string]string
+		wantErr   bool
 	}{
 		{
-			name:          "get node logs",
-			wantKeys:      []string{file1Key, file2Key},
-			wantErr:       false,
-			collectorName: "nodelogs",
+			name:      "missing first log file",
+			filePaths: []string{"/var/log/missing.log", file2Name},
+			wantData:  nil,
+			wantErr:   true,
+		},
+		{
+			name:      "missing second log file",
+			filePaths: []string{file1Name, "/var/log/missing.log"},
+			wantData:  nil,
+			wantErr:   true,
+		},
+		{
+			name:      "all log files exist",
+			filePaths: []string{file1Name, file2Name},
+			wantData: map[string]string{
+				file1ExpectedKey: file1Content,
+				file2ExpectedKey: file2Content,
+			},
+			wantErr: false,
 		},
 	}
 
-	c := NewNodeLogsCollector()
-
-	if err := os.Setenv("DIAGNOSTIC_NODELOGS_LIST", fmt.Sprintf("%s %s", file1, file2)); err != nil {
-		t.Fatalf("Setenv: %v", err)
-	}
+	reader := utils.NewFakeFileContentReader(testLogFiles)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			runtimeInfo := &utils.RuntimeInfo{
+				NodeLogs: []string{file1Name, file2Name},
+			}
+			c := NewNodeLogsCollector(runtimeInfo, reader)
 			err := c.Collect()
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Collect() error = %v, wantErr %v", err, tt.wantErr)
-			}
-
-			dataItems := c.GetData()
-			if len(dataItems) != len(tt.wantKeys) {
-				t.Errorf("len(GetData()) = %v, want %v", len(dataItems), len(tt.wantKeys))
-			}
-
-			for _, fileKey := range tt.wantKeys {
-				_, ok := dataItems[fileKey]
-				if !ok {
-					t.Errorf("Missing file key %s", fileKey)
+			if err != nil {
+				if !tt.wantErr {
+					t.Errorf("Collect() error = %v, wantErr %v", err, tt.wantErr)
 				}
-			}
+			} else {
+				dataItems := c.GetData()
+				for key, expectedValue := range tt.wantData {
+					actualValue, ok := dataItems[key]
+					if !ok {
+						t.Errorf("Missing key %s", key)
+					}
 
-			name := c.GetName()
-			if name != tt.collectorName {
-				t.Errorf("GetName()) = %v, want %v", name, tt.collectorName)
+					if actualValue != expectedValue {
+						t.Errorf("Unexpected value for key %s.\nExpected '%s'\nFound '%s'", key, expectedValue, actualValue)
+					}
+				}
 			}
 		})
 	}

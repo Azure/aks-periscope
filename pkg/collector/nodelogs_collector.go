@@ -1,22 +1,25 @@
 package collector
 
 import (
-	"os"
-	"runtime"
 	"strings"
 
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // NodeLogsCollector defines a NodeLogs Collector struct
 type NodeLogsCollector struct {
-	data map[string]string
+	data        map[string]string
+	runtimeInfo *utils.RuntimeInfo
+	fileReader  interfaces.FileContentReader
 }
 
 // NewNodeLogsCollector is a constructor
-func NewNodeLogsCollector() *NodeLogsCollector {
+func NewNodeLogsCollector(runtimeInfo *utils.RuntimeInfo, fileReader interfaces.FileContentReader) *NodeLogsCollector {
 	return &NodeLogsCollector{
-		data: make(map[string]string),
+		data:        make(map[string]string),
+		runtimeInfo: runtimeInfo,
+		fileReader:  fileReader,
 	}
 }
 
@@ -32,20 +35,13 @@ func (collector *NodeLogsCollector) CheckSupported() error {
 
 // Collect implements the interface method
 func (collector *NodeLogsCollector) Collect() error {
-	var nodeLogs []string
-	if runtime.GOOS == "linux" {
-		nodeLogs = strings.Fields(os.Getenv("DIAGNOSTIC_NODELOGS_LIST_LINUX"))
-	} else {
-		nodeLogs = strings.Fields(os.Getenv("DIAGNOSTIC_NODELOGS_LIST_WINDOWS"))
-	}
-
-	for _, nodeLog := range nodeLogs {
+	for _, nodeLog := range collector.runtimeInfo.NodeLogs {
 		normalizedNodeLog := strings.Replace(nodeLog, "/", "_", -1)
 		if normalizedNodeLog[0] == '_' {
 			normalizedNodeLog = normalizedNodeLog[1:]
 		}
 
-		output, err := utils.ReadFileContent(nodeLog)
+		output, err := collector.fileReader.GetFileContent(nodeLog)
 		if err != nil {
 			return err
 		}

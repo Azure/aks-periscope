@@ -21,13 +21,15 @@ type networkOutboundDiagnosticDatum struct {
 
 // NetworkOutboundDiagnoser defines a NetworkOutbound Diagnoser struct
 type NetworkOutboundDiagnoser struct {
+	runtimeInfo              *utils.RuntimeInfo
 	networkOutboundCollector *collector.NetworkOutboundCollector
 	data                     map[string]string
 }
 
 // NewNetworkOutboundDiagnoser is a constructor
-func NewNetworkOutboundDiagnoser(networkOutboundCollector *collector.NetworkOutboundCollector) *NetworkOutboundDiagnoser {
+func NewNetworkOutboundDiagnoser(runtimeInfo *utils.RuntimeInfo, networkOutboundCollector *collector.NetworkOutboundCollector) *NetworkOutboundDiagnoser {
 	return &NetworkOutboundDiagnoser{
+		runtimeInfo:              runtimeInfo,
 		networkOutboundCollector: networkOutboundCollector,
 		data:                     make(map[string]string),
 	}
@@ -39,15 +41,10 @@ func (collector *NetworkOutboundDiagnoser) GetName() string {
 
 // Diagnose implements the interface method
 func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
-	hostName, err := utils.GetHostName()
-	if err != nil {
-		return err
-	}
-
 	outboundDiagnosticData := []networkOutboundDiagnosticDatum{}
 
 	for _, data := range diagnoser.networkOutboundCollector.GetData() {
-		dataPoint := networkOutboundDiagnosticDatum{HostName: hostName}
+		dataPoint := networkOutboundDiagnosticDatum{HostName: diagnoser.runtimeInfo.HostNodeName}
 		lines := strings.Split(data, "\n")
 		for _, line := range lines {
 			var outboundDatum collector.NetworkOutboundDatum

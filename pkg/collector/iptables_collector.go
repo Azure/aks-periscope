@@ -2,20 +2,21 @@ package collector
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // IPTablesCollector defines a IPTables Collector struct
 type IPTablesCollector struct {
-	data map[string]string
+	data        map[string]string
+	runtimeInfo *utils.RuntimeInfo
 }
 
 // NewIPTablesCollector is a constructor
-func NewIPTablesCollector() *IPTablesCollector {
+func NewIPTablesCollector(runtimeInfo *utils.RuntimeInfo) *IPTablesCollector {
 	return &IPTablesCollector{
-		data: make(map[string]string),
+		data:        make(map[string]string),
+		runtimeInfo: runtimeInfo,
 	}
 }
 
@@ -25,8 +26,8 @@ func (collector *IPTablesCollector) GetName() string {
 
 func (collector *IPTablesCollector) CheckSupported() error {
 	// There's no obvious alternative to `iptables` on Windows.
-	if runtime.GOOS != "linux" {
-		return fmt.Errorf("Unsupported OS: %s", runtime.GOOS)
+	if collector.runtimeInfo.OSIdentifier != "linux" {
+		return fmt.Errorf("Unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
 	}
 
 	return nil

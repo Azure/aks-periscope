@@ -8,18 +8,34 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func TestPDBCollector(t *testing.T) {
+func TestPDBCollectorGetName(t *testing.T) {
+	const expectedName = "poddisruptionbudget"
+
+	c := NewPDBCollector(nil)
+	actualName := c.GetName()
+	if actualName != expectedName {
+		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+	}
+}
+
+func TestPDBCollectorCheckSupported(t *testing.T) {
+	c := NewPDBCollector(nil)
+	err := c.CheckSupported()
+	if err != nil {
+		t.Errorf("Error checking supported: %v", err)
+	}
+}
+
+func TestPDBCollectorCollect(t *testing.T) {
 	tests := []struct {
-		name          string
-		want          int
-		wantErr       bool
-		collectorName string
+		name    string
+		want    int
+		wantErr bool
 	}{
 		{
-			name:          "get pdb information for logs",
-			want:          1,
-			wantErr:       false,
-			collectorName: "poddisruptionbudget",
+			name:    "get pdb information for logs",
+			want:    1,
+			wantErr: false,
 		},
 	}
 
@@ -48,11 +64,6 @@ func TestPDBCollector(t *testing.T) {
 
 			if len(raw) < tt.want {
 				t.Errorf("len(GetData()) = %v, want %v", len(raw), tt.want)
-			}
-
-			name := c.GetName()
-			if name != tt.collectorName {
-				t.Errorf("GetName()) = %v, want %v", name, tt.collectorName)
 			}
 		})
 	}

@@ -9,18 +9,34 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func TestHelmCollector(t *testing.T) {
+func TestHelmCollectorGetName(t *testing.T) {
+	const expectedName = "helm"
+
+	c := NewHelmCollector(nil)
+	actualName := c.GetName()
+	if actualName != expectedName {
+		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+	}
+}
+
+func TestHelmCollectorCheckSupported(t *testing.T) {
+	c := NewHelmCollector(nil)
+	err := c.CheckSupported()
+	if err != nil {
+		t.Errorf("Error checking supported: %v", err)
+	}
+}
+
+func TestHelmCollectorCollect(t *testing.T) {
 	tests := []struct {
-		name          string
-		want          int
-		wantErr       bool
-		collectorName string
+		name    string
+		want    int
+		wantErr bool
 	}{
 		{
-			name:          "get release history",
-			want:          1,
-			wantErr:       false,
-			collectorName: "helm",
+			name:    "get release history",
+			want:    1,
+			wantErr: false,
 		},
 	}
 
@@ -54,11 +70,6 @@ func TestHelmCollector(t *testing.T) {
 
 			if len(releases) < tt.want {
 				t.Errorf("len(GetData()) = %v, want %v", len(releases), tt.want)
-			}
-
-			name := c.GetName()
-			if name != tt.collectorName {
-				t.Errorf("GetName()) = %v, want %v", name, tt.collectorName)
 			}
 		})
 	}

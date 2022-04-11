@@ -5,21 +5,38 @@ import (
 	"path"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/utils"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func TestPodsContainerLogsCollector(t *testing.T) {
+func TestPodsContainerLogsCollectorGetName(t *testing.T) {
+	const expectedName = "podscontainerlogs"
+
+	c := NewPodsContainerLogsCollector(nil, nil)
+	actualName := c.GetName()
+	if actualName != expectedName {
+		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+	}
+}
+
+func TestPodsContainerLogsCollectorCheckSupported(t *testing.T) {
+	c := NewPodsContainerLogsCollector(nil, nil)
+	err := c.CheckSupported()
+	if err != nil {
+		t.Errorf("Error checking supported: %v", err)
+	}
+}
+
+func TestPodsContainerLogsCollectorCollect(t *testing.T) {
 	tests := []struct {
-		name          string
-		want          int
-		wantErr       bool
-		collectorName string
+		name    string
+		want    int
+		wantErr bool
 	}{
 		{
-			name:          "get pods container logs",
-			want:          1,
-			wantErr:       false,
-			collectorName: "podscontainerlogs",
+			name:    "get pods container logs",
+			want:    1,
+			wantErr: false,
 		},
 	}
 
@@ -35,11 +52,10 @@ func TestPodsContainerLogsCollector(t *testing.T) {
 		t.Fatalf("Cannot load kube config: %v", err)
 	}
 
-	c := NewPodsContainerLogs(config)
-
-	if err := os.Setenv("DIAGNOSTIC_CONTAINERLOGS_LIST", "kube-system"); err != nil {
-		t.Fatalf("Setenv: %v", err)
+	runtimeInfo := &utils.RuntimeInfo{
+		ContainerLogsNamespaces: []string{"kube-system"},
 	}
+	c := NewPodsContainerLogsCollector(config, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -53,12 +69,6 @@ func TestPodsContainerLogsCollector(t *testing.T) {
 			if len(raw) < tt.want {
 				t.Errorf("len(GetData()) = %v, want %v", len(raw), tt.want)
 			}
-
-			name := c.GetName()
-			if name != tt.collectorName {
-				t.Errorf("GetName()) = %v, want %v", name, tt.collectorName)
-			}
-
 		})
 	}
 }

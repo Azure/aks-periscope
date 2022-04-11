@@ -8,17 +8,17 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 )
 
-func TestOsmCollectorGetName(t *testing.T) {
-	const expectedName = "osm"
+func TestSmiCollectorGetName(t *testing.T) {
+	const expectedName = "smi"
 
-	c := NewOsmCollector(nil)
+	c := NewSmiCollector(nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 
-func TestOsmCollectorCheckSupported(t *testing.T) {
+func TestSmiCollectorCheckSupported(t *testing.T) {
 	tests := []struct {
 		name         string
 		osIdentifier string
@@ -28,19 +28,25 @@ func TestOsmCollectorCheckSupported(t *testing.T) {
 		{
 			name:         "windows",
 			osIdentifier: "windows",
-			collectors:   []string{"OSM"},
+			collectors:   []string{"SMI"},
 			wantErr:      true,
 		},
 		{
-			name:         "linux without OSM included",
+			name:         "linux without OSM or SMI included",
 			osIdentifier: "linux",
-			collectors:   []string{"NOT_OSM"},
+			collectors:   []string{"NOT_OSM", "NOT_SMI"},
 			wantErr:      true,
 		},
 		{
 			name:         "linux with OSM included",
 			osIdentifier: "linux",
-			collectors:   []string{"OSM"},
+			collectors:   []string{"OSM", "NOT_SMI"},
+			wantErr:      false,
+		},
+		{
+			name:         "linux with SMI included",
+			osIdentifier: "linux",
+			collectors:   []string{"NOT_OSM", "SMI"},
 			wantErr:      false,
 		},
 	}
@@ -50,7 +56,7 @@ func TestOsmCollectorCheckSupported(t *testing.T) {
 			OSIdentifier:  tt.osIdentifier,
 			CollectorList: tt.collectors,
 		}
-		c := NewOsmCollector(runtimeInfo)
+		c := NewSmiCollector(runtimeInfo)
 		err := c.CheckSupported()
 		if (err != nil) != tt.wantErr {
 			t.Errorf("CheckSupported() for %s error = %v, wantErr %v", tt.name, err, tt.wantErr)
@@ -58,7 +64,7 @@ func TestOsmCollectorCheckSupported(t *testing.T) {
 	}
 }
 
-func TestOsmCollectorCollect(t *testing.T) {
+func TestSmiCollectorCollect(t *testing.T) {
 	tests := []struct {
 		name        string
 		want        int
@@ -66,7 +72,7 @@ func TestOsmCollectorCollect(t *testing.T) {
 		deployments []*appsv1.Deployment
 	}{
 		{
-			name:        "no OSM deployments found",
+			name:        "no SMI deployments found",
 			want:        0,
 			wantErr:     true,
 			deployments: []*appsv1.Deployment{},
@@ -75,10 +81,10 @@ func TestOsmCollectorCollect(t *testing.T) {
 
 	runtimeInfo := &utils.RuntimeInfo{
 		OSIdentifier:  "linux",
-		CollectorList: []string{"OSM"},
+		CollectorList: []string{"SMI"},
 	}
 
-	c := NewOsmCollector(runtimeInfo)
+	c := NewSmiCollector(runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

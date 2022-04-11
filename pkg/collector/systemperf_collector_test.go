@@ -9,7 +9,25 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func TestSystemperfCollector(t *testing.T) {
+func TestSystemPerfCollectorGetName(t *testing.T) {
+	const expectedName = "systemperf"
+
+	c := NewSystemPerfCollector(nil)
+	actualName := c.GetName()
+	if actualName != expectedName {
+		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+	}
+}
+
+func TestSystemPerfCollectorCheckSupported(t *testing.T) {
+	c := NewSystemPerfCollector(nil)
+	err := c.CheckSupported()
+	if err != nil {
+		t.Errorf("Error checking supported: %v", err)
+	}
+}
+
+func TestSystemPerfCollectorCollect(t *testing.T) {
 	tests := []struct {
 		name    string
 		want    int

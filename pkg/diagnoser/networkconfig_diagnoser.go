@@ -20,14 +20,16 @@ type networkConfigDiagnosticDatum struct {
 
 // NetworkConfigDiagnoser defines a NetworkConfig Diagnoser struct
 type NetworkConfigDiagnoser struct {
+	runtimeInfo         *utils.RuntimeInfo
 	dnsCollector        *collector.DNSCollector
 	kubeletCmdCollector *collector.KubeletCmdCollector
 	data                map[string]string
 }
 
 // NewNetworkConfigDiagnoser is a constructor
-func NewNetworkConfigDiagnoser(dnsCollector *collector.DNSCollector, kubeletCmdCollector *collector.KubeletCmdCollector) *NetworkConfigDiagnoser {
+func NewNetworkConfigDiagnoser(runtimeInfo *utils.RuntimeInfo, dnsCollector *collector.DNSCollector, kubeletCmdCollector *collector.KubeletCmdCollector) *NetworkConfigDiagnoser {
 	return &NetworkConfigDiagnoser{
+		runtimeInfo:         runtimeInfo,
 		dnsCollector:        dnsCollector,
 		kubeletCmdCollector: kubeletCmdCollector,
 		data:                make(map[string]string),
@@ -40,12 +42,7 @@ func (collector *NetworkConfigDiagnoser) GetName() string {
 
 // Diagnose implements the interface method
 func (diagnoser *NetworkConfigDiagnoser) Diagnose() error {
-	hostName, err := utils.GetHostName()
-	if err != nil {
-		return err
-	}
-
-	networkConfigDiagnosticData := networkConfigDiagnosticDatum{HostName: hostName}
+	networkConfigDiagnosticData := networkConfigDiagnosticDatum{HostName: diagnoser.runtimeInfo.HostNodeName}
 	for key, data := range diagnoser.dnsCollector.GetData() {
 		var dns []string
 		words := strings.Split(data, " ")

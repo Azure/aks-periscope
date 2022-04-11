@@ -2,20 +2,21 @@ package collector
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // KubeletCmdCollector defines a KubeletCmd Collector struct
 type KubeletCmdCollector struct {
-	data map[string]string
+	data        map[string]string
+	runtimeInfo *utils.RuntimeInfo
 }
 
 // NewKubeletCmdCollector is a constructor
-func NewKubeletCmdCollector() *KubeletCmdCollector {
+func NewKubeletCmdCollector(runtimeInfo *utils.RuntimeInfo) *KubeletCmdCollector {
 	return &KubeletCmdCollector{
-		data: make(map[string]string),
+		data:        make(map[string]string),
+		runtimeInfo: runtimeInfo,
 	}
 }
 
@@ -27,8 +28,8 @@ func (collector *KubeletCmdCollector) CheckSupported() error {
 	// This looks to be impossible on Windows, since Windows containers don't support shared process namespaces,
 	// and hence processes on the host are completely isolated from the container. See:
 	// https://docs.microsoft.com/en-us/virtualization/windowscontainers/manage-containers/hyperv-container#piercing-the-isolation-boundary
-	if runtime.GOOS != "linux" {
-		return fmt.Errorf("Unsupported OS: %s", runtime.GOOS)
+	if collector.runtimeInfo.OSIdentifier != "linux" {
+		return fmt.Errorf("Unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
 	}
 
 	return nil

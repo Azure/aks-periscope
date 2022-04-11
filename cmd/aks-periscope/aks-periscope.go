@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"log"
-	"os"
-	"strings"
 	"sync"
 
 	"github.com/Azure/aks-periscope/pkg/collector"
@@ -26,36 +24,42 @@ func main() {
 		log.Fatalf("Failed to get creation timestamp: %v", err)
 	}
 
-	hostname, err := utils.GetHostName()
+	runtimeInfo, err := utils.GetRuntimeInfo()
 	if err != nil {
-		log.Fatalf("Failed to get the hostname on which AKS Periscope is running: %v", err)
+		log.Fatalf("Failed to get runtime information: %v", err)
 	}
 
-	collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))
-	exp := exporter.NewAzureBlobExporter(creationTimeStamp, hostname)
+	knownFilePaths, err := utils.GetKnownFilePaths(runtimeInfo)
+	if err != nil {
+		log.Fatalf("Failed to get file paths: %v", err)
+	}
+
+	exp := exporter.NewAzureBlobExporter(runtimeInfo, knownFilePaths, creationTimeStamp)
 
 	// Copies self-signed cert information to container if application is running on Azure Stack Cloud.
 	// We need the cert in order to communicate with the storage account.
-	if utils.IsAzureStackCloud() {
-		if err := utils.CopyFileFromHost("/etc/ssl/certs/azsCertificate.pem", "/etc/ssl/certs/azsCertificate.pem"); err != nil {
+	if utils.IsAzureStackCloud(knownFilePaths) {
+		if err := utils.CopyFile(knownFilePaths.AzureStackCertHost, knownFilePaths.AzureStackCertContainer); err != nil {
 			log.Fatalf("Cannot copy cert for Azure Stack Cloud environment: %v", err)
 		}
 	}
 
+	fileContentReader := utils.NewFileContentReader()
+
 	dataProducers := []interfaces.DataProducer{}
 
 	networkOutboundCollector := collector.NewNetworkOutboundCollector()
-	dnsCollector := collector.NewDNSCollector()
-	kubeObjectsCollector := collector.NewKubeObjectsCollector(config)
-	systemLogsCollector := collector.NewSystemLogsCollector()
-	ipTablesCollector := collector.NewIPTablesCollector()
-	nodeLogsCollector := collector.NewNodeLogsCollector()
-	kubeletCmdCollector := collector.NewKubeletCmdCollector()
+	dnsCollector := collector.NewDNSCollector(runtimeInfo, knownFilePaths, fileContentReader)
+	kubeObjectsCollector := collector.NewKubeObjectsCollector(config, runtimeInfo)
+	systemLogsCollector := collector.NewSystemLogsCollector(runtimeInfo)
+	ipTablesCollector := collector.NewIPTablesCollector(runtimeInfo)
+	nodeLogsCollector := collector.NewNodeLogsCollector(runtimeInfo, fileContentReader)
+	kubeletCmdCollector := collector.NewKubeletCmdCollector(runtimeInfo)
 	systemPerfCollector := collector.NewSystemPerfCollector(config)
 	helmCollector := collector.NewHelmCollector(config)
-	osmCollector := collector.NewOsmCollector()
-	smiCollector := collector.NewSmiCollector()
-	podsCollector := collector.NewPodsContainerLogs(config)
+	osmCollector := collector.NewOsmCollector(runtimeInfo)
+	smiCollector := collector.NewSmiCollector(runtimeInfo)
+	podsCollector := collector.NewPodsContainerLogsCollector(config, runtimeInfo)
 	pdbCollector := collector.NewPDBCollector(config)
 
 	collectors := []interfaces.Collector{
@@ -64,7 +68,7 @@ func main() {
 		networkOutboundCollector,
 	}
 
-	if contains(collectorList, "connectedCluster") {
+	if utils.Contains(runtimeInfo.CollectorList, "connectedCluster") {
 		collectors = append(collectors, helmCollector)
 		collectors = append(collectors, podsCollector)
 	} else {
@@ -76,13 +80,8 @@ func main() {
 		collectors = append(collectors, pdbCollector)
 	}
 
-	// OSM and SMI flags are mutually exclusive
-	if contains(collectorList, "OSM") {
-		collectors = append(collectors, osmCollector)
-		collectors = append(collectors, smiCollector)
-	} else if contains(collectorList, "SMI") {
-		collectors = append(collectors, smiCollector)
-	}
+	collectors = append(collectors, osmCollector)
+	collectors = append(collectors, smiCollector)
 
 	collectorGrp := new(sync.WaitGroup)
 
@@ -115,8 +114,8 @@ func main() {
 	collectorGrp.Wait()
 
 	diagnosers := []interfaces.Diagnoser{
-		diagnoser.NewNetworkConfigDiagnoser(dnsCollector, kubeletCmdCollector),
-		diagnoser.NewNetworkOutboundDiagnoser(networkOutboundCollector),
+		diagnoser.NewNetworkConfigDiagnoser(runtimeInfo, dnsCollector, kubeletCmdCollector),
+		diagnoser.NewNetworkOutboundDiagnoser(runtimeInfo, networkOutboundCollector),
 	}
 
 	diagnoserGrp := new(sync.WaitGroup)
@@ -147,7 +146,7 @@ func main() {
 	if err != nil {
 		log.Printf("Could not zip data: %v", err)
 	} else {
-		if err := exp.ExportReader(hostname+".zip", bytes.NewReader(zip.Bytes())); err != nil {
+		if err := exp.ExportReader(runtimeInfo.HostNodeName+".zip", bytes.NewReader(zip.Bytes())); err != nil {
 			log.Printf("Could not export zip archive: %v", err)
 		}
 	}
@@ -158,13 +157,4 @@ func main() {
 
 	// TODO: remove this //nolint comment once the select{} has been removed
 	//nolint:govet
-}
-
-func contains(flagsList []string, flag string) bool {
-	for _, f := range flagsList {
-		if strings.EqualFold(f, flag) {
-			return true
-		}
-	}
-	return false
 }

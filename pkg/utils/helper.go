@@ -4,17 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strings"
-	"sync"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -46,47 +43,9 @@ type CommandOutputStreams struct {
 	Stderr string
 }
 
-type KnownFilePaths struct {
-	AzureJson           string
-	AzureStackCloudJson string
-	Err                 error
-}
-
-var knownFilePaths = GetKnownPathsSingleton()
-
-// GetKnownPathsSingleton get known file paths
-func GetKnownPathsSingleton() *KnownFilePaths {
-	var once sync.Once
-	var knownFilePaths *KnownFilePaths
-	once.Do(func() {
-		os := runtime.GOOS
-		switch os {
-		case "windows":
-			knownFilePaths = &KnownFilePaths{
-				AzureJson:           "/k/azure.json",
-				AzureStackCloudJson: "/k/azurestackcloud.json",
-			}
-		case "linux":
-			knownFilePaths = &KnownFilePaths{
-				AzureJson:           "/etc/kubernetes/azure.json",
-				AzureStackCloudJson: "/etc/kubernetes/azurestackcloud.json",
-			}
-		default:
-			knownFilePaths = &KnownFilePaths{
-				Err: fmt.Errorf("Unexpected OS: %s", os),
-			}
-		}
-	})
-
-	return knownFilePaths
-}
-
 // IsAzureStackCloud returns true if the application is running on Azure Stack Cloud
-func IsAzureStackCloud() bool {
-	if knownFilePaths.Err != nil {
-		return false
-	}
-	azureFile, err := os.ReadFile(knownFilePaths.AzureJson)
+func IsAzureStackCloud(filePaths *KnownFilePaths) bool {
+	azureFile, err := os.ReadFile(filePaths.AzureJson)
 	if err != nil {
 		return false
 	}
@@ -98,38 +57,29 @@ func IsAzureStackCloud() bool {
 	return strings.EqualFold(cloud, AzureStackCloudName)
 }
 
-// CopyFileFromHost saves the specified source file to the destination
-func CopyFileFromHost(source, destination string) error {
-	sourceFile, err := RunCommandOnHost("cat", source)
+func CopyFile(source, destination string) error {
+	sourceFile, err := os.Open(source)
 	if err != nil {
-		return fmt.Errorf("unable to retrieve source content: %w", err)
+		return fmt.Errorf("unable to open source file %s: %w", source, err)
 	}
+	defer sourceFile.Close()
 
-	if err := os.MkdirAll(filepath.Dir(destination), os.ModePerm); err != nil {
-		return fmt.Errorf("create path directories for file %s: %w", destination, err)
-	}
-
-	f, err := os.Create(destination)
+	destFile, err := os.Create(destination)
 	if err != nil {
-		return fmt.Errorf("create file %s: %w", destination, err)
+		return fmt.Errorf("error creating file %s: %w", destination, err)
 	}
+	defer destFile.Close()
 
-	defer f.Close()
-
-	_, err = f.Write([]byte(sourceFile))
+	_, err = io.Copy(destFile, sourceFile)
 	if err != nil {
-		return fmt.Errorf("write data to file %s: %w", destination, err)
+		return fmt.Errorf("error copying data to file %s: %w", destination, err)
 	}
 	return nil
 }
 
 // GetStorageEndpointSuffix returns the SES url from the JSON file as a string
-func GetStorageEndpointSuffix() string {
-	if knownFilePaths.Err != nil {
-		log.Fatalf("Unable to determine configuration file paths: %v", knownFilePaths.Err)
-	}
-
-	if IsAzureStackCloud() {
+func GetStorageEndpointSuffix(knownFilePaths *KnownFilePaths) string {
+	if IsAzureStackCloud(knownFilePaths) {
 		ascFile, err := os.ReadFile(knownFilePaths.AzureStackCloudJson)
 		if err != nil {
 			log.Fatalf("unable to locate %s to extract storage endpoint suffix: %v", knownFilePaths.AzureStackCloudJson, err)
@@ -141,20 +91,6 @@ func GetStorageEndpointSuffix() string {
 		return azurestackcloud.StorageEndpointSuffix
 	}
 	return PublicAzureStorageEndpointSuffix
-}
-
-// GetHostName get host name
-func GetHostName() (string, error) {
-	// We can't use `os.Hostname` for this, because this gives us the _container_ hostname (i.e. the pod name, by default).
-	// An earlier approach was to `cat /etc/hostname` but that will not work for Windows containers.
-	// Instead we expect the host node name to be exposed to the pod in an environment variable, via the 'downward API', see:
-	// https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#use-pod-fields-as-values-for-environment-variables
-	hostName := os.Getenv("HOST_NODE_NAME")
-	if len(hostName) == 0 {
-		return "", errors.New("HOST_NODE_NAME value not set for container.")
-	}
-
-	return hostName, nil
 }
 
 // RunCommandOnHost runs a command on host system
@@ -281,22 +217,6 @@ func GetResourceList(kubeCmds []string, separator string) ([]string, error) {
 	return strings.Split(strings.Trim(resourceList, "\""), separator), nil
 }
 
-func ReadFileContent(filename string) (string, error) {
-	output, err := os.Open(filename)
-	if err != nil {
-		return "", err
-	}
-
-	defer output.Close()
-
-	b, err := ioutil.ReadAll(output)
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
-}
-
 func GetPods(clientset *kubernetes.Clientset, namespace string) (*v1.PodList, error) {
 	// Create a pod interface for the given namespace
 	podInterface := clientset.CoreV1().Pods(namespace)
@@ -309,4 +229,13 @@ func GetPods(clientset *kubernetes.Clientset, namespace string) (*v1.PodList, er
 	}
 
 	return podList, nil
+}
+
+func Contains(flagsList []string, flag string) bool {
+	for _, f := range flagsList {
+		if strings.EqualFold(f, flag) {
+			return true
+		}
+	}
+	return false
 }

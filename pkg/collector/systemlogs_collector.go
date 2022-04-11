@@ -2,20 +2,21 @@ package collector
 
 import (
 	"fmt"
-	"runtime"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // SystemLogsCollector defines a SystemLogs Collector struct
 type SystemLogsCollector struct {
-	data map[string]string
+	data        map[string]string
+	runtimeInfo *utils.RuntimeInfo
 }
 
 // NewSystemLogsCollector is a constructor
-func NewSystemLogsCollector() *SystemLogsCollector {
+func NewSystemLogsCollector(runtimeInfo *utils.RuntimeInfo) *SystemLogsCollector {
 	return &SystemLogsCollector{
-		data: make(map[string]string),
+		data:        make(map[string]string),
+		runtimeInfo: runtimeInfo,
 	}
 }
 
@@ -27,8 +28,8 @@ func (collector *SystemLogsCollector) CheckSupported() error {
 	// This uses `journalctl` to retrieve system logs, which is not available on Windows.
 	// It may be possible in future to identify useful Windows log files and configure this to
 	// output those.
-	if runtime.GOOS != "linux" {
-		return fmt.Errorf("Unsupported OS: %s", runtime.GOOS)
+	if collector.runtimeInfo.OSIdentifier != "linux" {
+		return fmt.Errorf("Unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
 	}
 
 	return nil

@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
@@ -18,8 +16,9 @@ import (
 
 // PodsContainerLogsCollector defines a Pods Container Logs Collector struct
 type PodsContainerLogsCollector struct {
-	kubeconfig *restclient.Config
-	data       map[string]string
+	data        map[string]string
+	kubeconfig  *restclient.Config
+	runtimeInfo *utils.RuntimeInfo
 }
 
 type PodsContainerStruct struct {
@@ -33,10 +32,11 @@ type PodsContainerStruct struct {
 }
 
 // NewPodsContainerLogs is a constructor
-func NewPodsContainerLogs(config *restclient.Config) *PodsContainerLogsCollector {
+func NewPodsContainerLogsCollector(config *restclient.Config, runtimeInfo *utils.RuntimeInfo) *PodsContainerLogsCollector {
 	return &PodsContainerLogsCollector{
-		data:       make(map[string]string),
-		kubeconfig: config,
+		data:        make(map[string]string),
+		kubeconfig:  config,
+		runtimeInfo: runtimeInfo,
 	}
 }
 
@@ -50,15 +50,13 @@ func (collector *PodsContainerLogsCollector) CheckSupported() error {
 
 // Collect implements the interface method
 func (collector *PodsContainerLogsCollector) Collect() error {
-	containerNamespaces := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))
-
 	// Creates the clientset
 	clientset, err := kubernetes.NewForConfig(collector.kubeconfig)
 	if err != nil {
 		return fmt.Errorf("getting access to K8S failed: %w", err)
 	}
 
-	for _, namespace := range containerNamespaces {
+	for _, namespace := range collector.runtimeInfo.ContainerLogsNamespaces {
 		// List the pods in the given namespace
 		podList, err := utils.GetPods(clientset, namespace)
 
