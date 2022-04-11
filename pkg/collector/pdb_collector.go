@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
+	"github.com/Azure/aks-periscope/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
@@ -19,15 +21,17 @@ type PDBInfo struct {
 
 // PDBCollector defines a Pod disruption Budget Collector struct
 type PDBCollector struct {
-	kubeconfig *restclient.Config
-	data       map[string]string
+	data        map[string]string
+	kubeconfig  *restclient.Config
+	runtimeInfo *utils.RuntimeInfo
 }
 
 // NewPDBCollector is a constructor
-func NewPDBCollector(config *restclient.Config) *PDBCollector {
+func NewPDBCollector(config *restclient.Config, runtimeInfo *utils.RuntimeInfo) *PDBCollector {
 	return &PDBCollector{
-		data:       make(map[string]string),
-		kubeconfig: config,
+		data:        make(map[string]string),
+		kubeconfig:  config,
+		runtimeInfo: runtimeInfo,
 	}
 }
 
@@ -36,6 +40,10 @@ func (collector *PDBCollector) GetName() string {
 }
 
 func (collector *PDBCollector) CheckSupported() error {
+	if utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
+		return fmt.Errorf("Not included because 'connectedCluster' is in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+	}
+
 	return nil
 }
 

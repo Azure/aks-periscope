@@ -17,10 +17,32 @@ func TestNodeLogsCollectorGetName(t *testing.T) {
 }
 
 func TestNodeLogsCollectorCheckSupported(t *testing.T) {
-	c := NewNodeLogsCollector(nil, nil)
-	err := c.CheckSupported()
-	if err != nil {
-		t.Errorf("Error checking supported: %v", err)
+	tests := []struct {
+		name          string
+		collectorList []string
+		wantErr       bool
+	}{
+		{
+			name:          "'connectedCluster' in COLLECTOR_LIST",
+			collectorList: []string{"connectedCluster"},
+			wantErr:       true,
+		},
+		{
+			name:          "'connectedCluster' not in COLLECTOR_LIST",
+			collectorList: []string{},
+			wantErr:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		runtimeInfo := &utils.RuntimeInfo{
+			CollectorList: tt.collectorList,
+		}
+		c := NewNodeLogsCollector(runtimeInfo, nil)
+		err := c.CheckSupported()
+		if (err != nil) != tt.wantErr {
+			t.Errorf("%s error = %v, wantErr %v", tt.name, err, tt.wantErr)
+		}
 	}
 }
 
@@ -74,7 +96,8 @@ func TestNodeLogsCollectorCollect(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			runtimeInfo := &utils.RuntimeInfo{
-				NodeLogs: []string{file1Name, file2Name},
+				NodeLogs:      []string{file1Name, file2Name},
+				CollectorList: []string{},
 			}
 			c := NewNodeLogsCollector(runtimeInfo, reader)
 			err := c.Collect()

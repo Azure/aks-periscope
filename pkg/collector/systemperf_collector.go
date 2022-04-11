@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
+	"github.com/Azure/aks-periscope/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	restclient "k8s.io/client-go/rest"
 	metrics "k8s.io/metrics/pkg/client/clientset/versioned"
@@ -12,8 +14,9 @@ import (
 
 // SystemPerfCollector defines a SystemPerf Collector struct
 type SystemPerfCollector struct {
-	kubeconfig *restclient.Config
-	data       map[string]string
+	data        map[string]string
+	kubeconfig  *restclient.Config
+	runtimeInfo *utils.RuntimeInfo
 }
 
 type NodeMetrics struct {
@@ -29,10 +32,11 @@ type PodMetrics struct {
 }
 
 // NewSystemPerfCollector is a constructor
-func NewSystemPerfCollector(config *restclient.Config) *SystemPerfCollector {
+func NewSystemPerfCollector(config *restclient.Config, runtimeInfo *utils.RuntimeInfo) *SystemPerfCollector {
 	return &SystemPerfCollector{
-		data:       make(map[string]string),
-		kubeconfig: config,
+		data:        make(map[string]string),
+		kubeconfig:  config,
+		runtimeInfo: runtimeInfo,
 	}
 }
 
@@ -41,6 +45,10 @@ func (collector *SystemPerfCollector) GetName() string {
 }
 
 func (collector *SystemPerfCollector) CheckSupported() error {
+	if utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
+		return fmt.Errorf("Not included because 'connectedCluster' is in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+	}
+
 	return nil
 }
 

@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
@@ -28,6 +29,10 @@ func (collector *NodeLogsCollector) GetName() string {
 }
 
 func (collector *NodeLogsCollector) CheckSupported() error {
+	if utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
+		return fmt.Errorf("Not included because 'connectedCluster' is in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+	}
+
 	// Although the files read by this collector may be different between Windows and Linux,
 	// they are defined in a ConfigMap which is expected to be populated correctly for the OS.
 	return nil

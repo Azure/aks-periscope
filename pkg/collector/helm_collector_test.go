@@ -6,13 +6,14 @@ import (
 	"path"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/utils"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 func TestHelmCollectorGetName(t *testing.T) {
 	const expectedName = "helm"
 
-	c := NewHelmCollector(nil)
+	c := NewHelmCollector(nil, nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
@@ -20,10 +21,32 @@ func TestHelmCollectorGetName(t *testing.T) {
 }
 
 func TestHelmCollectorCheckSupported(t *testing.T) {
-	c := NewHelmCollector(nil)
-	err := c.CheckSupported()
-	if err != nil {
-		t.Errorf("Error checking supported: %v", err)
+	tests := []struct {
+		name          string
+		collectorList []string
+		wantErr       bool
+	}{
+		{
+			name:          "'connectedCluster' in COLLECTOR_LIST",
+			collectorList: []string{"connectedCluster"},
+			wantErr:       false,
+		},
+		{
+			name:          "'connectedCluster' not in COLLECTOR_LIST",
+			collectorList: []string{},
+			wantErr:       true,
+		},
+	}
+
+	for _, tt := range tests {
+		runtimeInfo := &utils.RuntimeInfo{
+			CollectorList: tt.collectorList,
+		}
+		c := NewHelmCollector(nil, runtimeInfo)
+		err := c.CheckSupported()
+		if (err != nil) != tt.wantErr {
+			t.Errorf("%s error = %v, wantErr %v", tt.name, err, tt.wantErr)
+		}
 	}
 }
 
@@ -51,8 +74,11 @@ func TestHelmCollectorCollect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot load kube config: %v", err)
 	}
+	runtimeInfo := &utils.RuntimeInfo{
+		CollectorList: []string{"connectedCluster"},
+	}
 
-	c := NewHelmCollector(config)
+	c := NewHelmCollector(config, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

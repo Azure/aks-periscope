@@ -46,45 +46,28 @@ func main() {
 
 	fileContentReader := utils.NewFileContentReader()
 
-	dataProducers := []interfaces.DataProducer{}
-
-	networkOutboundCollector := collector.NewNetworkOutboundCollector()
 	dnsCollector := collector.NewDNSCollector(runtimeInfo, knownFilePaths, fileContentReader)
-	kubeObjectsCollector := collector.NewKubeObjectsCollector(config, runtimeInfo)
-	systemLogsCollector := collector.NewSystemLogsCollector(runtimeInfo)
-	ipTablesCollector := collector.NewIPTablesCollector(runtimeInfo)
-	nodeLogsCollector := collector.NewNodeLogsCollector(runtimeInfo, fileContentReader)
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(runtimeInfo)
-	systemPerfCollector := collector.NewSystemPerfCollector(config)
-	helmCollector := collector.NewHelmCollector(config)
-	osmCollector := collector.NewOsmCollector(runtimeInfo)
-	smiCollector := collector.NewSmiCollector(runtimeInfo)
-	podsCollector := collector.NewPodsContainerLogsCollector(config, runtimeInfo)
-	pdbCollector := collector.NewPDBCollector(config)
-
+	networkOutboundCollector := collector.NewNetworkOutboundCollector()
 	collectors := []interfaces.Collector{
 		dnsCollector,
-		kubeObjectsCollector,
+		kubeletCmdCollector,
 		networkOutboundCollector,
+		collector.NewHelmCollector(config, runtimeInfo),
+		collector.NewIPTablesCollector(runtimeInfo),
+		collector.NewKubeObjectsCollector(config, runtimeInfo),
+		collector.NewNodeLogsCollector(runtimeInfo, fileContentReader),
+		collector.NewOsmCollector(runtimeInfo),
+		collector.NewPDBCollector(config, runtimeInfo),
+		collector.NewPodsContainerLogsCollector(config, runtimeInfo),
+		collector.NewSmiCollector(runtimeInfo),
+		collector.NewSystemLogsCollector(runtimeInfo),
+		collector.NewSystemPerfCollector(config, runtimeInfo),
 	}
-
-	if utils.Contains(runtimeInfo.CollectorList, "connectedCluster") {
-		collectors = append(collectors, helmCollector)
-		collectors = append(collectors, podsCollector)
-	} else {
-		collectors = append(collectors, systemLogsCollector)
-		collectors = append(collectors, ipTablesCollector)
-		collectors = append(collectors, nodeLogsCollector)
-		collectors = append(collectors, kubeletCmdCollector)
-		collectors = append(collectors, systemPerfCollector)
-		collectors = append(collectors, pdbCollector)
-	}
-
-	collectors = append(collectors, osmCollector)
-	collectors = append(collectors, smiCollector)
 
 	collectorGrp := new(sync.WaitGroup)
 
+	dataProducers := []interfaces.DataProducer{}
 	for _, c := range collectors {
 		if err := c.CheckSupported(); err != nil {
 			// Log the reason why this collector is not supported, and skip to the next

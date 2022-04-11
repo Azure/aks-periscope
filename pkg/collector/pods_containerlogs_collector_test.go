@@ -20,10 +20,32 @@ func TestPodsContainerLogsCollectorGetName(t *testing.T) {
 }
 
 func TestPodsContainerLogsCollectorCheckSupported(t *testing.T) {
-	c := NewPodsContainerLogsCollector(nil, nil)
-	err := c.CheckSupported()
-	if err != nil {
-		t.Errorf("Error checking supported: %v", err)
+	tests := []struct {
+		name          string
+		collectorList []string
+		wantErr       bool
+	}{
+		{
+			name:          "'connectedCluster' in COLLECTOR_LIST",
+			collectorList: []string{"connectedCluster"},
+			wantErr:       false,
+		},
+		{
+			name:          "'connectedCluster' not in COLLECTOR_LIST",
+			collectorList: []string{},
+			wantErr:       true,
+		},
+	}
+
+	for _, tt := range tests {
+		runtimeInfo := &utils.RuntimeInfo{
+			CollectorList: tt.collectorList,
+		}
+		c := NewPodsContainerLogsCollector(nil, runtimeInfo)
+		err := c.CheckSupported()
+		if (err != nil) != tt.wantErr {
+			t.Errorf("%s error = %v, wantErr %v", tt.name, err, tt.wantErr)
+		}
 	}
 }
 

@@ -18,27 +18,40 @@ func TestKubeletCmdCollectorGetName(t *testing.T) {
 
 func TestKubeletCmdCollectorCheckSupported(t *testing.T) {
 	tests := []struct {
-		osIdentifier string
-		wantErr      bool
+		name          string
+		osIdentifier  string
+		collectorList []string
+		wantErr       bool
 	}{
 		{
-			osIdentifier: "windows",
-			wantErr:      true,
+			name:          "windows",
+			osIdentifier:  "windows",
+			collectorList: []string{"connectedCluster"},
+			wantErr:       true,
 		},
 		{
-			osIdentifier: "linux",
-			wantErr:      false,
+			name:          "'connectedCluster' in COLLECTOR_LIST",
+			osIdentifier:  "linux",
+			collectorList: []string{"connectedCluster"},
+			wantErr:       true,
+		},
+		{
+			name:          "'connectedCluster' not in COLLECTOR_LIST",
+			osIdentifier:  "linux",
+			collectorList: []string{},
+			wantErr:       false,
 		},
 	}
 
 	for _, tt := range tests {
 		runtimeInfo := &utils.RuntimeInfo{
-			OSIdentifier: tt.osIdentifier,
+			OSIdentifier:  tt.osIdentifier,
+			CollectorList: tt.collectorList,
 		}
 		c := NewKubeletCmdCollector(runtimeInfo)
 		err := c.CheckSupported()
 		if (err != nil) != tt.wantErr {
-			t.Errorf("CheckSupported() error = %v, wantErr %v", err, tt.wantErr)
+			t.Errorf("%s error = %v, wantErr %v", tt.name, err, tt.wantErr)
 		}
 	}
 }
@@ -57,7 +70,8 @@ func TestKubeletCmdCollectorCollect(t *testing.T) {
 	}
 
 	runtimeInfo := &utils.RuntimeInfo{
-		OSIdentifier: "linux",
+		OSIdentifier:  "linux",
+		CollectorList: []string{},
 	}
 	c := NewKubeletCmdCollector(runtimeInfo)
 
