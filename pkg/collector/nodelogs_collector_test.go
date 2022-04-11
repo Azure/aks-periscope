@@ -1,20 +1,30 @@
 package collector
 
 import (
+	"fmt"
 	"os"
 	"testing"
 )
 
 func TestNodeLogsCollector(t *testing.T) {
+	// TODO: Avoid using real files for testing. These are chosen because they happen to exist in
+	// common Linux distros (including Ubuntu on WSL) as well as the Ubuntu GitHub workflow host,
+	// but they won't exist in every environment we might wish to run tests.
+	file1 := "/var/log/alternatives.log"
+	file1Key := "var_log_alternatives.log"
+
+	file2 := "/var/log/dpkg.log"
+	file2Key := "var_log_dpkg.log"
+
 	tests := []struct {
 		name          string
-		want          int
+		wantKeys      []string
 		wantErr       bool
 		collectorName string
 	}{
 		{
 			name:          "get node logs",
-			want:          1,
+			wantKeys:      []string{file1Key, file2Key},
 			wantErr:       false,
 			collectorName: "nodelogs",
 		},
@@ -22,7 +32,7 @@ func TestNodeLogsCollector(t *testing.T) {
 
 	c := NewNodeLogsCollector()
 
-	if err := os.Setenv("DIAGNOSTIC_NODELOGS_LIST", "/var/log/cloud-init.log"); err != nil {
+	if err := os.Setenv("DIAGNOSTIC_NODELOGS_LIST", fmt.Sprintf("%s %s", file1, file2)); err != nil {
 		t.Fatalf("Setenv: %v", err)
 	}
 
@@ -33,10 +43,17 @@ func TestNodeLogsCollector(t *testing.T) {
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Collect() error = %v, wantErr %v", err, tt.wantErr)
 			}
-			raw := c.GetData()
 
-			if len(raw) < tt.want {
-				t.Errorf("len(GetData()) = %v, want %v", len(raw), tt.want)
+			dataItems := c.GetData()
+			if len(dataItems) != len(tt.wantKeys) {
+				t.Errorf("len(GetData()) = %v, want %v", len(dataItems), len(tt.wantKeys))
+			}
+
+			for _, fileKey := range tt.wantKeys {
+				_, ok := dataItems[fileKey]
+				if !ok {
+					t.Errorf("Missing file key %s", fileKey)
+				}
 			}
 
 			name := c.GetName()
