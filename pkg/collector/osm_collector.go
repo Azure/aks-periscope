@@ -4,24 +4,41 @@ import (
 	"fmt"
 	"log"
 	"regexp"
+	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // OsmCollector defines an OSM Collector struct
 type OsmCollector struct {
-	data map[string]string
+	data        map[string]string
+	runtimeInfo *utils.RuntimeInfo
 }
 
 // NewOsmCollector is a constructor
-func NewOsmCollector() *OsmCollector {
+func NewOsmCollector(runtimeInfo *utils.RuntimeInfo) *OsmCollector {
 	return &OsmCollector{
-		data: make(map[string]string),
+		data:        make(map[string]string),
+		runtimeInfo: runtimeInfo,
 	}
 }
 
 func (collector *OsmCollector) GetName() string {
 	return "osm"
+}
+
+func (collector *OsmCollector) CheckSupported() error {
+	// This is not currently supported on Windows because it launches `kubectl` as a separate process (within GetResourceList).
+	// If/when it is reimplemented using the go client API for k8s, we can re-enable this.
+	if collector.runtimeInfo.OSIdentifier != "linux" {
+		return fmt.Errorf("Unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
+	}
+
+	if !utils.Contains(collector.runtimeInfo.CollectorList, "OSM") {
+		return fmt.Errorf("Not included because 'OSM' not in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+	}
+
+	return nil
 }
 
 // Collect implements the interface method
@@ -198,7 +215,7 @@ func (collector *OsmCollector) collectDataFromEnvoys(namespace string, meshName 
 			// Remove certificate secrets from Envoy config i.e., "inline_bytes" field from response
 			re := regexp.MustCompile("(?m)[\r\n]+^.*inline_bytes.*$")
 			secretRemovedResponse := re.ReplaceAllString(string(responseBody), "---redacted---")
-			filePath := meshName + "/envoy/"+ podName + query
+			filePath := meshName + "/envoy/" + podName + query
 			collector.data[filePath] = secretRemovedResponse
 		}
 		if err = utils.KillProcess(pid); err != nil {

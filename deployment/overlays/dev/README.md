@@ -1,6 +1,6 @@
 # Dev Overlay
 
-This can be used for running a locally-built Periscope image in a `Kind` cluster.
+This can be used for running a locally-built Periscope image in a `Kind` cluster. Because `Kind` runs on Linux only, the Linux `DaemonSet` will refer to the locally-built image, whereas the Windows `DaemonSet` will refer to the latest published production Windows MCR image.
 
 It will deploy to its own namespace, `aks-periscope-dev` to avoid conflicts with any existing Periscope deployment.
 
@@ -9,7 +9,7 @@ It will deploy to its own namespace, `aks-periscope-dev` to avoid conflicts with
 First, build the image and make sure it's loaded in `Kind`. If it's not, the pod will fail trying to pull the image (because it's local).
 
 ```sh
-docker build -f ./builder/Dockerfile -t periscope-local .
+docker build -f ./builder/Dockerfile.linux -t periscope-local .
 # Include a --name argument here if not using the default kind cluster.
 kind load docker-image periscope-local
 ```

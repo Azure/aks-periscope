@@ -6,10 +6,51 @@ import (
 	"path"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/utils"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func TestSystemperfCollector(t *testing.T) {
+func TestSystemPerfCollectorGetName(t *testing.T) {
+	const expectedName = "systemperf"
+
+	c := NewSystemPerfCollector(nil, nil)
+	actualName := c.GetName()
+	if actualName != expectedName {
+		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+	}
+}
+
+func TestSystemPerfCollectorCheckSupported(t *testing.T) {
+	tests := []struct {
+		name          string
+		collectorList []string
+		wantErr       bool
+	}{
+		{
+			name:          "'connectedCluster' in COLLECTOR_LIST",
+			collectorList: []string{"connectedCluster"},
+			wantErr:       true,
+		},
+		{
+			name:          "'connectedCluster' not in COLLECTOR_LIST",
+			collectorList: []string{},
+			wantErr:       false,
+		},
+	}
+
+	for _, tt := range tests {
+		runtimeInfo := &utils.RuntimeInfo{
+			CollectorList: tt.collectorList,
+		}
+		c := NewSystemPerfCollector(nil, runtimeInfo)
+		err := c.CheckSupported()
+		if (err != nil) != tt.wantErr {
+			t.Errorf("%s error = %v, wantErr %v", tt.name, err, tt.wantErr)
+		}
+	}
+}
+
+func TestSystemPerfCollectorCollect(t *testing.T) {
 	tests := []struct {
 		name    string
 		want    int
@@ -33,8 +74,11 @@ func TestSystemperfCollector(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot load kube config: %v", err)
 	}
+	runtimeInfo := &utils.RuntimeInfo{
+		CollectorList: []string{},
+	}
 
-	c := NewSystemPerfCollector(config)
+	c := NewSystemPerfCollector(config, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/url"
-	"os"
 	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
@@ -17,8 +16,9 @@ import (
 
 // AzureBlobExporter defines an Azure Blob Exporter
 type AzureBlobExporter struct {
-	hostname     string
-	creationTime string
+	runtimeInfo    *utils.RuntimeInfo
+	knownFilePaths *utils.KnownFilePaths
+	creationTime   string
 }
 
 type StorageKeyType string
@@ -31,20 +31,16 @@ var storageKeyTypes = map[string]StorageKeyType{
 	"Container": Container,
 }
 
-func NewAzureBlobExporter(creationTime, hostname string) *AzureBlobExporter {
+func NewAzureBlobExporter(runtimeInfo *utils.RuntimeInfo, knownFilePaths *utils.KnownFilePaths, creationTime string) *AzureBlobExporter {
 	return &AzureBlobExporter{
-		hostname:     hostname,
-		creationTime: creationTime,
+		runtimeInfo:    runtimeInfo,
+		knownFilePaths: knownFilePaths,
+		creationTime:   creationTime,
 	}
 }
 
-func createContainerURL() (azblob.ContainerURL, error) {
-	accountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
-	sasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
-	containerName := os.Getenv("AZURE_BLOB_CONTAINER_NAME")
-	keyType := os.Getenv("AZURE_STORAGE_SAS_KEY_TYPE")
-
-	if accountName == "" || sasKey == "" || containerName == "" {
+func createContainerURL(runtimeInfo *utils.RuntimeInfo, knownFilePaths *utils.KnownFilePaths) (azblob.ContainerURL, error) {
+	if runtimeInfo.StorageAccountName == "" || runtimeInfo.StorageSasKey == "" || runtimeInfo.StorageContainerName == "" {
 		log.Print("Storage Account information were not provided. Export to Azure Storage Account will be skipped.")
 		return azblob.ContainerURL{}, errors.New("Storage not configured.")
 	}
@@ -53,15 +49,15 @@ func createContainerURL() (azblob.ContainerURL, error) {
 
 	pipeline := azblob.NewPipeline(azblob.NewAnonymousCredential(), azblob.PipelineOptions{})
 
-	ses := utils.GetStorageEndpointSuffix()
-	url, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", accountName, ses, containerName, sasKey))
+	ses := utils.GetStorageEndpointSuffix(knownFilePaths)
+	url, err := url.Parse(fmt.Sprintf("https://%s.blob.%s/%s%s", runtimeInfo.StorageAccountName, ses, runtimeInfo.StorageContainerName, runtimeInfo.StorageSasKey))
 	if err != nil {
 		return azblob.ContainerURL{}, fmt.Errorf("build blob container url: %w", err)
 	}
 
 	containerURL := azblob.NewContainerURL(*url, pipeline)
 
-	if _, ok := storageKeyTypes[keyType]; ok {
+	if _, ok := storageKeyTypes[runtimeInfo.StorageSasKeyType]; ok {
 		return containerURL, nil
 	}
 
@@ -84,13 +80,13 @@ func createContainerURL() (azblob.ContainerURL, error) {
 
 // Export implements the interface method
 func (exporter *AzureBlobExporter) Export(producer interfaces.DataProducer) error {
-	containerURL, err := createContainerURL()
+	containerURL, err := createContainerURL(exporter.runtimeInfo, exporter.knownFilePaths)
 	if err != nil {
 		return err
 	}
 
 	for key, data := range producer.GetData() {
-		blobURL := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, key))
+		blobURL := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.runtimeInfo.HostNodeName, key))
 
 		log.Printf("\tAppend blob file: %s (of size %d bytes)", key, len(data))
 		if _, err = azblob.UploadStreamToBlockBlob(context.Background(), strings.NewReader(data), blobURL, azblob.UploadStreamToBlockBlobOptions{}); err != nil {
@@ -102,12 +98,12 @@ func (exporter *AzureBlobExporter) Export(producer interfaces.DataProducer) erro
 }
 
 func (exporter *AzureBlobExporter) ExportReader(name string, reader io.ReadSeeker) error {
-	containerURL, err := createContainerURL()
+	containerURL, err := createContainerURL(exporter.runtimeInfo, exporter.knownFilePaths)
 	if err != nil {
 		return err
 	}
 
-	blobUrl := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.hostname, name))
+	blobUrl := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.runtimeInfo.HostNodeName, name))
 	log.Printf("Uploading the file with blob name: %s\n", name)
 	_, err = azblob.UploadStreamToBlockBlob(context.Background(), reader, blobUrl, azblob.UploadStreamToBlockBlobOptions{})
 

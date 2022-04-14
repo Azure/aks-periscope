@@ -97,7 +97,7 @@ jobs:
           context: .
           push: true
           tags: localhost:5000/periscope:${{ github.run_id }}
-          file: ./builder/Dockerfile
+          file: ./builder/Dockerfile.linux
       - name: Deploy dummy helm chart for tests
         run: |
           helm repo add bitnami https://charts.bitnami.com/bitnami
@@ -114,7 +114,8 @@ jobs:
           touch ./deployment/overlays/temp/.env.secret
 
           # Build kustomization yaml
-          export IMAGE_NAME=localhost:5000/periscope
+          export IMAGE_NAME_LINUX=localhost:5000/periscope
+          export IMAGE_NAME_WINDOWS=unused
           export IMAGE_TAG=${{ github.run_id }}
           cat ./deployment/overlays/dynamic-image/kustomization.template.yaml | envsubst > ./deployment/overlays/temp/kustomization.yaml
 

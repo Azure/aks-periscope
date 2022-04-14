@@ -11,18 +11,34 @@ import (
 
 // SmiCollector defines an Smi Collector struct
 type SmiCollector struct {
-	data map[string]string
+	data        map[string]string
+	runtimeInfo *utils.RuntimeInfo
 }
 
 // NewSmiCollector is a constructor
-func NewSmiCollector() *SmiCollector {
+func NewSmiCollector(runtimeInfo *utils.RuntimeInfo) *SmiCollector {
 	return &SmiCollector{
-		data: make(map[string]string),
+		data:        make(map[string]string),
+		runtimeInfo: runtimeInfo,
 	}
 }
 
 func (collector *SmiCollector) GetName() string {
 	return "smi"
+}
+
+func (collector *SmiCollector) CheckSupported() error {
+	// This is not currently supported on Windows because it launches `kubectl` as a separate process (within GetResourceList).
+	// If/when it is reimplemented using the go client API for k8s, we can re-enable this.
+	if collector.runtimeInfo.OSIdentifier != "linux" {
+		return fmt.Errorf("Unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
+	}
+
+	if !utils.Contains(collector.runtimeInfo.CollectorList, "OSM") && !utils.Contains(collector.runtimeInfo.CollectorList, "SMI") {
+		return fmt.Errorf("Not included because neither 'OSM' or 'SMI' are in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+	}
+
+	return nil
 }
 
 func (collector *SmiCollector) GetData() map[string]string {

@@ -5,14 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -28,8 +27,6 @@ const (
 	// https://kubernetes-sigs.github.io/cloud-provider-azure/install/configs/#azure-stack-configuration -- See this documentation for the well-known cloud name.
 	AzureStackCloudName = "AzureStackCloud"
 )
-
-var GetHostNameFunc = GetHostNameSingleton()
 
 // Azure defines Azure configuration
 type Azure struct {
@@ -47,8 +44,8 @@ type CommandOutputStreams struct {
 }
 
 // IsAzureStackCloud returns true if the application is running on Azure Stack Cloud
-func IsAzureStackCloud() bool {
-	azureFile, err := RunCommandOnHost("cat", "/etc/kubernetes/azure.json")
+func IsAzureStackCloud(filePaths *KnownFilePaths) bool {
+	azureFile, err := os.ReadFile(filePaths.AzureJson)
 	if err != nil {
 		return false
 	}
@@ -60,81 +57,40 @@ func IsAzureStackCloud() bool {
 	return strings.EqualFold(cloud, AzureStackCloudName)
 }
 
-// CopyFileFromHost saves the specified source file to the destination
-func CopyFileFromHost(source, destination string) error {
-	sourceFile, err := RunCommandOnHost("cat", source)
+func CopyFile(source, destination string) error {
+	sourceFile, err := os.Open(source)
 	if err != nil {
-		return fmt.Errorf("unable to retrieve source content: %w", err)
+		return fmt.Errorf("unable to open source file %s: %w", source, err)
 	}
+	defer sourceFile.Close()
 
-	if err := os.MkdirAll(filepath.Dir(destination), os.ModePerm); err != nil {
-		return fmt.Errorf("create path directories for file %s: %w", destination, err)
-	}
-
-	f, err := os.Create(destination)
+	destFile, err := os.Create(destination)
 	if err != nil {
-		return fmt.Errorf("create file %s: %w", destination, err)
+		return fmt.Errorf("error creating file %s: %w", destination, err)
 	}
+	defer destFile.Close()
 
-	defer f.Close()
-
-	_, err = f.Write([]byte(sourceFile))
+	_, err = io.Copy(destFile, sourceFile)
 	if err != nil {
-		return fmt.Errorf("write data to file %s: %w", destination, err)
+		return fmt.Errorf("error copying data to file %s: %w", destination, err)
 	}
 	return nil
 }
 
 // GetStorageEndpointSuffix returns the SES url from the JSON file as a string
-func GetStorageEndpointSuffix() string {
-	if IsAzureStackCloud() {
-		ascFile, err := RunCommandOnHost("cat", "/etc/kubernetes/azurestackcloud.json")
+func GetStorageEndpointSuffix(knownFilePaths *KnownFilePaths) string {
+	if IsAzureStackCloud(knownFilePaths) {
+		ascFile, err := os.ReadFile(knownFilePaths.AzureStackCloudJson)
 		if err != nil {
-			log.Fatalf("unable to locate azurestackcloud.json to extract storage endpoint suffix: %v", err)
+			log.Fatalf("unable to locate %s to extract storage endpoint suffix: %v", knownFilePaths.AzureStackCloudJson, err)
 		}
 		var azurestackcloud AzureStackCloud
 		if err = json.Unmarshal([]byte(ascFile), &azurestackcloud); err != nil {
-			log.Fatalf("unable to read azurestackcloud.json file: %v", err)
+			log.Fatalf("unable to read %s file: %v", knownFilePaths.AzureStackCloudJson, err)
 		}
 		return azurestackcloud.StorageEndpointSuffix
 	}
 	return PublicAzureStorageEndpointSuffix
-}
-
-type HostName struct {
-	HostName string
-	Err      error
-}
-
-var singletonHostName *HostName
-var once sync.Once
-
-// GetHostNameSingleton get host name singleton use
-func GetHostNameSingleton() *HostName {
-	once.Do(func() {
-		hostname, err := RunCommandOnHost("cat", "/etc/hostname")
-
-		if hostname != "" {
-			hostname = strings.TrimSuffix(string(hostname), "\n")
-		}
-
-		singletonHostName = &HostName{
-			HostName: hostname,
-			Err:      err,
-		}
-	})
-
-	return singletonHostName
-}
-
-// GetHostName get host name
-func GetHostName() (string, error) {
-	hostName := GetHostNameFunc
-	if hostName.Err != nil {
-		return "", fmt.Errorf("Fail to get host name: %+v", hostName.Err)
-	}
-
-	return hostName.HostName, nil
 }
 
 // RunCommandOnHost runs a command on host system
@@ -261,22 +217,6 @@ func GetResourceList(kubeCmds []string, separator string) ([]string, error) {
 	return strings.Split(strings.Trim(resourceList, "\""), separator), nil
 }
 
-func ReadFileContent(filename string) (string, error) {
-	output, err := os.Open(filename)
-	if err != nil {
-		return "", err
-	}
-
-	defer output.Close()
-
-	b, err := ioutil.ReadAll(output)
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
-}
-
 func GetPods(clientset *kubernetes.Clientset, namespace string) (*v1.PodList, error) {
 	// Create a pod interface for the given namespace
 	podInterface := clientset.CoreV1().Pods(namespace)
@@ -289,4 +229,13 @@ func GetPods(clientset *kubernetes.Clientset, namespace string) (*v1.PodList, er
 	}
 
 	return podList, nil
+}
+
+func Contains(flagsList []string, flag string) bool {
+	for _, f := range flagsList {
+		if strings.EqualFold(f, flag) {
+			return true
+		}
+	}
+	return false
 }

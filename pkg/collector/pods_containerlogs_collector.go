@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -18,8 +17,9 @@ import (
 
 // PodsContainerLogsCollector defines a Pods Container Logs Collector struct
 type PodsContainerLogsCollector struct {
-	kubeconfig *restclient.Config
-	data       map[string]string
+	data        map[string]string
+	kubeconfig  *restclient.Config
+	runtimeInfo *utils.RuntimeInfo
 }
 
 type PodsContainerStruct struct {
@@ -33,10 +33,11 @@ type PodsContainerStruct struct {
 }
 
 // NewPodsContainerLogs is a constructor
-func NewPodsContainerLogs(config *restclient.Config) *PodsContainerLogsCollector {
+func NewPodsContainerLogsCollector(config *restclient.Config, runtimeInfo *utils.RuntimeInfo) *PodsContainerLogsCollector {
 	return &PodsContainerLogsCollector{
-		data:       make(map[string]string),
-		kubeconfig: config,
+		data:        make(map[string]string),
+		kubeconfig:  config,
+		runtimeInfo: runtimeInfo,
 	}
 }
 
@@ -44,17 +45,23 @@ func (collector *PodsContainerLogsCollector) GetName() string {
 	return "podscontainerlogs"
 }
 
+func (collector *PodsContainerLogsCollector) CheckSupported() error {
+	if !utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
+		return fmt.Errorf("Not included because 'connectedCluster' not in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+	}
+
+	return nil
+}
+
 // Collect implements the interface method
 func (collector *PodsContainerLogsCollector) Collect() error {
-	containerNamespaces := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))
-
 	// Creates the clientset
 	clientset, err := kubernetes.NewForConfig(collector.kubeconfig)
 	if err != nil {
 		return fmt.Errorf("getting access to K8S failed: %w", err)
 	}
 
-	for _, namespace := range containerNamespaces {
+	for _, namespace := range collector.runtimeInfo.ContainerLogsNamespaces {
 		// List the pods in the given namespace
 		podList, err := utils.GetPods(clientset, namespace)
 

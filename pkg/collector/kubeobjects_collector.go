@@ -2,7 +2,6 @@ package collector
 
 import (
 	"fmt"
-	"os"
 	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
@@ -13,15 +12,17 @@ import (
 
 // KubeObjectsCollector defines a KubeObjects Collector struct
 type KubeObjectsCollector struct {
-	kubeconfig *restclient.Config
-	data       map[string]string
+	data        map[string]string
+	kubeconfig  *restclient.Config
+	runtimeInfo *utils.RuntimeInfo
 }
 
 // NewKubeObjectsCollector is a constructor
-func NewKubeObjectsCollector(config *restclient.Config) *KubeObjectsCollector {
+func NewKubeObjectsCollector(config *restclient.Config, runtimeInfo *utils.RuntimeInfo) *KubeObjectsCollector {
 	return &KubeObjectsCollector{
-		data:       make(map[string]string),
-		kubeconfig: config,
+		data:        make(map[string]string),
+		kubeconfig:  config,
+		runtimeInfo: runtimeInfo,
 	}
 }
 
@@ -29,17 +30,19 @@ func (collector *KubeObjectsCollector) GetName() string {
 	return "kubeobjects"
 }
 
+func (collector *KubeObjectsCollector) CheckSupported() error {
+	return nil
+}
+
 // Collect implements the interface method
 func (collector *KubeObjectsCollector) Collect() error {
-	kubernetesObjects := strings.Fields(os.Getenv("DIAGNOSTIC_KUBEOBJECTS_LIST"))
-
 	// Creates the clientset
 	clientset, err := kubernetes.NewForConfig(collector.kubeconfig)
 	if err != nil {
 		return fmt.Errorf("getting access to K8S failed: %w", err)
 	}
 
-	for _, kubernetesObject := range kubernetesObjects {
+	for _, kubernetesObject := range collector.runtimeInfo.KubernetesObjects {
 		kubernetesObjectParts := strings.Split(kubernetesObject, "/")
 		nameSpace := kubernetesObjectParts[0]
 		objectType := kubernetesObjectParts[1]

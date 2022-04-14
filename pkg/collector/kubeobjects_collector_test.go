@@ -5,21 +5,38 @@ import (
 	"path"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/utils"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func TestNewKubeObjectsCollector(t *testing.T) {
+func TestKubeObjectsCollectorGetName(t *testing.T) {
+	const expectedName = "kubeobjects"
+
+	c := NewKubeObjectsCollector(nil, nil)
+	actualName := c.GetName()
+	if actualName != expectedName {
+		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+	}
+}
+
+func TestKubeObjectsCollectorCheckSupported(t *testing.T) {
+	c := NewKubeObjectsCollector(nil, nil)
+	err := c.CheckSupported()
+	if err != nil {
+		t.Errorf("Error checking supported: %v", err)
+	}
+}
+
+func TestKubeObjectsCollectorCollect(t *testing.T) {
 	tests := []struct {
-		name          string
-		want          int
-		wantErr       bool
-		collectorName string
+		name    string
+		want    int
+		wantErr bool
 	}{
 		{
-			name:          "get kube objects logs",
-			want:          1,
-			wantErr:       false,
-			collectorName: "kubeobjects",
+			name:    "get kube objects logs",
+			want:    1,
+			wantErr: false,
 		},
 	}
 
@@ -35,11 +52,11 @@ func TestNewKubeObjectsCollector(t *testing.T) {
 		t.Fatalf("Cannot load kube config: %v", err)
 	}
 
-	c := NewKubeObjectsCollector(config)
-
-	if err := os.Setenv("DIAGNOSTIC_KUBEOBJECTS_LIST", "kube-system/pod kube-system/service kube-system/deployment"); err != nil {
-		t.Fatalf("Setenv: %v", err)
+	runtimeInfo := &utils.RuntimeInfo{
+		KubernetesObjects: []string{"kube-system/pod", "kube-system/service", "kube-system/deployment"},
 	}
+
+	c := NewKubeObjectsCollector(config, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -52,11 +69,6 @@ func TestNewKubeObjectsCollector(t *testing.T) {
 
 			if len(raw) < tt.want {
 				t.Errorf("len(GetData()) = %v, want %v", len(raw), tt.want)
-			}
-
-			name := c.GetName()
-			if name != tt.collectorName {
-				t.Errorf("GetName()) = %v, want %v", name, tt.collectorName)
 			}
 		})
 	}

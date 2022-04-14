@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
+	"github.com/Azure/aks-periscope/pkg/utils"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/release"
 	"k8s.io/cli-runtime/pkg/genericclioptions"
@@ -30,20 +32,30 @@ type HelmReleaseHistory struct {
 
 // HelmCollector defines a Helm Collector struct
 type HelmCollector struct {
-	kubeconfig *restclient.Config
-	data       map[string]string
+	data        map[string]string
+	kubeconfig  *restclient.Config
+	runtimeInfo *utils.RuntimeInfo
 }
 
 // NewHelmCollector is a constructor
-func NewHelmCollector(config *restclient.Config) *HelmCollector {
+func NewHelmCollector(config *restclient.Config, runtimeInfo *utils.RuntimeInfo) *HelmCollector {
 	return &HelmCollector{
-		data:       make(map[string]string),
-		kubeconfig: config,
+		data:        make(map[string]string),
+		kubeconfig:  config,
+		runtimeInfo: runtimeInfo,
 	}
 }
 
 func (collector *HelmCollector) GetName() string {
 	return "helm"
+}
+
+func (collector *HelmCollector) CheckSupported() error {
+	if !utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
+		return fmt.Errorf("Not included because 'connectedCluster' not in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+	}
+
+	return nil
 }
 
 // Collect implements the interface method

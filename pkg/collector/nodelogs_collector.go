@@ -1,21 +1,26 @@
 package collector
 
 import (
-	"os"
+	"fmt"
 	"strings"
 
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // NodeLogsCollector defines a NodeLogs Collector struct
 type NodeLogsCollector struct {
-	data map[string]string
+	data        map[string]string
+	runtimeInfo *utils.RuntimeInfo
+	fileReader  interfaces.FileContentReader
 }
 
 // NewNodeLogsCollector is a constructor
-func NewNodeLogsCollector() *NodeLogsCollector {
+func NewNodeLogsCollector(runtimeInfo *utils.RuntimeInfo, fileReader interfaces.FileContentReader) *NodeLogsCollector {
 	return &NodeLogsCollector{
-		data: make(map[string]string),
+		data:        make(map[string]string),
+		runtimeInfo: runtimeInfo,
+		fileReader:  fileReader,
 	}
 }
 
@@ -23,17 +28,25 @@ func (collector *NodeLogsCollector) GetName() string {
 	return "nodelogs"
 }
 
+func (collector *NodeLogsCollector) CheckSupported() error {
+	if utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
+		return fmt.Errorf("Not included because 'connectedCluster' is in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+	}
+
+	// Although the files read by this collector may be different between Windows and Linux,
+	// they are defined in a ConfigMap which is expected to be populated correctly for the OS.
+	return nil
+}
+
 // Collect implements the interface method
 func (collector *NodeLogsCollector) Collect() error {
-	nodeLogs := strings.Fields(os.Getenv("DIAGNOSTIC_NODELOGS_LIST"))
-
-	for _, nodeLog := range nodeLogs {
+	for _, nodeLog := range collector.runtimeInfo.NodeLogs {
 		normalizedNodeLog := strings.Replace(nodeLog, "/", "_", -1)
 		if normalizedNodeLog[0] == '_' {
 			normalizedNodeLog = normalizedNodeLog[1:]
 		}
 
-		output, err := utils.ReadFileContent(nodeLog)
+		output, err := collector.fileReader.GetFileContent(nodeLog)
 		if err != nil {
 			return err
 		}

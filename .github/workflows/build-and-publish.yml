@@ -8,7 +8,21 @@ on: [workflow_dispatch]
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 2
+      matrix:
+        os: [ubuntu-latest, windows-2019]
+        include:
+        - os: ubuntu-latest
+          file: ./builder/Dockerfile.linux
+          imagename: 'aks/periscope'
+        - os: windows-2019
+          file: ./builder/Dockerfile.windows
+          imagename: 'aks/periscope-win'
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v2
       - name: Get Changelog Entry
@@ -24,8 +38,8 @@ jobs:
       # Lowercase my github ownername.
       - name: Set Environment Variables
         run: |
-          OWNER="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
-          echo "REPO-OWNER=${OWNER}" >> $GITHUB_ENV
+          $owner="${{ github.repository_owner }}".ToLower()
+          Add-Content -Path $env:GITHUB_ENV -Value "REPO-OWNER=$owner"
 
       - name: Login to GitHub Packages OCI Registry
         uses: docker/login-action@v1
@@ -37,5 +51,5 @@ jobs:
       # Note the below automatically sets the registry to the local GH registry of the org name. 
       # Currently, for pure gitops reconstructing this runtime setting will require looking at the repository owner of the commit
         run: |
-          docker build -f ./builder/Dockerfile -t ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }} .
-          docker push ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}
+          docker build -f ${{ matrix.file }} -t ghcr.io/${{ env.REPO-OWNER }}/${{ matrix.imagename }}:${{ steps.changelog_reader.outputs.version }} .
+          docker push ghcr.io/${{ env.REPO-OWNER }}/${{ matrix.imagename }}:${{ steps.changelog_reader.outputs.version }}

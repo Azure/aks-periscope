@@ -1,3 +1,4 @@
 ignore:
   - "pkg/collector/osm_collector.go"
   - "pkg/collector/smi_collector.go"
+  - "pkg/utils"

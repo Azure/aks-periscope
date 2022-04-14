@@ -5,8 +5,11 @@ bases:
 - ../../base
 
 images:
-- name: periscope
-  newName: ${IMAGE_NAME}
+- name: periscope-linux
+  newName: ${IMAGE_NAME_LINUX}
+  newTag: "${IMAGE_TAG}"
+- name: periscope-windows
+  newName: ${IMAGE_NAME_WINDOWS}
   newTag: "${IMAGE_TAG}"
 
 secretGenerator:

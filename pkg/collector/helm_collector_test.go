@@ -6,21 +6,60 @@ import (
 	"path"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/utils"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func TestHelmCollector(t *testing.T) {
+func TestHelmCollectorGetName(t *testing.T) {
+	const expectedName = "helm"
+
+	c := NewHelmCollector(nil, nil)
+	actualName := c.GetName()
+	if actualName != expectedName {
+		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+	}
+}
+
+func TestHelmCollectorCheckSupported(t *testing.T) {
 	tests := []struct {
 		name          string
-		want          int
+		collectorList []string
 		wantErr       bool
-		collectorName string
 	}{
 		{
-			name:          "get release history",
-			want:          1,
+			name:          "'connectedCluster' in COLLECTOR_LIST",
+			collectorList: []string{"connectedCluster"},
 			wantErr:       false,
-			collectorName: "helm",
+		},
+		{
+			name:          "'connectedCluster' not in COLLECTOR_LIST",
+			collectorList: []string{},
+			wantErr:       true,
+		},
+	}
+
+	for _, tt := range tests {
+		runtimeInfo := &utils.RuntimeInfo{
+			CollectorList: tt.collectorList,
+		}
+		c := NewHelmCollector(nil, runtimeInfo)
+		err := c.CheckSupported()
+		if (err != nil) != tt.wantErr {
+			t.Errorf("%s error = %v, wantErr %v", tt.name, err, tt.wantErr)
+		}
+	}
+}
+
+func TestHelmCollectorCollect(t *testing.T) {
+	tests := []struct {
+		name    string
+		want    int
+		wantErr bool
+	}{
+		{
+			name:    "get release history",
+			want:    1,
+			wantErr: false,
 		},
 	}
 
@@ -35,8 +74,11 @@ func TestHelmCollector(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Cannot load kube config: %v", err)
 	}
+	runtimeInfo := &utils.RuntimeInfo{
+		CollectorList: []string{"connectedCluster"},
+	}
 
-	c := NewHelmCollector(config)
+	c := NewHelmCollector(config, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -54,11 +96,6 @@ func TestHelmCollector(t *testing.T) {
 
 			if len(releases) < tt.want {
 				t.Errorf("len(GetData()) = %v, want %v", len(releases), tt.want)
-			}
-
-			name := c.GetName()
-			if name != tt.collectorName {
-				t.Errorf("GetName()) = %v, want %v", name, tt.collectorName)
 			}
 		})
 	}
