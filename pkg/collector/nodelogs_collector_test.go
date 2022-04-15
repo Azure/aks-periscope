@@ -3,6 +3,7 @@ package collector
 import (
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -91,7 +92,7 @@ func TestNodeLogsCollectorCollect(t *testing.T) {
 		},
 	}
 
-	reader := utils.NewFakeFileContentReader(testLogFiles)
+	reader := test.NewFakeFileContentReader(testLogFiles)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

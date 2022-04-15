@@ -3,6 +3,7 @@ package collector
 import (
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -94,7 +95,7 @@ func TestDNSCollectorCollect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reader := utils.NewFakeFileContentReader(tt.files)
+			reader := test.NewFakeFileContentReader(tt.files)
 
 			c := NewDNSCollector(runtimeInfo, filePaths, reader)
 			err := c.Collect()
