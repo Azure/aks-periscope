@@ -22,7 +22,7 @@ func NewToolsCommandRunner(client *client.Client) *ToolsCommandRunner {
 	}
 }
 
-func (creator *ToolsCommandRunner) Run(command string) (string, error) {
+func (creator *ToolsCommandRunner) Run(command string, volumeBinds ...string) (string, error) {
 
 	// https://godoc.org/github.com/docker/docker/api/types/container#Config
 	config := &container.Config{
@@ -32,9 +32,8 @@ func (creator *ToolsCommandRunner) Run(command string) (string, error) {
 
 	// https://godoc.org/github.com/docker/docker/api/types/container#HostConfig
 	hostConfig := &container.HostConfig{
-		Binds: []string{
-			"/var/run/docker.sock:/var/run/docker.sock",
-		},
+		Binds:       append(volumeBinds, "/var/run/docker.sock:/var/run/docker.sock"),
+		NetworkMode: "host",
 	}
 	cont, err := creator.client.ContainerCreate(
 		context.Background(),

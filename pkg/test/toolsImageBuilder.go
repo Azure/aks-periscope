@@ -26,12 +26,6 @@ func NewToolsImageBuilder(client *client.Client) *ToolsImageBuilder {
 func (builder *ToolsImageBuilder) Build() error {
 	ctx := context.Background()
 
-	dockerfileContent := []byte(`
-FROM docker:20.10.14-alpine3.15
-ADD https://kind.sigs.k8s.io/dl/v0.12.0/kind-linux-amd64 /usr/local/bin/kind
-RUN chmod 755 /usr/local/bin/kind
-`)
-
 	// Create a buffer
 	buf := new(bytes.Buffer)
 	tw := tar.NewWriter(buf)
@@ -40,7 +34,7 @@ RUN chmod 755 /usr/local/bin/kind
 	// Make a TAR header for the dockerfile
 	tarHeader := &tar.Header{
 		Name: "Dockerfile",
-		Size: int64(len(dockerfileContent)),
+		Size: int64(len(DockerfileBytes)),
 	}
 
 	// Write the header and content
@@ -49,7 +43,7 @@ RUN chmod 755 /usr/local/bin/kind
 		return err
 	}
 
-	_, err = tw.Write(dockerfileContent)
+	_, err = tw.Write(DockerfileBytes)
 	if err != nil {
 		return err
 	}

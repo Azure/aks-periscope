@@ -13,3 +13,13 @@ func GetCreateClusterCommand() string {
 	getKubeConfigCommand := fmt.Sprintf("kind get kubeconfig --name %s", TestClusterName)
 	return fmt.Sprintf("%s || %s && %s", existsClusterCommand, createClusterCommand, getKubeConfigCommand)
 }
+
+func GetInstallHelmChartCommand(name, namespace, hostChartPath, hostKubeconfigPath string) (string, []string) {
+	chartPath := "/testchart"
+	kubeConfigPath := "/.kube/config"
+	command := fmt.Sprintf("KUBECONFIG=%s helm install %s %s --namespace %s --create-namespace", kubeConfigPath, name, chartPath, namespace)
+	return command, []string{
+		fmt.Sprintf("%s:%s", hostChartPath, chartPath),
+		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
+	}
+}
