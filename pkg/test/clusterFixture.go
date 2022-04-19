@@ -54,7 +54,7 @@ func buildInstance() (*ClusterFixture, error) {
 		NamespaceSuffix: time.Now().UTC().Format("20060102-150405"),
 	}
 
-	client, err := client.NewEnvClient()
+	client, err := client.NewClientWithOpts()
 	if err != nil {
 		return fixture, fmt.Errorf("Unable to create docker client: %v", err)
 	}

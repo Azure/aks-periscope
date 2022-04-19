@@ -17,8 +17,9 @@ func GetCreateClusterCommand() string {
 func GetInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string) {
 	kubeConfigPath := "/.kube/config"
 	installCommand := fmt.Sprintf("kubectl --kubeconfig=%s apply -f /resources/metrics-server/components.yaml", kubeConfigPath)
-	waitCommand := fmt.Sprintf("kubectl --kubeconfig=%s wait --for condition=ready pod -n kube-system -l k8s-app=metrics-server --timeout=240s", kubeConfigPath)
-	command := fmt.Sprintf("%s && %s", installCommand, waitCommand)
+	waitDeployCommand := fmt.Sprintf("kubectl wait --kubeconfig=%s --for condition=Available=True deployment -n kube-system metrics-server --timeout=240s", kubeConfigPath)
+	waitPodsCommand := fmt.Sprintf("kubectl --kubeconfig=%s wait --for condition=ready pod -n kube-system -l k8s-app=metrics-server --timeout=240s", kubeConfigPath)
+	command := fmt.Sprintf("%s && %s && %s", installCommand, waitDeployCommand, waitPodsCommand)
 	return command, []string{
 		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
 	}

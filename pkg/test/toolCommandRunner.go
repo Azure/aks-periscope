@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-
-	"github.com/docker/docker/pkg/stdcopy"
+	"log"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 )
 
 type ToolsCommandRunner struct {
@@ -51,7 +51,7 @@ func (creator *ToolsCommandRunner) Run(command string, volumeBinds ...string) (s
 	// Remove container after running command, whether successful or not.
 	// There is an auto-remove option when creating the container, but we avoid this because
 	// it introduces a race condition while we wait for the container.
-	defer creator.client.ContainerRemove(context.Background(), cont.ID, types.ContainerRemoveOptions{})
+	defer removeContainer(creator.client, cont.ID)
 
 	err = creator.client.ContainerStart(context.Background(), cont.ID, types.ContainerStartOptions{})
 	if err != nil {
@@ -78,6 +78,13 @@ func (creator *ToolsCommandRunner) Run(command string, volumeBinds ...string) (s
 	}
 
 	return stdout, nil
+}
+
+func removeContainer(client *client.Client, containerId string) {
+	err := client.ContainerRemove(context.Background(), containerId, types.ContainerRemoveOptions{})
+	if err != nil {
+		log.Printf("Error removing container ID %s", containerId)
+	}
 }
 
 func getContainerLogs(client *client.Client, containerId string) (string, string, error) {
