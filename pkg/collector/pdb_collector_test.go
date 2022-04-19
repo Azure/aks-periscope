@@ -1,12 +1,10 @@
 package collector
 
 import (
-	"os"
-	"path"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func TestPDBCollectorGetName(t *testing.T) {
@@ -62,22 +60,13 @@ func TestPDBCollectorCollect(t *testing.T) {
 		},
 	}
 
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("Cannot get user home dir: %v", err)
-	}
+	fixture, _ := test.GetClusterFixture()
 
-	master := ""
-	kubeconfig := path.Join(dirname, ".kube/config")
-	config, err := clientcmd.BuildConfigFromFlags(master, kubeconfig)
-	if err != nil {
-		t.Fatalf("Cannot load kube config: %v", err)
-	}
 	runtimeInfo := &utils.RuntimeInfo{
 		CollectorList: []string{},
 	}
 
-	c := NewPDBCollector(config, runtimeInfo)
+	c := NewPDBCollector(fixture.ClientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

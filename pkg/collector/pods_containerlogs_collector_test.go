@@ -1,12 +1,10 @@
 package collector
 
 import (
-	"os"
-	"path"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func TestPodsContainerLogsCollectorGetName(t *testing.T) {
@@ -62,22 +60,12 @@ func TestPodsContainerLogsCollectorCollect(t *testing.T) {
 		},
 	}
 
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("Cannot get user home dir: %v", err)
-	}
-
-	master := ""
-	kubeconfig := path.Join(dirname, ".kube/config")
-	config, err := clientcmd.BuildConfigFromFlags(master, kubeconfig)
-	if err != nil {
-		t.Fatalf("Cannot load kube config: %v", err)
-	}
+	fixture, _ := test.GetClusterFixture()
 
 	runtimeInfo := &utils.RuntimeInfo{
 		ContainerLogsNamespaces: []string{"kube-system"},
 	}
-	c := NewPodsContainerLogsCollector(config, runtimeInfo)
+	c := NewPodsContainerLogsCollector(fixture.ClientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
