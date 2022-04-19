@@ -14,12 +14,20 @@ func GetCreateClusterCommand() string {
 	return fmt.Sprintf("%s || %s && %s", existsClusterCommand, createClusterCommand, getKubeConfigCommand)
 }
 
-func GetInstallHelmChartCommand(name, namespace, hostChartPath, hostKubeconfigPath string) (string, []string) {
-	chartPath := "/testchart"
+func GetInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string) {
 	kubeConfigPath := "/.kube/config"
-	command := fmt.Sprintf("KUBECONFIG=%s helm install %s %s --namespace %s --create-namespace", kubeConfigPath, name, chartPath, namespace)
+	installCommand := fmt.Sprintf("kubectl --kubeconfig=%s apply -f /resources/metrics-server/components.yaml", kubeConfigPath)
+	waitCommand := fmt.Sprintf("kubectl --kubeconfig=%s wait --for condition=ready pod -n kube-system -l k8s-app=metrics-server --timeout=240s", kubeConfigPath)
+	command := fmt.Sprintf("%s && %s", installCommand, waitCommand)
 	return command, []string{
-		fmt.Sprintf("%s:%s", hostChartPath, chartPath),
+		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
+	}
+}
+
+func GetInstallHelmChartCommand(name, namespace, hostKubeconfigPath string) (string, []string) {
+	kubeConfigPath := "/.kube/config"
+	command := fmt.Sprintf("KUBECONFIG=%s helm install %s /resources/testchart --namespace %s --create-namespace", kubeConfigPath, name, namespace)
+	return command, []string{
 		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
 	}
 }

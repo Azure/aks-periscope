@@ -36,17 +36,10 @@ func GetClusterFixture() (*ClusterFixture, error) {
 		once.Do(
 			func() {
 				fixtureInstance, fixtureError = buildInstance()
-				if fixtureError != nil {
-					fixtureInstance = &ClusterFixture{}
-				}
 			})
 	}
 
-	if fixtureError != nil {
-		return nil, fixtureError
-	}
-
-	return fixtureInstance, nil
+	return fixtureInstance, fixtureError
 }
 
 func (fixture *ClusterFixture) Cleanup() {
@@ -102,6 +95,9 @@ func buildInstance() (*ClusterFixture, error) {
 	}
 
 	fixture.KubeConfigFile, err = ioutil.TempFile("", "")
+	if err != nil {
+		return fixture, fmt.Errorf("Error creating temp file for kubeconfig: %v", err)
+	}
 	_, err = fixture.KubeConfigFile.Write(kubeConfigContentBytes)
 	if err != nil {
 		return fixture, fmt.Errorf("Error creating kubeconfig file %s: %v", fixture.KubeConfigFile.Name(), err)
@@ -109,6 +105,12 @@ func buildInstance() (*ClusterFixture, error) {
 	err = fixture.KubeConfigFile.Close()
 	if err != nil {
 		return fixture, fmt.Errorf("Error closing kubeconfig file %s: %v", fixture.KubeConfigFile.Name(), err)
+	}
+
+	installMetricsServerCommand, binds := GetInstallMetricsServerCommand(fixture.KubeConfigFile.Name())
+	_, err = fixture.CommandRunner.Run(installMetricsServerCommand, binds...)
+	if err != nil {
+		return fixture, fmt.Errorf("Error installing metrics server: %v", err)
 	}
 
 	return fixture, nil

@@ -2,9 +2,6 @@ package collector
 
 import (
 	"encoding/json"
-	"io/ioutil"
-	"log"
-	"os"
 	"testing"
 
 	"github.com/Azure/aks-periscope/pkg/test"
@@ -12,37 +9,21 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func setup(t *testing.T) (*rest.Config, string, func()) {
+func setup(t *testing.T) *rest.Config {
 	fixture, _ := test.GetClusterFixture()
-
-	chartDir, err := ioutil.TempDir("", "")
-	if err != nil {
-		t.Fatalf("Error creating chart directory: %v", err)
-	}
-
-	err = test.CopyDir(test.TestChart, "resources/testchart", chartDir)
-	if err != nil {
-		t.Fatalf("Error copying testchart files to %s: %v", chartDir, err)
-	}
 
 	namespace, err := fixture.CreateNamespace("helmtest")
 	if err != nil {
 		t.Fatalf("Error creating namespace: %v", err)
 	}
 
-	installChartCommand, installHelmBinds := test.GetInstallHelmChartCommand("test", namespace, chartDir, fixture.KubeConfigFile.Name())
-	installChartOutput, err := fixture.CommandRunner.Run(installChartCommand, installHelmBinds...)
+	installChartCommand, installHelmBinds := test.GetInstallHelmChartCommand("test", namespace, fixture.KubeConfigFile.Name())
+	_, err = fixture.CommandRunner.Run(installChartCommand, installHelmBinds...)
 	if err != nil {
 		t.Fatalf("Error installing helm chart: %v", err)
 	}
 
-	log.Printf("OUTPUT:\n%s", installChartOutput)
-
-	teardown := func() {
-		os.RemoveAll(chartDir)
-	}
-
-	return fixture.ClientConfig, chartDir, teardown
+	return fixture.ClientConfig
 }
 
 func TestHelmCollectorGetName(t *testing.T) {
@@ -86,8 +67,7 @@ func TestHelmCollectorCheckSupported(t *testing.T) {
 }
 
 func TestHelmCollectorCollect(t *testing.T) {
-	clientConfig, _, teardown := setup(t)
-	defer teardown()
+	clientConfig := setup(t)
 
 	tests := []struct {
 		name    string

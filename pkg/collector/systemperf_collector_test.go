@@ -2,7 +2,6 @@ package collector
 
 import (
 	"encoding/json"
-	"os"
 	"testing"
 
 	"github.com/Azure/aks-periscope/pkg/test"
@@ -72,27 +71,20 @@ func TestSystemPerfCollectorCollect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if _, err := os.Stat("/var/lib/kubelet/kubeconfig"); os.IsExist(err) {
-				err := c.Collect()
-				// This test will not work in kind cluster.
-				// For kind cluster use in CI build:
-				// message: "metrics error: the server could not find the requested resource (get nodes.metrics.k8s.io)"
-				// hence skipping this for CI.
+			err := c.Collect()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Collect() error = %v, wantErr %v", err, tt.wantErr)
+			}
 
-				if (err != nil) != tt.wantErr {
-					t.Errorf("Collect() error = %v, wantErr %v", err, tt.wantErr)
-				}
+			raw := c.GetData()["nodes"]
+			var nodeMetrices []NodeMetrics
 
-				raw := c.GetData()["nodes"]
-				var nodeMetrices []NodeMetrics
+			if err := json.Unmarshal([]byte(raw), &nodeMetrices); err != nil {
+				t.Errorf("unmarshal GetData(): %v", err)
+			}
 
-				if err := json.Unmarshal([]byte(raw), &nodeMetrices); err != nil {
-					t.Errorf("unmarshal GetData(): %v", err)
-				}
-
-				if len(nodeMetrices) < tt.want {
-					t.Errorf("len(GetData()) = %v, want %v", len(nodeMetrices), tt.want)
-				}
+			if len(nodeMetrices) < tt.want {
+				t.Errorf("len(GetData()) = %v, want %v", len(nodeMetrices), tt.want)
 			}
 		})
 	}
