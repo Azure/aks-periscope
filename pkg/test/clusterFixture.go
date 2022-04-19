@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"sync"
 	"time"
@@ -43,7 +44,10 @@ func GetClusterFixture() (*ClusterFixture, error) {
 }
 
 func (fixture *ClusterFixture) Cleanup() {
-	cleanTestNamespaces(fixture.Clientset)
+	err := cleanTestNamespaces(fixture.Clientset)
+	if err != nil {
+		log.Printf("Error cleaning test namespaces: %v", err)
+	}
 	if fixture.KubeConfigFile != nil {
 		os.Remove(fixture.KubeConfigFile.Name())
 	}
