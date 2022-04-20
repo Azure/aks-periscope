@@ -64,11 +64,11 @@ func (creator *ToolsCommandRunner) Run(command string, volumeBinds ...string) (s
 		return "", fmt.Errorf("Failed waiting for command %s: %v", command, err)
 	case result := <-waitResultChan:
 		if result.StatusCode != 0 {
-			_, stderr, err := getContainerLogs(creator.client, cont.ID)
+			stdout, stderr, err := getContainerLogs(creator.client, cont.ID)
 			if err != nil {
 				return "", fmt.Errorf("Command failed with status %d, but unable to read container logs.\nCommand: %s\nError: %v", result.StatusCode, command, err)
 			}
-			return "", fmt.Errorf("Command failed with status %d\nCommand: %s\nLogs: %s", result.StatusCode, command, stderr)
+			return "", fmt.Errorf("Command failed with status %d\nCommand: %s\nStdout: %s\nStderr: %s", result.StatusCode, command, stdout, stderr)
 		}
 	}
 
