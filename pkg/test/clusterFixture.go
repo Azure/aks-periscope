@@ -44,6 +44,12 @@ func GetClusterFixture() (*ClusterFixture, error) {
 }
 
 func (fixture *ClusterFixture) Cleanup() {
+	if fixture.CommandRunner != nil && fixture.KubeConfigFile != nil {
+		err := uninstallOsm(fixture.CommandRunner, fixture.KubeConfigFile)
+		if err != nil {
+			log.Printf("Error uninstalling OSM: %v", err)
+		}
+	}
 	err := cleanTestNamespaces(fixture.Clientset)
 	if err != nil {
 		log.Printf("Error cleaning test namespaces: %v", err)
@@ -93,11 +99,6 @@ func buildInstance() (*ClusterFixture, error) {
 		return fixture, fmt.Errorf("Failed to create client connection to kubernetes from kubeconfig: %v", err)
 	}
 
-	err = cleanTestNamespaces(fixture.Clientset)
-	if err != nil {
-		return fixture, fmt.Errorf("Error cleaning test namespaces: %v", err)
-	}
-
 	fixture.KubeConfigFile, err = ioutil.TempFile("", "")
 	if err != nil {
 		return fixture, fmt.Errorf("Error creating temp file for kubeconfig: %v", err)
@@ -111,13 +112,40 @@ func buildInstance() (*ClusterFixture, error) {
 		return fixture, fmt.Errorf("Error closing kubeconfig file %s: %v", fixture.KubeConfigFile.Name(), err)
 	}
 
+	// Now we have a kubeconfig and cluster, cleanup any leftovers from previous tests
+	err = uninstallOsm(fixture.CommandRunner, fixture.KubeConfigFile)
+	if err != nil {
+		return fixture, fmt.Errorf("Error uninstalling OSM: %v", err)
+	}
+
+	err = cleanTestNamespaces(fixture.Clientset)
+	if err != nil {
+		return fixture, fmt.Errorf("Error cleaning test namespaces: %v", err)
+	}
+
 	installMetricsServerCommand, binds := GetInstallMetricsServerCommand(fixture.KubeConfigFile.Name())
 	_, err = fixture.CommandRunner.Run(installMetricsServerCommand, binds...)
 	if err != nil {
 		return fixture, fmt.Errorf("Error installing metrics server: %v", err)
 	}
 
+	installOsmCommand, binds := GetInstallOsmCommand(fixture.KubeConfigFile.Name())
+	_, err = fixture.CommandRunner.Run(installOsmCommand, binds...)
+	if err != nil {
+		return fixture, fmt.Errorf("Error installing OSM: %v", err)
+	}
+
 	return fixture, nil
+}
+
+func uninstallOsm(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
+	uninstallOsmCommand, binds := GetUninstallOsmCommand(kubeConfigFile.Name())
+	_, err := commandRunner.Run(uninstallOsmCommand, binds...)
+	if err != nil {
+		return fmt.Errorf("Error running uninstall command for OSM: %v", err)
+	}
+
+	return nil
 }
 
 func cleanTestNamespaces(clientset *kubernetes.Clientset) error {

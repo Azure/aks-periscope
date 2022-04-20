@@ -3,22 +3,23 @@ package test
 import "fmt"
 
 const (
-	TestClusterName = "aks-periscope-testing"
-	KindNodeTag     = "v1.23.5" // https://hub.docker.com/r/kindest/node/tags
+	testClusterName = "aks-periscope-testing"
+	kindNodeTag     = "v1.23.5" // https://hub.docker.com/r/kindest/node/tags
+	kubeConfigPath  = "/root/.kube/config"
+	osmName         = "test-osm"
 )
 
 func GetCreateClusterCommand() string {
-	existsClusterCommand := fmt.Sprintf("kind get clusters | grep -q '^%s$'", TestClusterName)
-	createClusterCommand := fmt.Sprintf("kind create cluster --name %s --image kindest/node:%s", TestClusterName, KindNodeTag)
-	getKubeConfigCommand := fmt.Sprintf("kind get kubeconfig --name %s", TestClusterName)
+	existsClusterCommand := fmt.Sprintf("kind get clusters | grep -q '^%s$'", testClusterName)
+	createClusterCommand := fmt.Sprintf("kind create cluster --name %s --image kindest/node:%s", testClusterName, kindNodeTag)
+	getKubeConfigCommand := fmt.Sprintf("kind get kubeconfig --name %s", testClusterName)
 	return fmt.Sprintf("%s || %s && %s", existsClusterCommand, createClusterCommand, getKubeConfigCommand)
 }
 
 func GetInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string) {
-	kubeConfigPath := "/.kube/config"
-	installCommand := fmt.Sprintf("kubectl --kubeconfig=%s apply -f /resources/metrics-server/components.yaml", kubeConfigPath)
-	waitDeployCommand := fmt.Sprintf("kubectl wait --kubeconfig=%s --for condition=Available=True deployment -n kube-system metrics-server --timeout=240s", kubeConfigPath)
-	waitPodsCommand := fmt.Sprintf("kubectl --kubeconfig=%s wait --for condition=ready pod -n kube-system -l k8s-app=metrics-server --timeout=240s", kubeConfigPath)
+	installCommand := "kubectl apply -f /resources/metrics-server/components.yaml"
+	waitDeployCommand := "kubectl wait --for condition=Available=True deployment -n kube-system metrics-server --timeout=240s"
+	waitPodsCommand := "kubectl wait --for condition=ready pod -n kube-system -l k8s-app=metrics-server --timeout=240s"
 	command := fmt.Sprintf("%s && %s && %s", installCommand, waitDeployCommand, waitPodsCommand)
 	return command, []string{
 		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
@@ -26,8 +27,32 @@ func GetInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string
 }
 
 func GetInstallHelmChartCommand(name, namespace, hostKubeconfigPath string) (string, []string) {
-	kubeConfigPath := "/.kube/config"
-	command := fmt.Sprintf("KUBECONFIG=%s helm install %s /resources/testchart --namespace %s --create-namespace", kubeConfigPath, name, namespace)
+	command := fmt.Sprintf("helm install %s /resources/testchart --namespace %s --create-namespace", name, namespace)
+	return command, []string{
+		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
+	}
+}
+
+func GetInstallOsmCommand(hostKubeconfigPath string) (string, []string) {
+	// https://release-v1-1.docs.openservicemesh.io/docs/getting_started/setup_osm/
+	command := fmt.Sprintf(`osm install \
+	--mesh-name %s \
+	--set=osm.enablePermissiveTrafficPolicy=true \
+	--set=osm.deployPrometheus=true \
+	--set=osm.deployGrafana=true \
+	--set=osm.deployJaeger=true`, osmName)
+
+	return command, []string{
+		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
+	}
+}
+
+func GetUninstallOsmCommand(hostKubeconfigPath string) (string, []string) {
+	// https://release-v1-1.docs.openservicemesh.io/docs/getting_started/setup_osm/
+	command := fmt.Sprintf(`osm uninstall mesh \
+	--mesh-name %s \
+	--force \
+	--delete-cluster-wide-resources`, osmName)
 	return command, []string{
 		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
 	}
