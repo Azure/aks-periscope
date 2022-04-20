@@ -41,7 +41,8 @@ func GetInstallOsmCommand(hostKubeconfigPath string) (string, []string) {
 	--set=osm.enablePermissiveTrafficPolicy=false \
 	--set=osm.deployPrometheus=true \
 	--set=osm.deployGrafana=true \
-	--set=osm.deployJaeger=true`, osmName)
+	--set=osm.deployJaeger=true \
+	--verbose`, osmName)
 
 	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
 }
