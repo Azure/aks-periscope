@@ -38,7 +38,7 @@ func GetInstallOsmCommand(hostKubeconfigPath string) (string, []string) {
 	// https://release-v1-1.docs.openservicemesh.io/docs/getting_started/setup_osm/
 	command := fmt.Sprintf(`osm install \
 	--mesh-name %s \
-	--set=osm.enablePermissiveTrafficPolicy=true \
+	--set=osm.enablePermissiveTrafficPolicy=false \
 	--set=osm.deployPrometheus=true \
 	--set=osm.deployGrafana=true \
 	--set=osm.deployJaeger=true`, osmName)
@@ -61,14 +61,18 @@ func GetAddOsmNamespacesCommand(hostKubeconfigPath string) (string, []string) {
 }
 
 func GetDeployOsmAppsCommand(hostKubeconfigPath string) (string, []string) {
-	buyerCommand := "kubectl apply -f /resources/osm-apps/bookbuyer.yaml"
-	thiefCommand := "kubectl apply -f /resources/osm-apps/bookthief.yaml"
-	storeCommand := "kubectl apply -f /resources/osm-apps/bookstore.yaml"
-	warehouseCommand := "kubectl apply -f /resources/osm-apps/bookwarehouse.yaml"
-	mysqlCommand := "kubectl apply -f /resources/osm-apps/mysql.yaml"
+	commands := []string{
+		"kubectl apply -f /resources/osm-apps/bookbuyer.yaml",
+		"kubectl apply -f /resources/osm-apps/bookthief.yaml",
+		"kubectl apply -f /resources/osm-apps/bookstore.yaml",
+		"kubectl apply -f /resources/osm-apps/bookstore-v2.yaml",
+		"kubectl apply -f /resources/osm-apps/bookwarehouse.yaml",
+		"kubectl apply -f /resources/osm-apps/mysql.yaml",
+		"kubectl apply -f /resources/osm-apps/traffic-access.yaml",
+		"kubectl apply -f /resources/osm-apps/traffic-split.yaml",
+	}
 
-	command := fmt.Sprintf("%s && %s && %s && %s && %s", buyerCommand, thiefCommand, storeCommand, warehouseCommand, mysqlCommand)
-	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
+	return strings.Join(commands, " && "), []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
 }
 
 func getBinding(hostPath, containerPath string) string {
