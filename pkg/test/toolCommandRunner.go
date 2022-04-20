@@ -107,11 +107,4 @@ func getContainerLogs(client *client.Client, containerId string) (string, string
 	}
 
 	return stdOutBuff.String(), stdErrBuff.String(), nil
-
-	// content, err := ioutil.ReadAll(body)
-	// if err != nil {
-	// 	return "", fmt.Errorf("Error reading logs: %v", err)
-	// }
-
-	//return string(content), nil
 }

@@ -9,12 +9,14 @@ import (
 	"k8s.io/client-go/rest"
 )
 
+const namespace = "helmtest"
+
 func setup(t *testing.T) *rest.Config {
 	fixture, _ := test.GetClusterFixture()
 
-	namespace, err := fixture.CreateNamespace("helmtest")
+	err := fixture.CreateNamespace(namespace)
 	if err != nil {
-		t.Fatalf("Error creating namespace: %v", err)
+		t.Fatalf("Error creating namespace %s: %v", namespace, err)
 	}
 
 	installChartCommand, installHelmBinds := test.GetInstallHelmChartCommand("test", namespace, fixture.KubeConfigFile.Name())

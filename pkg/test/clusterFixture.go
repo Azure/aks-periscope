@@ -1,7 +1,6 @@
 package test
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,8 +9,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -44,18 +41,20 @@ func GetClusterFixture() (*ClusterFixture, error) {
 }
 
 func (fixture *ClusterFixture) Cleanup() {
-	if fixture.CommandRunner != nil && fixture.KubeConfigFile != nil {
-		err := uninstallOsm(fixture.CommandRunner, fixture.KubeConfigFile)
+	// Assume errors will not be handled by caller - just log them here and continue
+	if fixture.Clientset != nil && fixture.CommandRunner != nil && fixture.KubeConfigFile != nil {
+		err := cleanupResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile)
 		if err != nil {
-			log.Printf("Error uninstalling OSM: %v", err)
+			log.Printf("Error cleaning up resources: %v", err)
 		}
 	}
-	err := cleanTestNamespaces(fixture.Clientset)
-	if err != nil {
-		log.Printf("Error cleaning test namespaces: %v", err)
-	}
+
 	if fixture.KubeConfigFile != nil {
-		os.Remove(fixture.KubeConfigFile.Name())
+		kubeConfigFileName := fixture.KubeConfigFile.Name()
+		err := os.Remove(kubeConfigFileName)
+		if err != nil {
+			log.Printf("Error deleting kubeconfig file %s: %v", kubeConfigFileName, err)
+		}
 	}
 }
 
@@ -112,77 +111,53 @@ func buildInstance() (*ClusterFixture, error) {
 		return fixture, fmt.Errorf("Error closing kubeconfig file %s: %v", fixture.KubeConfigFile.Name(), err)
 	}
 
-	// Now we have a kubeconfig and cluster, cleanup any leftovers from previous tests
-	err = uninstallOsm(fixture.CommandRunner, fixture.KubeConfigFile)
+	// Now we have a kubeconfig and cluster, cleanup any leftovers within the cluster from previous tests
+	err = cleanupResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile)
 	if err != nil {
-		return fixture, fmt.Errorf("Error uninstalling OSM: %v", err)
+		return fixture, fmt.Errorf("Error cleaning up resources: %v", err)
 	}
 
-	err = cleanTestNamespaces(fixture.Clientset)
+	// Install shared cluster resources
+	err = installResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile)
 	if err != nil {
-		return fixture, fmt.Errorf("Error cleaning test namespaces: %v", err)
-	}
-
-	installMetricsServerCommand, binds := GetInstallMetricsServerCommand(fixture.KubeConfigFile.Name())
-	_, err = fixture.CommandRunner.Run(installMetricsServerCommand, binds...)
-	if err != nil {
-		return fixture, fmt.Errorf("Error installing metrics server: %v", err)
-	}
-
-	installOsmCommand, binds := GetInstallOsmCommand(fixture.KubeConfigFile.Name())
-	_, err = fixture.CommandRunner.Run(installOsmCommand, binds...)
-	if err != nil {
-		return fixture, fmt.Errorf("Error installing OSM: %v", err)
+		return fixture, fmt.Errorf("Error installing resources: %v", err)
 	}
 
 	return fixture, nil
 }
 
-func uninstallOsm(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
-	uninstallOsmCommand, binds := GetUninstallOsmCommand(kubeConfigFile.Name())
-	_, err := commandRunner.Run(uninstallOsmCommand, binds...)
+func installResources(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
+	err := InstallMetricsServer(commandRunner, kubeConfigFile)
 	if err != nil {
-		return fmt.Errorf("Error running uninstall command for OSM: %v", err)
+		return fmt.Errorf("Error installing metrics server: %v", err)
+	}
+
+	err = InstallOsm(commandRunner, kubeConfigFile)
+	if err != nil {
+		return fmt.Errorf("Error installing OSM: %v", err)
+	}
+
+	err = DeployOsmApplications(clientset, commandRunner, kubeConfigFile)
+	if err != nil {
+		return fmt.Errorf("Error deploying OSM applications: %v", err)
 	}
 
 	return nil
 }
 
-func cleanTestNamespaces(clientset *kubernetes.Clientset) error {
-	namespaceList, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app=%s", testingLabel),
-	})
+func cleanupResources(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
+	// We only bother to clean up those resources which would cause problems next time we try and install
+	err := UninstallOsm(commandRunner, kubeConfigFile)
 	if err != nil {
-		return fmt.Errorf("Error listing namespaces: %v", err)
+		return err
 	}
-
-	var wg sync.WaitGroup
-	wg.Add(len(namespaceList.Items))
-	for _, namespace := range namespaceList.Items {
-		go func(name string) {
-			defer wg.Done()
-			err = clientset.CoreV1().Namespaces().Delete(context.TODO(), name, metav1.DeleteOptions{})
-		}(namespace.Name)
+	err = CleanTestNamespaces(clientset)
+	if err != nil {
+		return err
 	}
-
-	wg.Wait()
-	return err
+	return nil
 }
 
-func (fixture *ClusterFixture) CreateNamespace(prefix string) (string, error) {
-	name := fmt.Sprintf("%s-%s", prefix, fixture.NamespaceSuffix)
-	namespace := &v1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Labels: map[string]string{
-				"app": testingLabel,
-			},
-		},
-	}
-
-	_, err := fixture.Clientset.CoreV1().Namespaces().Create(context.TODO(), namespace, metav1.CreateOptions{})
-	if err != nil {
-		return "", fmt.Errorf("Error creating namespace %s: %v", name, err)
-	}
-	return name, nil
+func (fixture *ClusterFixture) CreateNamespace(name string) error {
+	return CreateTestNamespace(fixture.Clientset, name)
 }

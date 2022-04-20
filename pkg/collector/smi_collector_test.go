@@ -1,8 +1,10 @@
 package collector
 
 import (
+	"os"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -78,6 +80,9 @@ func TestSmiCollectorCollect(t *testing.T) {
 			deployments: []*appsv1.Deployment{},
 		},
 	}
+
+	fixture, _ := test.GetClusterFixture()
+	os.Setenv("KUBECONFIG", fixture.KubeConfigFile.Name())
 
 	runtimeInfo := &utils.RuntimeInfo{
 		OSIdentifier:  "linux",

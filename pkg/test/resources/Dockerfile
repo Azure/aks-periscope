@@ -14,4 +14,5 @@ RUN chmod 755 /usr/local/bin/kind && \
 
 # Copy resources
 ADD metrics-server /resources/metrics-server
+ADD osm-apps /resources/osm-apps
 ADD testchart /resources/testchart

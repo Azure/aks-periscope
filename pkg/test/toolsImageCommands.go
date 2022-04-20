@@ -1,6 +1,11 @@
 package test
 
-import "fmt"
+import (
+	"fmt"
+	"path/filepath"
+	"runtime"
+	"strings"
+)
 
 const (
 	testClusterName = "aks-periscope-testing"
@@ -21,16 +26,12 @@ func GetInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string
 	waitDeployCommand := "kubectl wait --for condition=Available=True deployment -n kube-system metrics-server --timeout=240s"
 	waitPodsCommand := "kubectl wait --for condition=ready pod -n kube-system -l k8s-app=metrics-server --timeout=240s"
 	command := fmt.Sprintf("%s && %s && %s", installCommand, waitDeployCommand, waitPodsCommand)
-	return command, []string{
-		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
-	}
+	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
 }
 
 func GetInstallHelmChartCommand(name, namespace, hostKubeconfigPath string) (string, []string) {
 	command := fmt.Sprintf("helm install %s /resources/testchart --namespace %s --create-namespace", name, namespace)
-	return command, []string{
-		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
-	}
+	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
 }
 
 func GetInstallOsmCommand(hostKubeconfigPath string) (string, []string) {
@@ -42,9 +43,7 @@ func GetInstallOsmCommand(hostKubeconfigPath string) (string, []string) {
 	--set=osm.deployGrafana=true \
 	--set=osm.deployJaeger=true`, osmName)
 
-	return command, []string{
-		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
-	}
+	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
 }
 
 func GetUninstallOsmCommand(hostKubeconfigPath string) (string, []string) {
@@ -53,7 +52,29 @@ func GetUninstallOsmCommand(hostKubeconfigPath string) (string, []string) {
 	--mesh-name %s \
 	--force \
 	--delete-cluster-wide-resources`, osmName)
-	return command, []string{
-		fmt.Sprintf("%s:%s", hostKubeconfigPath, kubeConfigPath),
+	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
+}
+
+func GetAddOsmNamespacesCommand(hostKubeconfigPath string) (string, []string) {
+	command := fmt.Sprintf("osm namespace add bookstore bookbuyer bookthief bookwarehouse --mesh-name %s", osmName)
+	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
+}
+
+func GetDeployOsmAppsCommand(hostKubeconfigPath string) (string, []string) {
+	buyerCommand := "kubectl apply -f /resources/osm-apps/bookbuyer.yaml"
+	thiefCommand := "kubectl apply -f /resources/osm-apps/bookthief.yaml"
+	storeCommand := "kubectl apply -f /resources/osm-apps/bookstore.yaml"
+	warehouseCommand := "kubectl apply -f /resources/osm-apps/bookwarehouse.yaml"
+	mysqlCommand := "kubectl apply -f /resources/osm-apps/mysql.yaml"
+
+	command := fmt.Sprintf("%s && %s && %s && %s && %s", buyerCommand, thiefCommand, storeCommand, warehouseCommand, mysqlCommand)
+	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
+}
+
+func getBinding(hostPath, containerPath string) string {
+	if runtime.GOOS == "windows" {
+		hostPath = strings.Replace(filepath.ToSlash(hostPath), "C:", "/c", 1)
 	}
+
+	return fmt.Sprintf("%s:%s", hostPath, containerPath)
 }
