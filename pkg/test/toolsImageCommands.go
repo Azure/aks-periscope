@@ -16,16 +16,15 @@ const (
 
 func GetCreateClusterCommand() string {
 	existsClusterCommand := fmt.Sprintf("kind get clusters | grep -q '^%s$'", testClusterName)
-	createClusterCommand := fmt.Sprintf("kind create cluster --name %s --image kindest/node:%s", testClusterName, kindNodeTag)
+	createClusterCommand := fmt.Sprintf("kind create cluster --name %s --config=/resources/kind-config/config.yaml --wait 5m --image kindest/node:%s", testClusterName, kindNodeTag)
 	getKubeConfigCommand := fmt.Sprintf("kind get kubeconfig --name %s", testClusterName)
 	return fmt.Sprintf("%s || %s && %s", existsClusterCommand, createClusterCommand, getKubeConfigCommand)
 }
 
 func GetInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string) {
 	installCommand := "kubectl apply -f /resources/metrics-server/components.yaml"
-	waitDeployCommand := "kubectl wait --for condition=Available=True deployment -n kube-system metrics-server --timeout=240s"
-	waitPodsCommand := "kubectl wait --for condition=ready pod -n kube-system -l k8s-app=metrics-server --timeout=240s"
-	command := fmt.Sprintf("%s && %s && %s", installCommand, waitDeployCommand, waitPodsCommand)
+	waitCommand := "kubectl rollout status -n kube-system deploy/metrics-server --timeout=240s"
+	command := fmt.Sprintf("%s && %s", installCommand, waitCommand)
 	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
 }
 
@@ -36,7 +35,7 @@ func GetInstallHelmChartCommand(name, namespace, hostKubeconfigPath string) (str
 
 func GetInstallOsmCommand(hostKubeconfigPath string) (string, []string) {
 	// https://release-v1-1.docs.openservicemesh.io/docs/getting_started/setup_osm/
-	command := fmt.Sprintf(`osm install \
+	installCommand := fmt.Sprintf(`osm install \
 	--mesh-name %s \
 	--set=osm.enablePermissiveTrafficPolicy=false \
 	--set=osm.deployPrometheus=false \
@@ -44,7 +43,10 @@ func GetInstallOsmCommand(hostKubeconfigPath string) (string, []string) {
 	--set=osm.deployJaeger=false \
 	--verbose`, osmName)
 
-	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
+	// Apply custom config changes to the mesh for testing purposes
+	patchConfigCommand := "kubectl patch meshconfig -n osm-system osm-mesh-config --patch-file /resources/osm-config/meshconfig-patch.yaml --type merge"
+
+	return fmt.Sprintf("%s && %s", installCommand, patchConfigCommand), []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
 }
 
 func GetUninstallOsmCommand(hostKubeconfigPath string) (string, []string) {
@@ -71,6 +73,28 @@ func GetDeployOsmAppsCommand(hostKubeconfigPath string) (string, []string) {
 		"kubectl apply -f /resources/osm-apps/mysql.yaml",
 		"kubectl apply -f /resources/osm-apps/traffic-access.yaml",
 		"kubectl apply -f /resources/osm-apps/traffic-split.yaml",
+		// wait for deployments
+		"kubectl rollout status -n bookbuyer deploy/bookbuyer --timeout=240s",
+		"kubectl rollout status -n bookthief deploy/bookthief --timeout=240s",
+		"kubectl rollout status -n bookstore deploy/bookstore --timeout=240s",
+		"kubectl rollout status -n bookstore deploy/bookstore-v2 --timeout=240s",
+		"kubectl rollout status -n bookwarehouse deploy/bookwarehouse --timeout=240s",
+		"kubectl rollout status -n bookwarehouse statefulset/mysql --timeout=240s",
+	}
+
+	return strings.Join(commands, " && "), []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
+}
+
+func GetTestDiagnosticsCommand(hostKubeconfigPath string) (string, []string) {
+	commands := []string{
+		"printf '\nDESCRIBE NODES\n'",
+		"kubectl describe node",
+		"printf '\nTOP NODES\n'",
+		"kubectl top node",
+		"printf '\nTOP PODS\n'",
+		"kubectl top pod -A",
+		"printf '\nALL PODS\n'",
+		"kubectl get pod -A",
 	}
 
 	return strings.Join(commands, " && "), []string{getBinding(hostKubeconfigPath, kubeConfigPath)}

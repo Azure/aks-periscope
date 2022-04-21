@@ -1,0 +1,12 @@
+spec:
+  sidecar:
+    # https://www.envoyproxy.io/docs/envoy/latest/start/quick-start/run-envoy#debugging-envoy
+    # To get logs:
+    #   namespace=bookbuyer # or other namespace
+    #   kubectl logs -n $namespace $(kubectl get pod -n $namespace -o name) -c envoy
+    logLevel: info
+    # Explicitly set limits for sidecar as we assume we're testing in a resource-constrained environment.
+    resources:
+      limits:
+        cpu: "0.1"
+        memory: 10Mi

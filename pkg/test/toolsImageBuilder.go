@@ -17,8 +17,9 @@ import (
 const ToolsImageName = "aks-periscope-test-tools"
 
 // Include file prefixed with '_' explicitly
-//go:embed resources/*
-//go:embed resources/testchart/templates/_helpers.tpl
+//go:embed resources/Dockerfile
+//go:embed resources/tools-resources/*
+//go:embed resources/tools-resources/testchart/templates/_helpers.tpl
 var resources embed.FS
 
 type ToolsImageBuilder struct {

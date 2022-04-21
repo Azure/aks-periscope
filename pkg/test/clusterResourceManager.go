@@ -65,8 +65,9 @@ func CleanTestNamespaces(clientset *kubernetes.Clientset) error {
 }
 
 func InstallMetricsServer(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
-	installMetricsServerCommand, binds := GetInstallMetricsServerCommand(kubeConfigFile.Name())
-	_, err := commandRunner.Run(installMetricsServerCommand, binds...)
+	command, binds := GetInstallMetricsServerCommand(kubeConfigFile.Name())
+	output, err := commandRunner.Run(command, binds...)
+	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
 		return fmt.Errorf("Error installing metrics server: %v", err)
 	}
@@ -75,8 +76,9 @@ func InstallMetricsServer(commandRunner *ToolsCommandRunner, kubeConfigFile *os.
 }
 
 func InstallOsm(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
-	installOsmCommand, binds := GetInstallOsmCommand(kubeConfigFile.Name())
-	_, err := commandRunner.Run(installOsmCommand, binds...)
+	command, binds := GetInstallOsmCommand(kubeConfigFile.Name())
+	output, err := commandRunner.Run(command, binds...)
+	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
 		return fmt.Errorf("Error running install command for OSM: %v", err)
 	}
@@ -85,8 +87,9 @@ func InstallOsm(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) erro
 }
 
 func UninstallOsm(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
-	uninstallOsmCommand, binds := GetUninstallOsmCommand(kubeConfigFile.Name())
-	_, err := commandRunner.Run(uninstallOsmCommand, binds...)
+	command, binds := GetUninstallOsmCommand(kubeConfigFile.Name())
+	output, err := commandRunner.Run(command, binds...)
+	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
 		return fmt.Errorf("Error running uninstall command for OSM: %v", err)
 	}
@@ -113,14 +116,16 @@ func DeployOsmApplications(clientset *kubernetes.Clientset, commandRunner *Tools
 		return fmt.Errorf("Error creating bookwarehouse namespace: %v", err)
 	}
 
-	addOsmNamespacesCommand, binds := GetAddOsmNamespacesCommand(kubeConfigFile.Name())
-	_, err = commandRunner.Run(addOsmNamespacesCommand, binds...)
+	command, binds := GetAddOsmNamespacesCommand(kubeConfigFile.Name())
+	output, err := commandRunner.Run(command, binds...)
+	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
 		return fmt.Errorf("Error adding namespaces to OSM control plane: %v", err)
 	}
 
-	deployOsmAppsCommand, binds := GetDeployOsmAppsCommand(kubeConfigFile.Name())
-	_, err = commandRunner.Run(deployOsmAppsCommand, binds...)
+	command, binds = GetDeployOsmAppsCommand(kubeConfigFile.Name())
+	_, err = commandRunner.Run(command, binds...)
+	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
 		return fmt.Errorf("Error installing applications for OSM: %v", err)
 	}

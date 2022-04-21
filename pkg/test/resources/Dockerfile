@@ -13,6 +13,4 @@ RUN chmod 755 /usr/local/bin/kind && \
     tar -zxvf /osm.tar.gz && mv /linux-amd64/osm /usr/local/bin/osm
 
 # Copy resources
-ADD metrics-server /resources/metrics-server
-ADD osm-apps /resources/osm-apps
-ADD testchart /resources/testchart
+ADD tools-resources /resources

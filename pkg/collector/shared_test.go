@@ -20,5 +20,10 @@ func TestMain(m *testing.M) {
 
 func runTests(m *testing.M, fixture *test.ClusterFixture) int {
 	defer fixture.Cleanup()
-	return m.Run()
+	code := m.Run()
+	if code != 0 {
+		fixture.PrintDiagnostics()
+	}
+
+	return code
 }

@@ -57,6 +57,10 @@ spec:
             port: 3306
           initialDelaySeconds: 15
           periodSeconds: 10
+        resources:
+          limits:
+            cpu: "0.1"
+            memory: "10Mi"
       volumes:
         - name: data
           emptyDir: {}

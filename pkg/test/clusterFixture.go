@@ -126,6 +126,16 @@ func buildInstance() (*ClusterFixture, error) {
 	return fixture, nil
 }
 
+func (fixture *ClusterFixture) PrintDiagnostics() {
+	// Print some information that might be helpful for diagnosing CI test failures
+	diagnosticsCommand, binds := GetTestDiagnosticsCommand(fixture.KubeConfigFile.Name())
+	diagnosticsOutput, err := fixture.CommandRunner.Run(diagnosticsCommand, binds...)
+	fmt.Println(diagnosticsOutput)
+	if err != nil {
+		fmt.Printf("Error running test diagnostics command: %v", err)
+	}
+}
+
 func installResources(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
 	err := InstallMetricsServer(commandRunner, kubeConfigFile)
 	if err != nil {
