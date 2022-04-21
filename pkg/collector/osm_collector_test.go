@@ -7,7 +7,6 @@ import (
 	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestOsmCollectorGetName(t *testing.T) {
@@ -68,10 +67,9 @@ func TestOsmCollectorCollect(t *testing.T) {
 		deployments []*appsv1.Deployment
 	}{
 		{
-			name:        "no OSM deployments found",
-			want:        0,
-			wantErr:     true,
-			deployments: []*appsv1.Deployment{},
+			name:    "OSM deployments found",
+			want:    107,
+			wantErr: false,
 		},
 	}
 
@@ -87,10 +85,6 @@ func TestOsmCollectorCollect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			objs := make([]runtime.Object, len(tt.deployments))
-			for i := range tt.deployments {
-				objs[i] = tt.deployments[i]
-			}
 			err := c.Collect()
 
 			if (err != nil) != tt.wantErr {
