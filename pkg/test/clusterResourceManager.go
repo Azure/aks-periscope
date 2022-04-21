@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -37,16 +38,30 @@ func CleanTestNamespaces(clientset *kubernetes.Clientset) error {
 	}
 
 	var wg sync.WaitGroup
+	var mu = &sync.Mutex{}
+	errs := []error{}
 	wg.Add(len(namespaceList.Items))
 	for _, namespace := range namespaceList.Items {
 		go func(name string) {
 			defer wg.Done()
-			err = clientset.CoreV1().Namespaces().Delete(context.TODO(), name, metav1.DeleteOptions{})
+			err := clientset.CoreV1().Namespaces().Delete(context.TODO(), name, metav1.DeleteOptions{})
+			if err != nil {
+				mu.Lock()
+				errs = append(errs, err)
+				mu.Unlock()
+			}
 		}(namespace.Name)
 	}
-
 	wg.Wait()
-	return err
+
+	if len(errs) > 0 {
+		msg := "Error cleaning namespaces:"
+		for _, err := range errs {
+			msg += fmt.Sprintf("\n- %v", err)
+		}
+		return errors.New(msg)
+	}
+	return nil
 }
 
 func InstallMetricsServer(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
