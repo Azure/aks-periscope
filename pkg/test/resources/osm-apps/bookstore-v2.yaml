@@ -58,26 +58,7 @@ spec:
               value: bookwarehouse
             - name: IDENTITY
               value: bookstore-v2
-
----
-
-kind: TrafficTarget
-apiVersion: access.smi-spec.io/v1alpha3
-metadata:
-  name: bookstore-v2
-  namespace: bookstore
-spec:
-  destination:
-    kind: ServiceAccount
-    name: bookstore-v2
-    namespace: bookstore
-  rules:
-  - kind: HTTPRouteGroup
-    name: bookstore-service-routes
-    matches:
-    - buy-a-book
-    - books-bought
-  sources:
-  - kind: ServiceAccount
-    name: bookbuyer
-    namespace: bookbuyer
+          resources:
+            limits:
+              cpu: "0.1"
+              memory: "10Mi"

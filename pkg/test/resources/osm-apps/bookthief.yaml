@@ -40,3 +40,7 @@ spec:
               value: bookstore
             - name: "BOOKTHIEF_EXPECTED_RESPONSE_CODE"
               value: "503"
+          resources:
+            limits:
+              cpu: "0.1"
+              memory: "10Mi"

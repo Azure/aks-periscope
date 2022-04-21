@@ -39,9 +39,9 @@ func GetInstallOsmCommand(hostKubeconfigPath string) (string, []string) {
 	command := fmt.Sprintf(`osm install \
 	--mesh-name %s \
 	--set=osm.enablePermissiveTrafficPolicy=false \
-	--set=osm.deployPrometheus=true \
-	--set=osm.deployGrafana=true \
-	--set=osm.deployJaeger=true \
+	--set=osm.deployPrometheus=false \
+	--set=osm.deployGrafana=false \
+	--set=osm.deployJaeger=false \
 	--verbose`, osmName)
 
 	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}

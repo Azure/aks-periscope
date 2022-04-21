@@ -39,3 +39,7 @@ spec:
               value: bookstore
             - name: "BOOKSTORE_SVC"
               value: bookstore
+          resources:
+            limits:
+              cpu: "0.1"
+              memory: "10Mi"
