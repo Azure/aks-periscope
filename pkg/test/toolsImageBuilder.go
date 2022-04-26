@@ -37,7 +37,7 @@ func (builder *ToolsImageBuilder) Build() error {
 
 	archiveContent, err := createArchive()
 	if err != nil {
-		return fmt.Errorf("Error creating resources archive: %v", err)
+		return fmt.Errorf("error creating resources archive: %w", err)
 	}
 
 	dockerFileTarReader := bytes.NewReader(archiveContent)
@@ -51,7 +51,7 @@ func (builder *ToolsImageBuilder) Build() error {
 
 	imageBuildResponse, err := builder.client.ImageBuild(ctx, dockerFileTarReader, buildOptions)
 	if err != nil {
-		return fmt.Errorf("Error building docker image: %v", err)
+		return fmt.Errorf("error building docker image: %w", err)
 	}
 
 	defer imageBuildResponse.Body.Close()
@@ -59,7 +59,7 @@ func (builder *ToolsImageBuilder) Build() error {
 	// Read the STDOUT from the build process
 	_, err = io.Copy(os.Stdout, imageBuildResponse.Body)
 	if err != nil {
-		return fmt.Errorf("Error copying build output to stdout: %v", err)
+		return fmt.Errorf("error copying build output to stdout: %w", err)
 	}
 
 	return nil
@@ -72,7 +72,7 @@ func createArchive() ([]byte, error) {
 
 	err := addToArchive(tarWriter, resources, "resources", "")
 	if err != nil {
-		return nil, fmt.Errorf("Error creating archive for resources: %v", err)
+		return nil, fmt.Errorf("error creating archive for resources: %w", err)
 	}
 
 	return buffer.Bytes(), nil
@@ -81,7 +81,7 @@ func createArchive() ([]byte, error) {
 func addToArchive(tarWriter *tar.Writer, srcFS embed.FS, srcDirPath, destDirPath string) error {
 	dirEntries, err := srcFS.ReadDir(srcDirPath)
 	if err != nil {
-		return fmt.Errorf("Error reading directory %s: %v", srcDirPath, err)
+		return fmt.Errorf("error reading directory %s: %w", srcDirPath, err)
 	}
 	for _, dirEntry := range dirEntries {
 		srcItemPath := path.Join(srcDirPath, dirEntry.Name())
@@ -89,12 +89,12 @@ func addToArchive(tarWriter *tar.Writer, srcFS embed.FS, srcDirPath, destDirPath
 
 		srcItemInfo, err := dirEntry.Info()
 		if err != nil {
-			return fmt.Errorf("Error getting info for %s: %v", srcItemPath, err)
+			return fmt.Errorf("error getting info for %s: %w", srcItemPath, err)
 		}
 
 		tarHeader, err := tar.FileInfoHeader(srcItemInfo, "")
 		if err != nil {
-			return fmt.Errorf("Error creating tar header for %s: %v", destItemPath, err)
+			return fmt.Errorf("error creating tar header for %s: %w", destItemPath, err)
 		}
 
 		tarHeader.Name = destItemPath
@@ -104,7 +104,7 @@ func addToArchive(tarWriter *tar.Writer, srcFS embed.FS, srcDirPath, destDirPath
 
 		err = tarWriter.WriteHeader(tarHeader)
 		if err != nil {
-			return fmt.Errorf("Error writing tar header for %s: %v", destItemPath, err)
+			return fmt.Errorf("error writing tar header for %s: %w", destItemPath, err)
 		}
 
 		if dirEntry.IsDir() {
@@ -114,12 +114,12 @@ func addToArchive(tarWriter *tar.Writer, srcFS embed.FS, srcDirPath, destDirPath
 		} else {
 			content, err := srcFS.ReadFile(srcItemPath)
 			if err != nil {
-				return fmt.Errorf("Error reading file %s: %v", srcItemPath, err)
+				return fmt.Errorf("error reading file %s: %w", srcItemPath, err)
 			}
 
 			_, err = tarWriter.Write(content)
 			if err != nil {
-				return fmt.Errorf("Error writing file file content to archive %s: %v", destItemPath, err)
+				return fmt.Errorf("error writing file file content to archive %s: %w", destItemPath, err)
 			}
 		}
 	}

@@ -9,7 +9,7 @@ type FakeFileContentReader struct {
 func (reader *FakeFileContentReader) GetFileContent(path string) (string, error) {
 	content, ok := reader.lookup[path]
 	if !ok {
-		return "", fmt.Errorf("File not found: %s", path)
+		return "", fmt.Errorf("file not found: %s", path)
 	}
 	return content, nil
 }

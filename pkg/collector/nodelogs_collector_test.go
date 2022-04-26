@@ -13,7 +13,7 @@ func TestNodeLogsCollectorGetName(t *testing.T) {
 	c := NewNodeLogsCollector(nil, nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
-		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 
@@ -112,11 +112,11 @@ func TestNodeLogsCollectorCollect(t *testing.T) {
 				for key, expectedValue := range tt.wantData {
 					actualValue, ok := dataItems[key]
 					if !ok {
-						t.Errorf("Missing key %s", key)
+						t.Errorf("missing key %s", key)
 					}
 
 					if actualValue != expectedValue {
-						t.Errorf("Unexpected value for key %s.\nExpected '%s'\nFound '%s'", key, expectedValue, actualValue)
+						t.Errorf("unexpected value for key %s.\nExpected '%s'\nFound '%s'", key, expectedValue, actualValue)
 					}
 				}
 			}

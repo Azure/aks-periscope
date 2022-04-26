@@ -46,7 +46,7 @@ func (collector *SystemPerfCollector) GetName() string {
 
 func (collector *SystemPerfCollector) CheckSupported() error {
 	if utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
-		return fmt.Errorf("Not included because 'connectedCluster' is in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+		return fmt.Errorf("not included because 'connectedCluster' is in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
 	}
 
 	return nil

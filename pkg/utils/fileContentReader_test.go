@@ -31,24 +31,24 @@ func TestGetFileContentForExistingFile(t *testing.T) {
 
 	_, err := testFile.Write([]byte(expectedContent))
 	if err != nil {
-		t.Errorf("Failed to write to file %s: %s", testFile.Name(), expectedContent)
+		t.Errorf("failed to write to file %s: %s", testFile.Name(), expectedContent)
 	}
 
 	reader := NewFileContentReader()
 	actualContent, err := reader.GetFileContent(testFile.Name())
 	if err != nil {
-		t.Errorf("Error reading content from %s", testFile.Name())
+		t.Errorf("error reading content from %s", testFile.Name())
 	}
 
 	if actualContent != expectedContent {
-		t.Errorf("Unexpected file content.\nExpected '%s'\nFound '%s'", expectedContent, actualContent)
+		t.Errorf("unexpected file content.\nExpected '%s'\nFound '%s'", expectedContent, actualContent)
 	}
 }
 
 func TestGetFileContentForMissingFile(t *testing.T) {
 	cwd, err := os.Getwd()
 	if err != nil {
-		t.Errorf("Error getting current directory: %v", err)
+		t.Errorf("error getting current directory: %v", err)
 	}
 
 	missingFilePath := path.Join(cwd, uuid.New().String())
@@ -56,6 +56,6 @@ func TestGetFileContentForMissingFile(t *testing.T) {
 	reader := NewFileContentReader()
 	_, err = reader.GetFileContent(missingFilePath)
 	if err == nil {
-		t.Errorf("Expected error reading file %s", missingFilePath)
+		t.Errorf("no error reading missing file %s", missingFilePath)
 	}
 }

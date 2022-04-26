@@ -65,13 +65,13 @@ func buildInstance() (*ClusterFixture, error) {
 
 	client, err := client.NewClientWithOpts()
 	if err != nil {
-		return fixture, fmt.Errorf("Unable to create docker client: %v", err)
+		return fixture, fmt.Errorf("unable to create docker client: %w", err)
 	}
 
 	toolsImageBuilder := NewToolsImageBuilder(client)
 	err = toolsImageBuilder.Build()
 	if err != nil {
-		return fixture, fmt.Errorf("Error building tools image: %v", err)
+		return fixture, fmt.Errorf("error building tools image: %w", err)
 	}
 
 	fixture.CommandRunner = NewToolsCommandRunner(client)
@@ -79,48 +79,48 @@ func buildInstance() (*ClusterFixture, error) {
 	createClusterCommand := GetCreateClusterCommand()
 	kubeConfigContent, err := fixture.CommandRunner.Run(createClusterCommand)
 	if err != nil {
-		return fixture, fmt.Errorf("Error creating cluster: %v", err)
+		return fixture, fmt.Errorf("error creating cluster: %w", err)
 	}
 
 	kubeConfigContentBytes := []byte(kubeConfigContent)
 	config, err := clientcmd.NewClientConfigFromBytes(kubeConfigContentBytes)
 	if err != nil {
-		return fixture, fmt.Errorf("Error reading kubeconfig: %v", err)
+		return fixture, fmt.Errorf("error reading kubeconfig: %w", err)
 	}
 
 	fixture.ClientConfig, err = config.ClientConfig()
 	if err != nil {
-		return fixture, fmt.Errorf("Error creating client config from config: %v", err)
+		return fixture, fmt.Errorf("error creating client config from config: %w", err)
 	}
 
 	fixture.Clientset, err = kubernetes.NewForConfig(fixture.ClientConfig)
 	if err != nil {
-		return fixture, fmt.Errorf("Failed to create client connection to kubernetes from kubeconfig: %v", err)
+		return fixture, fmt.Errorf("failed to create client connection to kubernetes from kubeconfig: %w", err)
 	}
 
 	fixture.KubeConfigFile, err = ioutil.TempFile("", "")
 	if err != nil {
-		return fixture, fmt.Errorf("Error creating temp file for kubeconfig: %v", err)
+		return fixture, fmt.Errorf("error creating temp file for kubeconfig: %w", err)
 	}
 	_, err = fixture.KubeConfigFile.Write(kubeConfigContentBytes)
 	if err != nil {
-		return fixture, fmt.Errorf("Error creating kubeconfig file %s: %v", fixture.KubeConfigFile.Name(), err)
+		return fixture, fmt.Errorf("error creating kubeconfig file %s: %w", fixture.KubeConfigFile.Name(), err)
 	}
 	err = fixture.KubeConfigFile.Close()
 	if err != nil {
-		return fixture, fmt.Errorf("Error closing kubeconfig file %s: %v", fixture.KubeConfigFile.Name(), err)
+		return fixture, fmt.Errorf("error closing kubeconfig file %s: %w", fixture.KubeConfigFile.Name(), err)
 	}
 
 	// Now we have a kubeconfig and cluster, cleanup any leftovers within the cluster from previous tests
 	err = cleanupResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile)
 	if err != nil {
-		return fixture, fmt.Errorf("Error cleaning up resources: %v", err)
+		return fixture, fmt.Errorf("error cleaning up resources: %w", err)
 	}
 
 	// Install shared cluster resources
 	err = installResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile)
 	if err != nil {
-		return fixture, fmt.Errorf("Error installing resources: %v", err)
+		return fixture, fmt.Errorf("error installing resources: %w", err)
 	}
 
 	return fixture, nil
@@ -132,24 +132,24 @@ func (fixture *ClusterFixture) PrintDiagnostics() {
 	diagnosticsOutput, err := fixture.CommandRunner.Run(diagnosticsCommand, binds...)
 	fmt.Println(diagnosticsOutput)
 	if err != nil {
-		fmt.Printf("Error running test diagnostics command: %v", err)
+		fmt.Printf("error running test diagnostics command: %v", err)
 	}
 }
 
 func installResources(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
 	err := InstallMetricsServer(commandRunner, kubeConfigFile)
 	if err != nil {
-		return fmt.Errorf("Error installing metrics server: %v", err)
+		return fmt.Errorf("error installing metrics server: %w", err)
 	}
 
 	err = InstallOsm(commandRunner, kubeConfigFile)
 	if err != nil {
-		return fmt.Errorf("Error installing OSM: %v", err)
+		return fmt.Errorf("error installing OSM: %w", err)
 	}
 
 	err = DeployOsmApplications(clientset, commandRunner, kubeConfigFile)
 	if err != nil {
-		return fmt.Errorf("Error deploying OSM applications: %v", err)
+		return fmt.Errorf("error deploying OSM applications: %w", err)
 	}
 
 	return nil

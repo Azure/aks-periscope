@@ -30,11 +30,11 @@ func (collector *KubeletCmdCollector) CheckSupported() error {
 	// and hence processes on the host are completely isolated from the container. See:
 	// https://docs.microsoft.com/en-us/virtualization/windowscontainers/manage-containers/hyperv-container#piercing-the-isolation-boundary
 	if collector.runtimeInfo.OSIdentifier != "linux" {
-		return fmt.Errorf("Unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
+		return fmt.Errorf("unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
 	}
 
 	if utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
-		return fmt.Errorf("Not included because 'connectedCluster' is in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+		return fmt.Errorf("not included because 'connectedCluster' is in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
 	}
 
 	return nil

@@ -13,7 +13,7 @@ func TestKubeObjectsCollectorGetName(t *testing.T) {
 	c := NewKubeObjectsCollector(nil, nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
-		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 
@@ -21,7 +21,7 @@ func TestKubeObjectsCollectorCheckSupported(t *testing.T) {
 	c := NewKubeObjectsCollector(nil, nil)
 	err := c.CheckSupported()
 	if err != nil {
-		t.Errorf("Error checking supported: %v", err)
+		t.Errorf("error checking supported: %v", err)
 	}
 }
 

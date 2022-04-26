@@ -15,7 +15,7 @@ func TestOsmCollectorGetName(t *testing.T) {
 	c := NewOsmCollector(nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
-		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 

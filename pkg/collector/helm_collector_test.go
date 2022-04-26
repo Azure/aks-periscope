@@ -34,7 +34,7 @@ func TestHelmCollectorGetName(t *testing.T) {
 	c := NewHelmCollector(nil, nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
-		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 

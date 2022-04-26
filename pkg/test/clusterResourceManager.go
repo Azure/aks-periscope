@@ -24,7 +24,7 @@ func CreateTestNamespace(clientset *kubernetes.Clientset, name string) error {
 
 	_, err := clientset.CoreV1().Namespaces().Create(context.TODO(), namespace, metav1.CreateOptions{})
 	if err != nil {
-		return fmt.Errorf("Error creating namespace %s: %v", name, err)
+		return fmt.Errorf("error creating namespace %s: %w", name, err)
 	}
 	return nil
 }
@@ -34,7 +34,7 @@ func CleanTestNamespaces(clientset *kubernetes.Clientset) error {
 		LabelSelector: fmt.Sprintf("app=%s", testingLabel),
 	})
 	if err != nil {
-		return fmt.Errorf("Error listing namespaces: %v", err)
+		return fmt.Errorf("error listing namespaces: %w", err)
 	}
 
 	var wg sync.WaitGroup
@@ -55,7 +55,7 @@ func CleanTestNamespaces(clientset *kubernetes.Clientset) error {
 	wg.Wait()
 
 	if len(errs) > 0 {
-		msg := "Error cleaning namespaces:"
+		msg := "error cleaning namespaces:"
 		for _, err := range errs {
 			msg += fmt.Sprintf("\n- %v", err)
 		}
@@ -69,7 +69,7 @@ func InstallMetricsServer(commandRunner *ToolsCommandRunner, kubeConfigFile *os.
 	output, err := commandRunner.Run(command, binds...)
 	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
-		return fmt.Errorf("Error installing metrics server: %v", err)
+		return fmt.Errorf("error installing metrics server: %w", err)
 	}
 
 	return nil
@@ -80,7 +80,7 @@ func InstallOsm(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) erro
 	output, err := commandRunner.Run(command, binds...)
 	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
-		return fmt.Errorf("Error running install command for OSM: %v", err)
+		return fmt.Errorf("error running install command for OSM: %w", err)
 	}
 
 	return nil
@@ -91,7 +91,7 @@ func UninstallOsm(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) er
 	output, err := commandRunner.Run(command, binds...)
 	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
-		return fmt.Errorf("Error running uninstall command for OSM: %v", err)
+		return fmt.Errorf("error running uninstall command for OSM: %w", err)
 	}
 
 	return nil
@@ -101,33 +101,33 @@ func DeployOsmApplications(clientset *kubernetes.Clientset, commandRunner *Tools
 	// https://release-v1-1.docs.openservicemesh.io/docs/getting_started/install_apps/
 	err := CreateTestNamespace(clientset, "bookstore")
 	if err != nil {
-		return fmt.Errorf("Error creating bookstore namespace: %v", err)
+		return fmt.Errorf("error creating bookstore namespace: %w", err)
 	}
 	err = CreateTestNamespace(clientset, "bookbuyer")
 	if err != nil {
-		return fmt.Errorf("Error creating bookbuyer namespace: %v", err)
+		return fmt.Errorf("error creating bookbuyer namespace: %w", err)
 	}
 	err = CreateTestNamespace(clientset, "bookthief")
 	if err != nil {
-		return fmt.Errorf("Error creating bookthief namespace: %v", err)
+		return fmt.Errorf("error creating bookthief namespace: %w", err)
 	}
 	err = CreateTestNamespace(clientset, "bookwarehouse")
 	if err != nil {
-		return fmt.Errorf("Error creating bookwarehouse namespace: %v", err)
+		return fmt.Errorf("error creating bookwarehouse namespace: %w", err)
 	}
 
 	command, binds := GetAddOsmNamespacesCommand(kubeConfigFile.Name())
 	output, err := commandRunner.Run(command, binds...)
 	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
-		return fmt.Errorf("Error adding namespaces to OSM control plane: %v", err)
+		return fmt.Errorf("error adding namespaces to OSM control plane: %w", err)
 	}
 
 	command, binds = GetDeployOsmAppsCommand(kubeConfigFile.Name())
 	_, err = commandRunner.Run(command, binds...)
 	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
-		return fmt.Errorf("Error installing applications for OSM: %v", err)
+		return fmt.Errorf("error installing applications for OSM: %w", err)
 	}
 
 	return nil

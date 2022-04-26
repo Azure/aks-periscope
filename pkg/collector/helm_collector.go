@@ -1,14 +1,15 @@
 package collector
 
 import (
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/client-go/discovery"
 	"encoding/json"
 	"fmt"
 	"log"
 	"strings"
 	"time"
+
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
 	"helm.sh/helm/v3/pkg/action"
@@ -54,7 +55,7 @@ func (collector *HelmCollector) GetName() string {
 
 func (collector *HelmCollector) CheckSupported() error {
 	if !utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
-		return fmt.Errorf("Not included because 'connectedCluster' not in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+		return fmt.Errorf("not included because 'connectedCluster' not in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
 	}
 
 	return nil

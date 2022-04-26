@@ -103,7 +103,7 @@ func RunCommandOnHost(command string, arg ...string) (string, error) {
 	cmd := exec.Command("nsenter", args...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return "", fmt.Errorf("Fail to run command on host: %+v", err)
+		return "", fmt.Errorf("fail to run command on host: %+v", err)
 	}
 
 	return string(out), nil
@@ -143,7 +143,7 @@ func RunBackgroundCommand(command string, arg ...string) (int, error) {
 	cmd.Stderr = &stderr
 	err := cmd.Start()
 	if err != nil {
-		return 0, fmt.Errorf("Start background command in container exited with message %s: %w", stderr.String(), err)
+		return 0, fmt.Errorf("start background command in container exited with message %s: %w", stderr.String(), err)
 	}
 	return cmd.Process.Pid, nil
 }
@@ -152,7 +152,7 @@ func RunBackgroundCommand(command string, arg ...string) (int, error) {
 func KillProcess(pid int) error {
 	process, err := os.FindProcess(pid)
 	if err != nil {
-		return fmt.Errorf("Find process with pid %d to kill: %w", pid, err)
+		return fmt.Errorf("find process with pid %d to kill: %w", pid, err)
 	}
 	if err := process.Kill(); err != nil {
 		return err
@@ -167,7 +167,7 @@ func GetUrlWithRetries(url string, maxRetries int) ([]byte, error) {
 		resp, err := http.Get(url)
 		if err != nil {
 			if retry == maxRetries {
-				return nil, fmt.Errorf("Max retries reached for request HTTP Get %s: %w", url, err)
+				return nil, fmt.Errorf("max retries reached for request HTTP Get %s: %w", url, err)
 			}
 			retry++
 			time.Sleep(5 * time.Second)
@@ -211,7 +211,7 @@ func GetResourceList(kubeCmds []string, separator string) ([]string, error) {
 	resourceList := outputStreams.Stdout
 	// If the resource is not found within the cluster, then log a message and do not return any resources.
 	if len(resourceList) == 0 {
-		return nil, fmt.Errorf("No '%s' resource found in the cluster for given kubectl command", kubeCmds[1])
+		return nil, fmt.Errorf("no '%s' resource found in the cluster for given kubectl command", kubeCmds[1])
 	}
 
 	return strings.Split(strings.Trim(resourceList, "\""), separator), nil

@@ -34,7 +34,7 @@ func (collector *DNSCollector) CheckSupported() error {
 	// https://kubernetes.io/docs/setup/production-environment/windows/intro-windows-in-kubernetes/#networking
 	// But for now it's restricted to Linux containers only, in which we can read `resolv.conf`.
 	if collector.runtimeInfo.OSIdentifier != "linux" {
-		return fmt.Errorf("Unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
+		return fmt.Errorf("unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
 	}
 
 	return nil
