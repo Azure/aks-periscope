@@ -1,25 +1,31 @@
 package collector
 
 import (
-	"errors"
 	"fmt"
-	"log"
 	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/rest"
 )
 
 // SmiCollector defines an Smi Collector struct
 type SmiCollector struct {
-	data        map[string]string
-	runtimeInfo *utils.RuntimeInfo
+	data          map[string]string
+	kubeconfig    *rest.Config
+	commandRunner *utils.KubeCommandRunner
+	runtimeInfo   *utils.RuntimeInfo
 }
 
 // NewSmiCollector is a constructor
-func NewSmiCollector(runtimeInfo *utils.RuntimeInfo) *SmiCollector {
+func NewSmiCollector(config *rest.Config, runtimeInfo *utils.RuntimeInfo) *SmiCollector {
 	return &SmiCollector{
-		data:        make(map[string]string),
-		runtimeInfo: runtimeInfo,
+		data:          make(map[string]string),
+		kubeconfig:    config,
+		commandRunner: utils.NewKubeCommandRunner(config),
+		runtimeInfo:   runtimeInfo,
 	}
 }
 
@@ -47,66 +53,93 @@ func (collector *SmiCollector) GetData() map[string]string {
 
 // Collect implements the interface method
 func (collector *SmiCollector) Collect() error {
-	// Get all CustomResourceDefinitions in the cluster
-	allCrdsList, err := utils.GetResourceList([]string{"get", "crds", "-o", "jsonpath={..metadata.name}"}, " ")
+	smiCrds, err := collector.getAllSmiCrds()
 	if err != nil {
-		return err
+		return fmt.Errorf("error getting SMI CRDs: %w", err)
 	}
 
-	// Filter to obtain a list of Smi CustomResourceDefinitions in the cluster
-	var smiCrdsList []string
-	for _, s := range allCrdsList {
-		if strings.Contains(s, "smi-spec.io") {
-			smiCrdsList = append(smiCrdsList, s)
-		}
-	}
-	if len(smiCrdsList) == 0 {
-		return errors.New("cluster does not contain any SMI CRDs")
-	}
-
-	collectSmiCrds(collector, smiCrdsList)
-	return collectSmiCustomResourcesFromAllNamespaces(collector, smiCrdsList)
-}
-
-func collectSmiCrds(collector *SmiCollector, smiCrdsList []string) {
-	for _, smiCrd := range smiCrdsList {
-		yamlDefinition, err := utils.RunCommandOnContainer("kubectl", "get", "crd", smiCrd, "-o", "yaml")
+	// Store the CRD definitions as collector data
+	for _, smiCrd := range smiCrds {
+		trimmedName := strings.TrimSuffix(smiCrd.GetName(), ".io")
+		yaml, err := collector.commandRunner.PrintAsYaml(&smiCrd)
 		if err != nil {
-			log.Printf("Skipping: unable to collect yaml definition of %s: %+v", smiCrd, err)
+			return fmt.Errorf("error printing CRD %s as YAML: %w", trimmedName, err)
 		}
-		collector.data["smi/crd_"+strings.TrimSuffix(smiCrd, ".io")] = yamlDefinition
+		key := fmt.Sprintf("smi/crd_%s", trimmedName)
+		collector.data[key] = yaml
 	}
-}
 
-func collectSmiCustomResourcesFromAllNamespaces(collector *SmiCollector, smiCrdsList []string) error {
-	// Get all namespaces in the cluster
-	namespacesList, err := utils.GetResourceList([]string{"get", "namespaces", "-o", "jsonpath={..metadata.name}"}, " ")
+	// Get the GroupVersionResource identifiers for all the resources for these CRDs
+	gvrs := []schema.GroupVersionResource{}
+	for _, smiCrd := range smiCrds {
+		gvr, err := collector.commandRunner.GetGVRFromCRD(&smiCrd)
+		if err != nil {
+			return fmt.Errorf("error getting GVR from CRD %s: %+v", smiCrd.GetName(), err)
+		}
+		gvrs = append(gvrs, *gvr)
+	}
+
+	// Get the resources in all the namespaces for all possible versions of all the CRDs.
+	smiResources, err := collector.getSmiCustomResourcesFromAllNamespaces(gvrs)
 	if err != nil {
-		return fmt.Errorf("collect SMI custom resources: unable to list namespaces in the cluster: %w", err)
+		return fmt.Errorf("error getting custom SMI resources for all namespaces: %w", err)
 	}
 
-	for _, namespace := range namespacesList {
-		collectSmiCustomResourcesFromNamespace(collector, smiCrdsList, namespace)
+	// Store the resource definitions as collector data
+	for _, resource := range smiResources {
+		crdName := resource.GroupResource().String() // e.g. "traffictargets.access.smi-spec.io"
+		key := fmt.Sprintf("smi/namespace_%s/%s_%s_custom_resource", resource.namespace, crdName, resource.name)
+		collector.data[key] = resource.yaml
 	}
 
 	return nil
 }
 
-func collectSmiCustomResourcesFromNamespace(collector *SmiCollector, smiCrdsList []string, namespace string) {
-	for _, smiCrdType := range smiCrdsList {
-		// get all custom resources of this smi crd type
-		customResourcesList, err := utils.GetResourceList([]string{"get", smiCrdType, "-n", namespace, "-o", "jsonpath={..metadata.name}"}, " ")
-		if err != nil {
-			log.Printf("Skipping: unable to list custom resources of type %s in namespace %s: %+v", smiCrdType, namespace, err)
-			continue
-		}
+type smiResource struct {
+	namespace string
+	schema.GroupVersionResource
+	name string
+	yaml string
+}
 
-		for _, customResourceName := range customResourcesList {
-			yamlDefinition, err := utils.RunCommandOnContainer("kubectl", "get", smiCrdType, customResourceName, "-n", namespace, "-o", "yaml")
-			if err != nil {
-				log.Printf("Skipping: unable to collect yaml definition of %s (custom resource type: %s): %+v", customResourceName, smiCrdType, err)
-			}
-			collector.data["smi/namespace_"+namespace+"/"+smiCrdType+"_"+customResourceName+"_custom_resource"] = yamlDefinition
+func (collector *SmiCollector) getAllSmiCrds() ([]unstructured.Unstructured, error) {
+	// Get all the CRDs in the cluster (we'll filter them according to a pattern, so can't retrieve them by name).
+	crds, err := collector.commandRunner.GetCRDUnstructuredList()
+	if err != nil {
+		return nil, fmt.Errorf("error listing CRDs in cluster")
+	}
+
+	results := []unstructured.Unstructured{}
+	for _, crd := range crds.Items {
+		if strings.Contains(crd.GetName(), "smi-spec.io") {
+			results = append(results, crd)
 		}
 	}
+
+	return results, nil
+}
+
+func (collector *SmiCollector) getSmiCustomResourcesFromAllNamespaces(gvrs []schema.GroupVersionResource) ([]smiResource, error) {
+	result := []smiResource{}
+	for _, gvr := range gvrs {
+		// Find resources in all namespaces
+		resources, err := collector.commandRunner.GetUnstructuredList(&gvr, "", &metav1.ListOptions{})
+		if err != nil {
+			return nil, fmt.Errorf("error listing %s resources: %w", gvr.String(), err)
+		}
+		for _, resource := range resources.Items {
+			yaml, err := collector.commandRunner.PrintAsYaml(&resource)
+			if err != nil {
+				return nil, fmt.Errorf("error getting yaml for %s: %w", resource.GetName(), err)
+			}
+			result = append(result, smiResource{
+				namespace:            resource.GetNamespace(),
+				GroupVersionResource: gvr,
+				name:                 resource.GetName(),
+				yaml:                 yaml,
+			})
+		}
+	}
+
+	return result, nil
 }

@@ -60,7 +60,7 @@ func main() {
 		collector.NewOsmCollector(config, runtimeInfo),
 		collector.NewPDBCollector(config, runtimeInfo),
 		collector.NewPodsContainerLogsCollector(config, runtimeInfo),
-		collector.NewSmiCollector(runtimeInfo),
+		collector.NewSmiCollector(config, runtimeInfo),
 		collector.NewSystemLogsCollector(runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
 	}

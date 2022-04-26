@@ -14,7 +14,7 @@ import (
 func TestSmiCollectorGetName(t *testing.T) {
 	const expectedName = "smi"
 
-	c := NewSmiCollector(nil)
+	c := NewSmiCollector(nil, nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
@@ -59,7 +59,7 @@ func TestSmiCollectorCheckSupported(t *testing.T) {
 			OSIdentifier:  tt.osIdentifier,
 			CollectorList: tt.collectors,
 		}
-		c := NewSmiCollector(runtimeInfo)
+		c := NewSmiCollector(nil, runtimeInfo)
 		err := c.CheckSupported()
 		if (err != nil) != tt.wantErr {
 			t.Errorf("CheckSupported() for %s error = %v, wantErr %v", tt.name, err, tt.wantErr)
@@ -88,7 +88,7 @@ func TestSmiCollectorCollect(t *testing.T) {
 		CollectorList: []string{"SMI"},
 	}
 
-	c := NewSmiCollector(runtimeInfo)
+	c := NewSmiCollector(fixture.ClientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
