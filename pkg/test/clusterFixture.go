@@ -82,6 +82,11 @@ func buildInstance() (*ClusterFixture, error) {
 		return fixture, fmt.Errorf("error creating cluster: %w", err)
 	}
 
+	err = PullAndLoadDockerImages(client, fixture.CommandRunner)
+	if err != nil {
+		return fixture, fmt.Errorf("error pulling and loading Docker images: %w", err)
+	}
+
 	kubeConfigContentBytes := []byte(kubeConfigContent)
 	config, err := clientcmd.NewClientConfigFromBytes(kubeConfigContentBytes)
 	if err != nil {
@@ -121,6 +126,11 @@ func buildInstance() (*ClusterFixture, error) {
 	err = installResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile)
 	if err != nil {
 		return fixture, fmt.Errorf("error installing resources: %w", err)
+	}
+
+	err = CheckDockerImages(fixture.Clientset)
+	if err != nil {
+		return fixture, fmt.Errorf("error checking Docker images: %w", err)
 	}
 
 	return fixture, nil

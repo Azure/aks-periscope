@@ -60,7 +60,7 @@ spec:
         resources:
           limits:
             cpu: "0.1"
-            memory: "10Mi"
+            memory: "512Mi"
       volumes:
         - name: data
           emptyDir: {}

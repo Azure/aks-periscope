@@ -15,10 +15,15 @@ const (
 )
 
 func GetCreateClusterCommand() string {
+	// Create the cluster if it doesn't exist, and output the kubeconfig content
 	existsClusterCommand := fmt.Sprintf("kind get clusters | grep -q '^%s$'", testClusterName)
 	createClusterCommand := fmt.Sprintf("kind create cluster --name %s --config=/resources/kind-config/config.yaml --wait 5m --image kindest/node:%s", testClusterName, kindNodeTag)
 	getKubeConfigCommand := fmt.Sprintf("kind get kubeconfig --name %s", testClusterName)
 	return fmt.Sprintf("%s || %s && %s", existsClusterCommand, createClusterCommand, getKubeConfigCommand)
+}
+
+func GetLoadDockerImagesCommand(images []string) string {
+	return fmt.Sprintf(`echo "%s" | xargs -P8 -n1 kind load docker-image --name %s`, strings.Join(images, " "), testClusterName)
 }
 
 func GetInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string) {
