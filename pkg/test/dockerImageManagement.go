@@ -20,9 +20,23 @@ import (
 // requiredImages is the complete list of Docker images specified in containers
 // when a test run is executed.
 var requiredImages = []string{
+	"docker.io/curlimages/curl:7.83.0",
 	"docker.io/kindest/kindnetd:v20211122-a2c10462",
+	"docker.io/library/mysql:5.6",
 	"docker.io/library/nginx:1.16.0",
 	"docker.io/rancher/local-path-provisioner:v0.0.14",
+	"docker.io/envoyproxy/envoy-alpine:v1.21.2",
+	"docker.io/openservicemesh/bookbuyer:v1.1.0",
+	"docker.io/openservicemesh/bookstore:v1.1.0",
+	"docker.io/openservicemesh/bookthief:v1.1.0",
+	"docker.io/openservicemesh/bookwarehouse:v1.1.0",
+	"docker.io/openservicemesh/init:v1.1.0",
+	"docker.io/openservicemesh/osm-bootstrap:v1.1.0",
+	"docker.io/openservicemesh/osm-crds:v1.1.0",
+	"docker.io/openservicemesh/osm-controller:v1.1.0",
+	"docker.io/openservicemesh/osm-healthcheck:v1.1.0",
+	"docker.io/openservicemesh/osm-injector:v1.1.0",
+	"docker.io/openservicemesh/osm-preinstall:v1.1.0",
 	"k8s.gcr.io/build-image/debian-base:buster-v1.7.2",
 	"k8s.gcr.io/coredns/coredns:v1.8.6",
 	"k8s.gcr.io/etcd:3.5.1-0",
@@ -38,11 +52,11 @@ var requiredImages = []string{
 // (populated in the init() method)
 var requiredImageSet map[string]bool
 
-// PullAndLoadDockerImages ensures all images required by all tests are pre-loaded on to the Kind cluster
+// pullAndLoadDockerImages ensures all images required by all tests are pre-loaded on to the Kind cluster
 // before running any tests. If this is *not* done, the images will not be pulled from their respective
 // registries on every test run, and not cached on the host (because they are pulled from within the Docker
 // containers comprising the Kind cluster, not the host itself).
-func PullAndLoadDockerImages(client *dockerclient.Client, commandRunner *ToolsCommandRunner) error {
+func pullAndLoadDockerImages(client *dockerclient.Client, commandRunner *ToolsCommandRunner) error {
 	images, err := client.ImageList(context.Background(), dockertypes.ImageListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing Docker images: %w", err)
@@ -67,7 +81,14 @@ func PullAndLoadDockerImages(client *dockerclient.Client, commandRunner *ToolsCo
 		return fmt.Errorf("error pulling Docker images: %w", err)
 	}
 
-	loadDockerImagesCommand := GetLoadDockerImagesCommand(requiredImages)
+	listNodesCommand := getListNodesCommand()
+	nodeOutput, err := commandRunner.Run(listNodesCommand)
+	if err != nil {
+		return fmt.Errorf("error listing nodes for cluster: %w", err)
+	}
+
+	nodes := strings.Split(strings.TrimSpace(nodeOutput), "\n")
+	loadDockerImagesCommand := getLoadDockerImagesCommand(requiredImages, nodes)
 	_, err = commandRunner.Run(loadDockerImagesCommand)
 	if err != nil {
 		return fmt.Errorf("error loading Docker images into cluster: %w", err)
@@ -114,10 +135,7 @@ func pullDockerImages(client *dockerclient.Client, imagesToPull []string) error 
 	}
 }
 
-// CheckDockerImages checks our list of required images is up-to-date based on images stored in the cluster's nodes.
-// If any images are superfluous or missing it will return an error specifying the image tags that need to be added or removed.
-// It also verifies the pull policies to ensure that no unnecessary downloading of images occurs during test runs.
-func CheckDockerImages(clientset *kubernetes.Clientset) error {
+func checkDockerImages(clientset *kubernetes.Clientset) error {
 	nodeList, err := clientset.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
 		return fmt.Errorf("error listing nodes in cluster: %w", err)
@@ -127,7 +145,10 @@ func CheckDockerImages(clientset *kubernetes.Clientset) error {
 	for _, node := range nodeList.Items {
 		for _, image := range node.Status.Images {
 			for _, imageName := range image.Names {
-				actualImageSet[imageName] = true
+				// Kind doesn't seem to find images loaded by SHA256 digest, so we ignore any of those we find.
+				if !strings.Contains(imageName, "@sha256:") {
+					actualImageSet[imageName] = true
+				}
 			}
 		}
 	}

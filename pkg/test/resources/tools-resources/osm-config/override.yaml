@@ -1,0 +1,38 @@
+# Overrides used to specify known images to be loaded into the cluster, as well as resource limits.
+osm:
+  image:
+    # -- Container image pull policy for control plane containers
+    pullPolicy: Never
+    # -- Container image tag for control plane images
+    tag: "v1.1.0"
+
+  # -- Envoy sidecar image for Linux workloads
+  sidecarImage: docker.io/envoyproxy/envoy-alpine:v1.21.2
+  curlImage: docker.io/curlimages/curl:7.83.0
+
+  # -- OSM controller parameters
+  osmController:
+    # -- OSM controller's container resource parameters. See https://docs.openservicemesh.io/docs/guides/ha_scale/scale/ for more details.
+    resource:
+      limits:
+        cpu: "0.5"
+        memory: "256M"
+
+  # -- Log level for the Envoy proxy sidecar. Non developers should generally never set this value. In production environments the LogLevel should be set to `error`
+  envoyLogLevel: info
+
+  # -- OSM's sidecar injector parameters
+  injector:
+    # -- Sidecar injector's container resource parameters
+    resource:
+      limits:
+        cpu: "0.3"
+        memory: "64M"
+
+  # -- OSM bootstrap parameters
+  osmBootstrap:
+    # -- OSM bootstrap's container resource parameters
+    resource:
+      limits:
+        cpu: "0.3"
+        memory: "128M"

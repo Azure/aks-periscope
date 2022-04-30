@@ -1,0 +1,64 @@
+# Create bookstore Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookstore
+  namespace: ${BOOKSTORE_NS}
+  labels:
+    app: bookstore
+spec:
+  ports:
+  - port: 14001
+    name: bookstore-port
+  selector:
+    app: bookstore
+
+---
+
+# Create bookstore Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookstore
+  namespace: ${BOOKSTORE_NS}
+
+---
+
+# Create bookstore Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookstore
+  namespace: ${BOOKSTORE_NS}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookstore
+  template:
+    metadata:
+      labels:
+        app: bookstore
+    spec:
+      serviceAccountName: bookstore
+      nodeSelector:
+        kubernetes.io/arch: amd64
+        kubernetes.io/os: linux
+      containers:
+        - name: bookstore
+          image: openservicemesh/bookstore:v1.1.0
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 14001
+              name: web
+          command: ["/bookstore"]
+          args: ["--port", "14001"]
+          env:
+            - name: BOOKWAREHOUSE_NAMESPACE
+              value: ${BOOKWAREHOUSE_NS}
+            - name: IDENTITY
+              value: bookstore-v1
+          resources:
+            limits:
+              cpu: "0.1"
+              memory: "10Mi"

@@ -1,7 +1,9 @@
 package collector
 
 import (
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/Azure/aks-periscope/pkg/test"
@@ -59,6 +61,27 @@ func TestOsmCollectorCheckSupported(t *testing.T) {
 	}
 }
 
+func setupOsmTest(t *testing.T) *test.ClusterFixture {
+	fixture, _ := test.GetClusterFixture()
+
+	// Run commands to wait until the OSM application rollout is complete
+	commands := []string{
+		fmt.Sprintf("kubectl rollout status -n %s deploy/bookbuyer --timeout=240s", fixture.KnownNamespaces.OsmBookBuyer),
+		fmt.Sprintf("kubectl rollout status -n %s deploy/bookthief --timeout=240s", fixture.KnownNamespaces.OsmBookThief),
+		fmt.Sprintf("kubectl rollout status -n %s deploy/bookstore --timeout=240s", fixture.KnownNamespaces.OsmBookStore),
+		fmt.Sprintf("kubectl rollout status -n %s deploy/bookstore-v2 --timeout=240s", fixture.KnownNamespaces.OsmBookStore),
+		fmt.Sprintf("kubectl rollout status -n %s deploy/bookwarehouse --timeout=240s", fixture.KnownNamespaces.OsmBookWarehouse),
+		fmt.Sprintf("kubectl rollout status -n %s statefulset/mysql --timeout=240s", fixture.KnownNamespaces.OsmBookWarehouse),
+	}
+
+	_, err := fixture.CommandRunner.Run(strings.Join(commands, " && "), fixture.GetKubeConfigBinding())
+	if err != nil {
+		t.Fatalf("Error waiting for OSM application rollout to complete: %v", err)
+	}
+
+	return fixture
+}
+
 func TestOsmCollectorCollect(t *testing.T) {
 	tests := []struct {
 		name        string
@@ -67,13 +90,13 @@ func TestOsmCollectorCollect(t *testing.T) {
 		deployments []*appsv1.Deployment
 	}{
 		{
-			name:    "no OSM deployments found",
-			want:    0,
-			wantErr: true,
+			name:    "OSM deployments found",
+			want:    107,
+			wantErr: false,
 		},
 	}
 
-	fixture, _ := test.GetClusterFixture()
+	fixture := setupOsmTest(t)
 	os.Setenv("KUBECONFIG", fixture.KubeConfigFile.Name())
 
 	runtimeInfo := &utils.RuntimeInfo{

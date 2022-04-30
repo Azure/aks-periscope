@@ -1,0 +1,46 @@
+# Create bookthief ServiceAccount
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookthief
+  namespace: ${BOOKTHIEF_NS}
+
+---
+
+# Create bookthief Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookthief
+  namespace: ${BOOKTHIEF_NS}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookthief
+  template:
+    metadata:
+      labels:
+        app: bookthief
+        version: v1
+    spec:
+      serviceAccountName: bookthief
+      nodeSelector:
+        kubernetes.io/arch: amd64
+        kubernetes.io/os: linux
+      containers:
+        - name: bookthief
+          image: openservicemesh/bookthief:v1.1.0
+          imagePullPolicy: Never
+          command: ["/bookthief"]
+          env:
+            - name: "BOOKSTORE_NAMESPACE"
+              value: ${BOOKSTORE_NS}
+            - name: "BOOKSTORE_SVC"
+              value: bookstore
+            - name: "BOOKTHIEF_EXPECTED_RESPONSE_CODE"
+              value: "503"
+          resources:
+            limits:
+              cpu: "0.1"
+              memory: "10Mi"
