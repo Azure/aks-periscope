@@ -73,9 +73,9 @@ func TestSmiCollectorCollect(t *testing.T) {
 		deployments []*appsv1.Deployment
 	}{
 		{
-			name:    "SMI deployments found",
-			want:    12,
-			wantErr: false,
+			name:    "no SMI deployments found",
+			want:    0,
+			wantErr: true,
 		},
 	}
 

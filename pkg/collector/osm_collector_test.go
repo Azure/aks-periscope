@@ -67,9 +67,9 @@ func TestOsmCollectorCollect(t *testing.T) {
 		deployments []*appsv1.Deployment
 	}{
 		{
-			name:    "OSM deployments found",
-			want:    107,
-			wantErr: false,
+			name:    "no OSM deployments found",
+			want:    0,
+			wantErr: true,
 		},
 	}
 

@@ -20,7 +20,6 @@ import (
 var requiredImages = []string{
 	"docker.io/kindest/kindnetd:v20211122-a2c10462",
 	"docker.io/rancher/local-path-provisioner:v0.0.14",
-	"envoyproxy/envoy-alpine:v1.19.3@sha256:874e699857e023d9234b10ffc5af39ccfc9011feab89638e56ac4042ecd4b0f3",
 	"k8s.gcr.io/coredns/coredns:v1.8.6",
 	"k8s.gcr.io/etcd:3.5.1-0",
 	"k8s.gcr.io/kube-apiserver:v1.23.5",
@@ -28,15 +27,6 @@ var requiredImages = []string{
 	"k8s.gcr.io/kube-proxy:v1.23.5",
 	"k8s.gcr.io/kube-scheduler:v1.23.5",
 	"k8s.gcr.io/metrics-server/metrics-server:v0.6.1",
-	"mysql:5.6",
-	"openservicemesh/bookbuyer:v1.1.0",
-	"openservicemesh/bookstore:v1.1.0",
-	"openservicemesh/bookthief:v1.1.0",
-	"openservicemesh/bookwarehouse:v1.1.0",
-	"openservicemesh/osm-bootstrap@sha256:a21737b77f0ba72a0bbb050f4b78170cf021f90e81050a0a775f1935ab5c6991",
-	"openservicemesh/osm-controller@sha256:8a8a67ebe34eab020235c9f06020faa1604e9bb35476ee96bba5da0d5ef7b339",
-	"openservicemesh/osm-healthcheck@sha256:84a95a78f703ffeb26d6236d3a6e5a0b8ec729105f4ee633821b71f8933b6098",
-	"openservicemesh/osm-injector@sha256:77559ba5b196489325b3e22e1dd1b33e9b7793896226a3a5de659184bee17908",
 }
 
 // use a map to emulate a distinct set with efficient lookup

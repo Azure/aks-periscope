@@ -152,26 +152,12 @@ func installResources(clientset *kubernetes.Clientset, commandRunner *ToolsComma
 		return fmt.Errorf("error installing metrics server: %w", err)
 	}
 
-	err = InstallOsm(commandRunner, kubeConfigFile)
-	if err != nil {
-		return fmt.Errorf("error installing OSM: %w", err)
-	}
-
-	err = DeployOsmApplications(clientset, commandRunner, kubeConfigFile)
-	if err != nil {
-		return fmt.Errorf("error deploying OSM applications: %w", err)
-	}
-
 	return nil
 }
 
 func cleanupResources(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
 	// We only bother to clean up those resources which would cause problems next time we try and install
-	err := UninstallOsm(commandRunner, kubeConfigFile)
-	if err != nil {
-		return err
-	}
-	err = CleanTestNamespaces(clientset)
+	err := CleanTestNamespaces(clientset)
 	if err != nil {
 		return err
 	}

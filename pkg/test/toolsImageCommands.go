@@ -11,7 +11,6 @@ const (
 	testClusterName = "aks-periscope-testing"
 	kindNodeTag     = "v1.23.5" // https://hub.docker.com/r/kindest/node/tags
 	kubeConfigPath  = "/root/.kube/config"
-	osmName         = "test-osm"
 )
 
 func GetCreateClusterCommand() string {
@@ -36,58 +35,6 @@ func GetInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string
 func GetInstallHelmChartCommand(name, namespace, hostKubeconfigPath string) (string, []string) {
 	command := fmt.Sprintf("helm install %s /resources/testchart --namespace %s --create-namespace", name, namespace)
 	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
-}
-
-func GetInstallOsmCommand(hostKubeconfigPath string) (string, []string) {
-	// https://release-v1-1.docs.openservicemesh.io/docs/getting_started/setup_osm/
-	installCommand := fmt.Sprintf(`osm install \
-	--mesh-name %s \
-	--set=osm.enablePermissiveTrafficPolicy=false \
-	--set=osm.deployPrometheus=false \
-	--set=osm.deployGrafana=false \
-	--set=osm.deployJaeger=false \
-	--verbose`, osmName)
-
-	// Apply custom config changes to the mesh for testing purposes
-	patchConfigCommand := "kubectl patch meshconfig -n osm-system osm-mesh-config --patch-file /resources/osm-config/meshconfig-patch.yaml --type merge"
-
-	return fmt.Sprintf("%s && %s", installCommand, patchConfigCommand), []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
-}
-
-func GetUninstallOsmCommand(hostKubeconfigPath string) (string, []string) {
-	// https://release-v1-1.docs.openservicemesh.io/docs/getting_started/setup_osm/
-	command := fmt.Sprintf(`osm uninstall mesh \
-	--mesh-name %s \
-	--force \
-	--delete-cluster-wide-resources`, osmName)
-	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
-}
-
-func GetAddOsmNamespacesCommand(hostKubeconfigPath string) (string, []string) {
-	command := fmt.Sprintf("osm namespace add bookstore bookbuyer bookthief bookwarehouse --mesh-name %s", osmName)
-	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
-}
-
-func GetDeployOsmAppsCommand(hostKubeconfigPath string) (string, []string) {
-	commands := []string{
-		"kubectl apply -f /resources/osm-apps/bookbuyer.yaml",
-		"kubectl apply -f /resources/osm-apps/bookthief.yaml",
-		"kubectl apply -f /resources/osm-apps/bookstore.yaml",
-		"kubectl apply -f /resources/osm-apps/bookstore-v2.yaml",
-		"kubectl apply -f /resources/osm-apps/bookwarehouse.yaml",
-		"kubectl apply -f /resources/osm-apps/mysql.yaml",
-		"kubectl apply -f /resources/osm-apps/traffic-access.yaml",
-		"kubectl apply -f /resources/osm-apps/traffic-split.yaml",
-		// wait for deployments
-		"kubectl rollout status -n bookbuyer deploy/bookbuyer --timeout=240s",
-		"kubectl rollout status -n bookthief deploy/bookthief --timeout=240s",
-		"kubectl rollout status -n bookstore deploy/bookstore --timeout=240s",
-		"kubectl rollout status -n bookstore deploy/bookstore-v2 --timeout=240s",
-		"kubectl rollout status -n bookwarehouse deploy/bookwarehouse --timeout=240s",
-		"kubectl rollout status -n bookwarehouse statefulset/mysql --timeout=240s",
-	}
-
-	return strings.Join(commands, " && "), []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
 }
 
 func GetTestDiagnosticsCommand(hostKubeconfigPath string) (string, []string) {
