@@ -11,6 +11,7 @@ import (
 
 	dockertypes "github.com/docker/docker/api/types"
 	dockerclient "github.com/docker/docker/client"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 )
@@ -27,6 +28,7 @@ var requiredImages = []string{
 	"k8s.gcr.io/kube-proxy:v1.23.5",
 	"k8s.gcr.io/kube-scheduler:v1.23.5",
 	"k8s.gcr.io/metrics-server/metrics-server:v0.6.1",
+	"nginx:1.16.0",
 }
 
 // use a map to emulate a distinct set with efficient lookup
@@ -110,11 +112,20 @@ func CheckDockerImages(clientset *kubernetes.Clientset) error {
 		return fmt.Errorf("error listing pods in all namespaces: %w", err)
 	}
 
+	pullAlwaysContainers := []string{}
 	actualImageSet := make(map[string]bool)
 	for _, pod := range podList.Items {
 		for _, container := range pod.Spec.Containers {
 			actualImageSet[container.Image] = true
+			if container.ImagePullPolicy == corev1.PullAlways {
+				pullAlwaysContainers = append(pullAlwaysContainers, fmt.Sprintf("%s/%s", pod.Name, container.Name))
+			}
 		}
+	}
+
+	// Avoid any 'Always' pull policies in tests
+	if len(pullAlwaysContainers) > 0 {
+		return fmt.Errorf("pull policy 'always' not permitted for tests, found in:\n%s", strings.Join(pullAlwaysContainers, "\n"))
 	}
 
 	// Check missing requirements

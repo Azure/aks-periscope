@@ -128,11 +128,6 @@ func buildInstance() (*ClusterFixture, error) {
 		return fixture, fmt.Errorf("error installing resources: %w", err)
 	}
 
-	err = CheckDockerImages(fixture.Clientset)
-	if err != nil {
-		return fixture, fmt.Errorf("error checking Docker images: %w", err)
-	}
-
 	return fixture, nil
 }
 

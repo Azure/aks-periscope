@@ -25,5 +25,12 @@ func runTests(m *testing.M, fixture *test.ClusterFixture) int {
 		fixture.PrintDiagnostics()
 	}
 
+	// Check our tests haven't resulted in any unexpected Docker image usage
+	err := test.CheckDockerImages(fixture.Clientset)
+	if err != nil {
+		log.Printf("Failing due to unexpected Docker image usage (see test.dockerImageManager): %v", err)
+		code = 1
+	}
+
 	return code
 }
