@@ -18,6 +18,9 @@ const testingLabel = "aks-periscope-test"
 
 var once sync.Once
 
+// ClusterFixture holds all information required to connect to a local cluster, generated on the fly
+// for testing purposes. It supports running arbitrary command-line tools available via a locally-built
+// Docker image containing any desired tools for test setup.
 type ClusterFixture struct {
 	NamespaceSuffix string
 	CommandRunner   *ToolsCommandRunner
@@ -29,6 +32,8 @@ type ClusterFixture struct {
 var fixtureInstance *ClusterFixture
 var fixtureError error
 
+// GetClusterFixture can be called from test files, and will always return the same instance of the Fixture
+// (per test process).
 func GetClusterFixture() (*ClusterFixture, error) {
 	if fixtureInstance == nil {
 		once.Do(
@@ -40,6 +45,8 @@ func GetClusterFixture() (*ClusterFixture, error) {
 	return fixtureInstance, fixtureError
 }
 
+// Cleanup is intended to be called after all tests have run. It does not delete the cluster itself, because
+// re-creating it is an expensive operation, and the goal here is to allow fast re-runs when testing locally.
 func (fixture *ClusterFixture) Cleanup() {
 	// Assume errors will not be handled by caller - just log them here and continue
 	if fixture.Clientset != nil && fixture.CommandRunner != nil && fixture.KubeConfigFile != nil {
@@ -131,8 +138,9 @@ func buildInstance() (*ClusterFixture, error) {
 	return fixture, nil
 }
 
+// PrintDiagnostics logs information to stdout that might be helpful for diagnosing test failures
+// (particularly helpful in a CI environment where it is not possible to break execution with a debugger).
 func (fixture *ClusterFixture) PrintDiagnostics() {
-	// Print some information that might be helpful for diagnosing CI test failures
 	diagnosticsCommand, binds := GetTestDiagnosticsCommand(fixture.KubeConfigFile.Name())
 	diagnosticsOutput, err := fixture.CommandRunner.Run(diagnosticsCommand, binds...)
 	fmt.Println(diagnosticsOutput)

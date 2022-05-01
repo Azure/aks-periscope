@@ -1,5 +1,6 @@
 module github.com/Azure/aks-periscope
 
+// 1.16 required for go:embed (used for testing resources)
 go 1.16
 
 require (

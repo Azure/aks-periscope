@@ -12,6 +12,7 @@ import (
 const namespace = "helmtest"
 
 func setup(t *testing.T) *rest.Config {
+	// Install the helm chart stored in test resources into a unique new namespace
 	fixture, _ := test.GetClusterFixture()
 
 	err := fixture.CreateNamespace(namespace)

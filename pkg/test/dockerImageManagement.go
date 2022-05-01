@@ -16,8 +16,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// //go:embed resources/tools-resources/required-images.txt
-// var requiredImageLines string
+// requiredImages is the complete list of Docker images specified in containers
+// when a test run is executed.
 var requiredImages = []string{
 	"docker.io/kindest/kindnetd:v20211122-a2c10462",
 	"docker.io/rancher/local-path-provisioner:v0.0.14",
@@ -32,8 +32,13 @@ var requiredImages = []string{
 }
 
 // use a map to emulate a distinct set with efficient lookup
+// (populated in the init() method)
 var requiredImageSet map[string]bool
 
+// PullAndLoadDockerImages ensures all images required by all tests are pre-loaded on to the Kind cluster
+// before running any tests. If this is *not* done, the images will not be pulled from their respective
+// registries on every test run, and not cached on the host (because they are pulled from within the Docker
+// containers comprising the Kind cluster, not the host itself).
 func PullAndLoadDockerImages(client *dockerclient.Client, commandRunner *ToolsCommandRunner) error {
 	images, err := client.ImageList(context.Background(), dockertypes.ImageListOptions{})
 	if err != nil {
@@ -106,6 +111,9 @@ func pullDockerImages(client *dockerclient.Client, imagesToPull []string) error 
 	}
 }
 
+// CheckDockerImages checks our list of required images is up-to-date based on pods currently running in the test cluster.
+// If any images are superfluous or missing it will return an error specifying the image tags that need to be added or removed.
+// It also verifies the pull policies to ensure that no unnecessary downloading of images occurs during test runs.
 func CheckDockerImages(clientset *kubernetes.Clientset) error {
 	podList, err := clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
 	if err != nil {

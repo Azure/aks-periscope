@@ -22,6 +22,8 @@ const ToolsImageName = "aks-periscope-test-tools"
 //go:embed resources/tools-resources/testchart/templates/_helpers.tpl
 var resources embed.FS
 
+// ToolsImageBuilder provides a method for building the Docker image that contains all the tools
+// involved in initializing a Kind cluster for tests.
 type ToolsImageBuilder struct {
 	client *client.Client
 }

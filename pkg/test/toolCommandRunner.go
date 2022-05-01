@@ -12,6 +12,8 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 )
 
+// ToolsCommandRunner provides a means to invoke command-line tools within a Docker container
+// made for testing purposes.
 type ToolsCommandRunner struct {
 	client *client.Client
 }
@@ -22,15 +24,16 @@ func NewToolsCommandRunner(client *client.Client) *ToolsCommandRunner {
 	}
 }
 
+// Run executest the specified command in the tools container, with the specified volume bindings.
+// It returns the stdout of the executed command.
 func (creator *ToolsCommandRunner) Run(command string, volumeBinds ...string) (string, error) {
-
-	// https://godoc.org/github.com/docker/docker/api/types/container#Config
 	config := &container.Config{
 		Image: ToolsImageName,
 		Cmd:   []string{"sh", "-c", command},
 	}
 
-	// https://godoc.org/github.com/docker/docker/api/types/container#HostConfig
+	// Always bind the docker socket because we're expecting to use the docker client within the container.
+	// Host networking is required to connect to the cluster API server, which is exposed on a port on the host.
 	hostConfig := &container.HostConfig{
 		Binds:       append(volumeBinds, "/var/run/docker.sock:/var/run/docker.sock"),
 		NetworkMode: "host",

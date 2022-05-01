@@ -12,6 +12,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
+// CreateTestNamespace creates a Kuberenetes namespace with a well-known label. This is used for cleanup
+// purposes, so that it is easy to identify which namespaces have been created for testing and delete
+// just those.
 func CreateTestNamespace(clientset *kubernetes.Clientset, name string) error {
 	namespace := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,6 +32,7 @@ func CreateTestNamespace(clientset *kubernetes.Clientset, name string) error {
 	return nil
 }
 
+// CleanTestNamespace deletes all namespaces that have been created for testing purposes.
 func CleanTestNamespaces(clientset *kubernetes.Clientset) error {
 	namespaceList, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{
 		LabelSelector: fmt.Sprintf("app=%s", testingLabel),
@@ -64,6 +68,8 @@ func CleanTestNamespaces(clientset *kubernetes.Clientset) error {
 	return nil
 }
 
+// InstallMetricsServer installs metrics-server (https://github.com/kubernetes-sigs/metrics-server)
+// to the cluster. This is used by the SystemPerf collector.
 func InstallMetricsServer(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
 	command, binds := GetInstallMetricsServerCommand(kubeConfigFile.Name())
 	output, err := commandRunner.Run(command, binds...)

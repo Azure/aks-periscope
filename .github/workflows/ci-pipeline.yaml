@@ -23,6 +23,7 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: latest
+          # the default timeout is 1 minute - this is too short and results in frequent timeout errors so we increase it here
           args: --timeout 3m0s
   build:
     runs-on: ubuntu-latest
