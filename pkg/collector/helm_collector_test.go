@@ -9,13 +9,12 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-const namespace = "helmtest"
-
 func setup(t *testing.T) *rest.Config {
-	// Install the helm chart stored in test resources into a unique new namespace
 	fixture, _ := test.GetClusterFixture()
 
-	err := fixture.CreateNamespace(namespace)
+	// Install the helm chart stored in test resources into a unique new namespace
+	namespace := fixture.GetTestNamespace("helmtest")
+	err := test.CreateTestNamespace(fixture.Clientset, namespace)
 	if err != nil {
 		t.Fatalf("Error creating namespace %s: %v", namespace, err)
 	}

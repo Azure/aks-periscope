@@ -167,6 +167,10 @@ func cleanupResources(clientset *kubernetes.Clientset, commandRunner *ToolsComma
 	return nil
 }
 
-func (fixture *ClusterFixture) CreateNamespace(name string) error {
-	return CreateTestNamespace(fixture.Clientset, name)
+// GetTestNamespace generates a namespace name with a suffix that changes for each test run. Using this allows serial test runs
+// to start faster and more reliably, because they won't be impacted by slow deletion of namespaces from previous runs.
+func (fixture *ClusterFixture) GetTestNamespace(prefix string) string {
+	return getTestNamespace(prefix, fixture.NamespaceSuffix)
 }
+
+func getTestNamespace(prefix, suffix string) string { return fmt.Sprintf("%s-%s", prefix, suffix) }
