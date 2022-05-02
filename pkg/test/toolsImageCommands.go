@@ -33,7 +33,7 @@ func GetInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string
 }
 
 func GetInstallHelmChartCommand(name, namespace, hostKubeconfigPath string) (string, []string) {
-	command := fmt.Sprintf("helm install %s /resources/testchart --namespace %s --create-namespace", name, namespace)
+	command := fmt.Sprintf("helm install %s /resources/testchart --namespace %s", name, namespace)
 	return command, []string{getBinding(hostKubeconfigPath, kubeConfigPath)}
 }
 
