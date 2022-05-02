@@ -47,7 +47,7 @@ func (collector *PodsContainerLogsCollector) GetName() string {
 
 func (collector *PodsContainerLogsCollector) CheckSupported() error {
 	if !utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
-		return fmt.Errorf("Not included because 'connectedCluster' not in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+		return fmt.Errorf("not included because 'connectedCluster' not in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
 	}
 
 	return nil

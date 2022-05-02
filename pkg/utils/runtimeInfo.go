@@ -30,7 +30,7 @@ func GetRuntimeInfo() (*RuntimeInfo, error) {
 	// https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#use-pod-fields-as-values-for-environment-variables
 	hostName := os.Getenv("HOST_NODE_NAME")
 	if len(hostName) == 0 {
-		return nil, errors.New("HOST_NODE_NAME value not set for container.")
+		return nil, errors.New("variable HOST_NODE_NAME value not set for container")
 	}
 
 	collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))

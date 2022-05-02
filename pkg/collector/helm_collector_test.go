@@ -2,13 +2,31 @@ package collector
 
 import (
 	"encoding/json"
-	"os"
-	"path"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
-	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/rest"
 )
+
+func setup(t *testing.T) *rest.Config {
+	fixture, _ := test.GetClusterFixture()
+
+	// Install the helm chart stored in test resources into a unique new namespace
+	namespace := fixture.GetTestNamespace("helmtest")
+	err := test.CreateTestNamespace(fixture.Clientset, namespace)
+	if err != nil {
+		t.Fatalf("Error creating namespace %s: %v", namespace, err)
+	}
+
+	installChartCommand, installHelmBinds := test.GetInstallHelmChartCommand("test", namespace, fixture.KubeConfigFile.Name())
+	_, err = fixture.CommandRunner.Run(installChartCommand, installHelmBinds...)
+	if err != nil {
+		t.Fatalf("Error installing helm chart: %v", err)
+	}
+
+	return fixture.ClientConfig
+}
 
 func TestHelmCollectorGetName(t *testing.T) {
 	const expectedName = "helm"
@@ -16,7 +34,7 @@ func TestHelmCollectorGetName(t *testing.T) {
 	c := NewHelmCollector(nil, nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
-		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 
@@ -51,6 +69,8 @@ func TestHelmCollectorCheckSupported(t *testing.T) {
 }
 
 func TestHelmCollectorCollect(t *testing.T) {
+	clientConfig := setup(t)
+
 	tests := []struct {
 		name    string
 		want    int
@@ -63,22 +83,11 @@ func TestHelmCollectorCollect(t *testing.T) {
 		},
 	}
 
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("Cannot get user home dir: %v", err)
-	}
-
-	master := ""
-	kubeconfig := path.Join(dirname, ".kube/config")
-	config, err := clientcmd.BuildConfigFromFlags(master, kubeconfig)
-	if err != nil {
-		t.Fatalf("Cannot load kube config: %v", err)
-	}
 	runtimeInfo := &utils.RuntimeInfo{
 		CollectorList: []string{"connectedCluster"},
 	}
 
-	c := NewHelmCollector(config, runtimeInfo)
+	c := NewHelmCollector(clientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

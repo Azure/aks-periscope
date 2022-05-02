@@ -1,11 +1,12 @@
 package collector
 
 import (
+	"os"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 )
 
 func TestOsmCollectorGetName(t *testing.T) {
@@ -14,7 +15,7 @@ func TestOsmCollectorGetName(t *testing.T) {
 	c := NewOsmCollector(nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
-		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 
@@ -66,12 +67,14 @@ func TestOsmCollectorCollect(t *testing.T) {
 		deployments []*appsv1.Deployment
 	}{
 		{
-			name:        "no OSM deployments found",
-			want:        0,
-			wantErr:     true,
-			deployments: []*appsv1.Deployment{},
+			name:    "no OSM deployments found",
+			want:    0,
+			wantErr: true,
 		},
 	}
+
+	fixture, _ := test.GetClusterFixture()
+	os.Setenv("KUBECONFIG", fixture.KubeConfigFile.Name())
 
 	runtimeInfo := &utils.RuntimeInfo{
 		OSIdentifier:  "linux",
@@ -82,10 +85,6 @@ func TestOsmCollectorCollect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			objs := make([]runtime.Object, len(tt.deployments))
-			for i := range tt.deployments {
-				objs[i] = tt.deployments[i]
-			}
 			err := c.Collect()
 
 			if (err != nil) != tt.wantErr {

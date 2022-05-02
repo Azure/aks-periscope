@@ -7,10 +7,13 @@ import (
 	"strings"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/Azure/aks-periscope/pkg/utils"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/release"
-	"k8s.io/cli-runtime/pkg/genericclioptions"
 	restclient "k8s.io/client-go/rest"
 )
 
@@ -52,23 +55,33 @@ func (collector *HelmCollector) GetName() string {
 
 func (collector *HelmCollector) CheckSupported() error {
 	if !utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
-		return fmt.Errorf("Not included because 'connectedCluster' not in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+		return fmt.Errorf("not included because 'connectedCluster' not in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
 	}
 
 	return nil
 }
 
+// Implement the RESTClientGetter interface for helm client initialization.
+// This allows us to provide our restclient.Config directly, without having
+// to copy individual fields.
+func (collector *HelmCollector) ToRESTConfig() (*restclient.Config, error) {
+	return collector.kubeconfig, nil
+}
+func (collector *HelmCollector) ToDiscoveryClient() (discovery.CachedDiscoveryInterface, error) {
+	return nil, nil
+}
+func (collector *HelmCollector) ToRESTMapper() (meta.RESTMapper, error) {
+	return nil, nil
+}
+func (collector *HelmCollector) ToRawKubeConfigLoader() clientcmd.ClientConfig {
+	return nil
+}
+
 // Collect implements the interface method
 func (collector *HelmCollector) Collect() error {
-	cliOpt := &genericclioptions.ConfigFlags{
-		BearerToken: &collector.kubeconfig.BearerToken,
-		APIServer:   &collector.kubeconfig.Host,
-		CAFile:      &collector.kubeconfig.TLSClientConfig.CAFile,
-	}
-
 	actionConfig := new(action.Configuration)
 
-	if err := actionConfig.Init(cliOpt, "", "", log.Printf); err != nil {
+	if err := actionConfig.Init(collector, "", "", log.Printf); err != nil {
 		return fmt.Errorf("init action configuration: %w", err)
 	}
 

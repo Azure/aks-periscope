@@ -34,6 +34,6 @@ func GetKnownFilePaths(runtimeInfo *RuntimeInfo) (*KnownFilePaths, error) {
 			AzureStackCertContainer: "/etc/ssl/certs/azsCertificate.pem",
 		}, nil
 	default:
-		return nil, fmt.Errorf("Unexpected OS: %s", os)
+		return nil, fmt.Errorf("unexpected OS: %s", os)
 	}
 }

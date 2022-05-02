@@ -41,7 +41,7 @@ func (collector *PDBCollector) GetName() string {
 
 func (collector *PDBCollector) CheckSupported() error {
 	if utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {
-		return fmt.Errorf("Not included because 'connectedCluster' is in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
+		return fmt.Errorf("not included because 'connectedCluster' is in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
 	}
 
 	return nil
@@ -65,7 +65,7 @@ func (collector *PDBCollector) Collect() error {
 	for _, namespace := range namespacesList.Items {
 		podDistInterface, err := clientset.PolicyV1().PodDisruptionBudgets(namespace.Name).List(ctxBackground, metav1.ListOptions{})
 		if err != nil {
-			return fmt.Errorf("PDB error cluster: %w", err)
+			return fmt.Errorf("listing PDB error: %w", err)
 		}
 
 		pdbresult := make([]PDBInfo, 0)

@@ -10,7 +10,7 @@ func TestNetworkOutboundCollectorGetName(t *testing.T) {
 	c := NewNetworkOutboundCollector()
 	actualName := c.GetName()
 	if actualName != expectedName {
-		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 
@@ -18,7 +18,7 @@ func TestNetworkOutboundCollectorCheckSupported(t *testing.T) {
 	c := NewNetworkOutboundCollector()
 	err := c.CheckSupported()
 	if err != nil {
-		t.Errorf("Error checking supported: %v", err)
+		t.Errorf("error checking supported: %v", err)
 	}
 }
 

@@ -1,12 +1,10 @@
 package collector
 
 import (
-	"os"
-	"path"
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 func TestKubeObjectsCollectorGetName(t *testing.T) {
@@ -15,7 +13,7 @@ func TestKubeObjectsCollectorGetName(t *testing.T) {
 	c := NewKubeObjectsCollector(nil, nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
-		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 
@@ -23,7 +21,7 @@ func TestKubeObjectsCollectorCheckSupported(t *testing.T) {
 	c := NewKubeObjectsCollector(nil, nil)
 	err := c.CheckSupported()
 	if err != nil {
-		t.Errorf("Error checking supported: %v", err)
+		t.Errorf("error checking supported: %v", err)
 	}
 }
 
@@ -40,23 +38,13 @@ func TestKubeObjectsCollectorCollect(t *testing.T) {
 		},
 	}
 
-	dirname, err := os.UserHomeDir()
-	if err != nil {
-		t.Fatalf("Cannot get user home dir: %v", err)
-	}
-
-	master := ""
-	kubeconfig := path.Join(dirname, ".kube/config")
-	config, err := clientcmd.BuildConfigFromFlags(master, kubeconfig)
-	if err != nil {
-		t.Fatalf("Cannot load kube config: %v", err)
-	}
+	fixture, _ := test.GetClusterFixture()
 
 	runtimeInfo := &utils.RuntimeInfo{
 		KubernetesObjects: []string{"kube-system/pod", "kube-system/service", "kube-system/deployment"},
 	}
 
-	c := NewKubeObjectsCollector(config, runtimeInfo)
+	c := NewKubeObjectsCollector(fixture.ClientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

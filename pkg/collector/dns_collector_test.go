@@ -3,6 +3,7 @@ package collector
 import (
 	"testing"
 
+	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -12,7 +13,7 @@ func TestDNSCollectorGetName(t *testing.T) {
 	c := NewDNSCollector(nil, nil, nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
-		t.Errorf("Unexpected name: expected %s, found %s", expectedName, actualName)
+		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 
@@ -94,7 +95,7 @@ func TestDNSCollectorCollect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reader := utils.NewFakeFileContentReader(tt.files)
+			reader := test.NewFakeFileContentReader(tt.files)
 
 			c := NewDNSCollector(runtimeInfo, filePaths, reader)
 			err := c.Collect()
@@ -108,11 +109,11 @@ func TestDNSCollectorCollect(t *testing.T) {
 				for key, expectedValue := range tt.wantData {
 					actualValue, ok := dataItems[key]
 					if !ok {
-						t.Errorf("Missing key %s", key)
+						t.Errorf("missing key %s", key)
 					}
 
 					if actualValue != expectedValue {
-						t.Errorf("Unexpected value for key %s.\nExpected '%s'\nFound '%s'", key, expectedValue, actualValue)
+						t.Errorf("unexpected value for key %s.\nExpected '%s'\nFound '%s'", key, expectedValue, actualValue)
 					}
 				}
 			}
