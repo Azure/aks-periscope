@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 
@@ -20,7 +21,9 @@ import (
 // when a test run is executed.
 var requiredImages = []string{
 	"docker.io/kindest/kindnetd:v20211122-a2c10462",
+	"docker.io/library/nginx:1.16.0",
 	"docker.io/rancher/local-path-provisioner:v0.0.14",
+	"k8s.gcr.io/build-image/debian-base:buster-v1.7.2",
 	"k8s.gcr.io/coredns/coredns:v1.8.6",
 	"k8s.gcr.io/etcd:3.5.1-0",
 	"k8s.gcr.io/kube-apiserver:v1.23.5",
@@ -28,7 +31,7 @@ var requiredImages = []string{
 	"k8s.gcr.io/kube-proxy:v1.23.5",
 	"k8s.gcr.io/kube-scheduler:v1.23.5",
 	"k8s.gcr.io/metrics-server/metrics-server:v0.6.1",
-	"nginx:1.16.0",
+	"k8s.gcr.io/pause:3.6",
 }
 
 // use a map to emulate a distinct set with efficient lookup
@@ -111,29 +114,22 @@ func pullDockerImages(client *dockerclient.Client, imagesToPull []string) error 
 	}
 }
 
-// CheckDockerImages checks our list of required images is up-to-date based on pods currently running in the test cluster.
+// CheckDockerImages checks our list of required images is up-to-date based on images stored in the cluster's nodes.
 // If any images are superfluous or missing it will return an error specifying the image tags that need to be added or removed.
 // It also verifies the pull policies to ensure that no unnecessary downloading of images occurs during test runs.
 func CheckDockerImages(clientset *kubernetes.Clientset) error {
-	podList, err := clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	nodeList, err := clientset.CoreV1().Nodes().List(context.Background(), metav1.ListOptions{})
 	if err != nil {
-		return fmt.Errorf("error listing pods in all namespaces: %w", err)
+		return fmt.Errorf("error listing nodes in cluster: %w", err)
 	}
 
-	pullAlwaysContainers := []string{}
 	actualImageSet := make(map[string]bool)
-	for _, pod := range podList.Items {
-		for _, container := range pod.Spec.Containers {
-			actualImageSet[container.Image] = true
-			if container.ImagePullPolicy == corev1.PullAlways {
-				pullAlwaysContainers = append(pullAlwaysContainers, fmt.Sprintf("%s/%s", pod.Name, container.Name))
+	for _, node := range nodeList.Items {
+		for _, image := range node.Status.Images {
+			for _, imageName := range image.Names {
+				actualImageSet[imageName] = true
 			}
 		}
-	}
-
-	// Avoid any 'Always' pull policies in tests
-	if len(pullAlwaysContainers) > 0 {
-		return fmt.Errorf("pull policy 'always' not permitted for tests, found in:\n%s", strings.Join(pullAlwaysContainers, "\n"))
 	}
 
 	// Check missing requirements
@@ -144,6 +140,7 @@ func CheckDockerImages(clientset *kubernetes.Clientset) error {
 		}
 	}
 	if len(missingRequirements) > 0 {
+		sort.Strings(missingRequirements)
 		return fmt.Errorf("missing images in requiredImages slice:\n%s", strings.Join(missingRequirements, "\n"))
 	}
 
@@ -155,7 +152,27 @@ func CheckDockerImages(clientset *kubernetes.Clientset) error {
 		}
 	}
 	if len(superfluousRequirements) > 0 {
+		sort.Strings(superfluousRequirements)
 		return fmt.Errorf("superfluous images in requiredImages slice:\n%s", strings.Join(superfluousRequirements, "\n"))
+	}
+
+	podList, err := clientset.CoreV1().Pods("").List(context.Background(), metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("error listing pods in all namespaces: %w", err)
+	}
+
+	// Avoid any 'Always' pull policies in tests
+	pullAlwaysContainers := []string{}
+	for _, pod := range podList.Items {
+		for _, container := range pod.Spec.Containers {
+			if container.ImagePullPolicy == corev1.PullAlways {
+				pullAlwaysContainers = append(pullAlwaysContainers, fmt.Sprintf("%s/%s", pod.Name, container.Name))
+			}
+		}
+	}
+
+	if len(pullAlwaysContainers) > 0 {
+		return fmt.Errorf("pull policy 'always' not permitted for tests, found in:\n%s", strings.Join(pullAlwaysContainers, "\n"))
 	}
 
 	return nil
