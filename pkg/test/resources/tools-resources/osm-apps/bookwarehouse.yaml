@@ -47,7 +47,7 @@ spec:
         kubernetes.io/os: linux
       containers:
         - name: bookwarehouse
-          image: openservicemesh/bookwarehouse:v1.1.0
+          image: openservicemesh/bookwarehouse:v${OSM_VERSION}
           imagePullPolicy: Never
           command: ["/bookwarehouse"]
           resources:

@@ -32,11 +32,14 @@ func getInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string
 
 func getInstallOsmCommand(hostKubeconfigPath, namespace string) (string, []string) {
 	// https://release-v1-1.docs.openservicemesh.io/docs/guides/install/#helm-install
-	// Setting the release name is *supposed* to set the mesh name, but the CLI does not detect this,
-	// so it's set again as a command-line override.
+	// Notes:
+	// - Setting the release name (the first parameter) is *supposed* to set the mesh name, but the CLI does not detect this,
+	//   so it's set again as a command-line override.
+	// - The image tag is used to override the default SHA256 image digests specified in the chart's values.yaml.
+	//   https://github.com/openservicemesh/osm/blob/v1.1.0/charts/osm/values.yaml
 	command := fmt.Sprintf(
-		"helm install %s osm --repo https://openservicemesh.github.io/osm --version %s --namespace %s --wait --values /resources/osm-config/override.yaml --set osm.meshName=%s",
-		meshName, osmVersion, namespace, meshName)
+		"helm install %s osm --repo https://openservicemesh.github.io/osm --version %s --namespace %s --wait --values /resources/osm-config/override.yaml --set osm.meshName=%s --set osm.image.tag=v%s",
+		meshName, osmVersion, namespace, meshName, osmVersion)
 
 	return command, []string{getKubeConfigBinding(hostKubeconfigPath)}
 }
@@ -58,8 +61,8 @@ func getAddOsmNamespacesCommand(hostKubeconfigPath string, knownNamespaces *Know
 
 func getDeployOsmAppsCommand(hostKubeconfigPath string, knownNamespaces *KnownNamespaces) (string, []string) {
 	commands := []string{
-		fmt.Sprintf("export BOOKBUYER_NS=%s BOOKSTORE_NS=%s BOOKTHIEF_NS=%s BOOKWAREHOUSE_NS=%s",
-			knownNamespaces.OsmBookBuyer, knownNamespaces.OsmBookStore, knownNamespaces.OsmBookThief, knownNamespaces.OsmBookWarehouse),
+		fmt.Sprintf("export BOOKBUYER_NS=%s BOOKSTORE_NS=%s BOOKTHIEF_NS=%s BOOKWAREHOUSE_NS=%s OSM_VERSION=%s",
+			knownNamespaces.OsmBookBuyer, knownNamespaces.OsmBookStore, knownNamespaces.OsmBookThief, knownNamespaces.OsmBookWarehouse, osmVersion),
 		"cat /resources/osm-apps/bookbuyer.yaml | envsubst | kubectl apply -f -",
 		"cat /resources/osm-apps/bookthief.yaml | envsubst | kubectl apply -f -",
 		"cat /resources/osm-apps/bookstore.yaml | envsubst | kubectl apply -f -",

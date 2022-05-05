@@ -1,10 +1,12 @@
 # Overrides used to specify known images to be loaded into the cluster, as well as resource limits.
+# Release tags for different versions of OSM are here: https://github.com/openservicemesh/osm/tags
+# To see the default values for a specific version tag, view:
+#   https://github.com/openservicemesh/osm/blob/{VERSION_TAG}/charts/osm/values.yaml
 osm:
   image:
     # -- Container image pull policy for control plane containers
+    # This is overridden here because we want tests to fail if any containers try to use an unexpected image.
     pullPolicy: Never
-    # -- Container image tag for control plane images
-    tag: "v1.1.0"
 
   # -- Envoy sidecar image for Linux workloads
   sidecarImage: docker.io/envoyproxy/envoy-alpine:v1.21.2
