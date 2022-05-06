@@ -2,7 +2,7 @@
 
 The `collector` package tests are run against a [Kind](https://kind.sigs.k8s.io/) cluster.
 
-The cluster is created on the fly by the test initialization code. This gives some background on how the setup happens.
+The cluster is created on-the-fly by the test initialization code. This gives some background on how the setup happens.
 
 ## Requirements
 
@@ -10,7 +10,7 @@ The only tools required on the host (development machine or CI agent) are Docker
 
 ## Launching the tests
 
-The tests are launched using `go test ./...`, or by launching a debugger (F5) in VS Code while any file in the `collector` package is active.
+The tests are run using `go test ./...`, or by launching a debugger (F5) in VS Code while any file in the `collector` package is active.
 
 This produces a binary which runs on the host, containing some embedded resources and the initialization code (the `TestMain` function in `collector/shared_test.go`).
 
@@ -84,7 +84,7 @@ For CI workflows, cleanup is unnecessary because that is managed by the provider
 
 With that in mind, we:
 - intentionally *retain* the cluster and the cached Docker images (both within the nodes and the host) after completing the test run.
-- delete any Kubernetes resources deployed to the cluster (after completing the test run, and before starting a new one in case the previous run terminated unexpectedly).
+- *delete* any Kubernetes resources deployed to the cluster (after completing the test run, and before starting a new one in case the previous run terminated unexpectedly).
 
 ## Cached image validation
 
@@ -92,4 +92,4 @@ Managing the list of images that need to be pre-pulled and loaded into the nodes
 
 For that reason we automatically check the images that are loaded on the nodes after each test run. If any unexpected images are found they are logged and the test run will fail. Similarly, if any images that we *expect* to be there are *not* found, they are also flagged (because it suggests our list includes images which are no longer used).
 
-There is also a check to try and ensure that no pods deployed for testing purposes use the image pull policy `Always`, since that would result in unnecessary pulling of images we're trying to guarantee will already be available.
+There is also a check to ensure that *no* pods deployed for testing purposes use the image pull policy `Always`, since that would result in unnecessary pulling of images we're guaranteeing will already be available.
