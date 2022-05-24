@@ -1,5 +1,19 @@
 # Change Log
 
+## [0.0.9]
+
+* Return error from createContainerURL if storage settings are not configured by @peterbom in https://github.com/Azure/aks-periscope/pull/156
+* Remove old redundant deployment file. by @Tatsinnit in https://github.com/Azure/aks-periscope/pull/162
+* Fix Node Logs Collector to use separate keys for each log file by @peterbom in https://github.com/Azure/aks-periscope/pull/166
+* Support Kustomize for development and consuming tools by @peterbom in https://github.com/Azure/aks-periscope/pull/164
+* Allow Periscope to run on Windows nodes by @peterbom in https://github.com/Azure/aks-periscope/pull/167
+* Make it easier to run and debug tests locally by @peterbom in https://github.com/Azure/aks-periscope/pull/170
+* Document the automated testing approach introduced earlier by @peterbom in https://github.com/Azure/aks-periscope/pull/172
+* Add notes for differences in Windows behaviour by @peterbom in https://github.com/Azure/aks-periscope/pull/174
+* Adding Microsoft SECURITY.MD by @microsoft-github-policy-service in https://github.com/Azure/aks-periscope/pull/175
+
+Thanks to @peterbom, @rzhang628 
+
 ## [0.0.8]
 
 * A few minor edits to README.md by @davefellows in #147
