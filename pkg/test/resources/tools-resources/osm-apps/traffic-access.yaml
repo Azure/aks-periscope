@@ -1,0 +1,119 @@
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha3
+metadata:
+  name: bookstore
+  namespace: ${BOOKSTORE_NS}
+spec:
+  destination:
+    kind: ServiceAccount
+    name: bookstore
+    namespace: ${BOOKSTORE_NS}
+  rules:
+  - kind: HTTPRouteGroup
+    name: bookstore-service-routes
+    matches:
+    - buy-a-book
+    - books-bought
+  sources:
+  - kind: ServiceAccount
+    name: bookbuyer
+    namespace: ${BOOKBUYER_NS}
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha3
+metadata:
+  name: bookstore-v2
+  namespace: ${BOOKSTORE_NS}
+spec:
+  destination:
+    kind: ServiceAccount
+    name: bookstore-v2
+    namespace: ${BOOKSTORE_NS}
+  rules:
+  - kind: HTTPRouteGroup
+    name: bookstore-service-routes
+    matches:
+    - buy-a-book
+    - books-bought
+  sources:
+  - kind: ServiceAccount
+    name: bookbuyer
+    namespace: ${BOOKBUYER_NS}
+---
+apiVersion: specs.smi-spec.io/v1alpha4
+kind: HTTPRouteGroup
+metadata:
+  name: bookstore-service-routes
+  namespace: ${BOOKSTORE_NS}
+spec:
+  matches:
+  - name: books-bought
+    pathRegex: /books-bought
+    methods:
+    - GET
+    headers:
+    - "user-agent": ".*-http-client/*.*"
+    - "client-app": "bookbuyer"
+  - name: buy-a-book
+    pathRegex: ".*a-book.*new"
+    methods:
+    - GET
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha3
+metadata:
+  name: bookstore-access-bookwarehouse
+  namespace: ${BOOKWAREHOUSE_NS}
+spec:
+  destination:
+    kind: ServiceAccount
+    name: bookwarehouse
+    namespace: ${BOOKWAREHOUSE_NS}
+  rules:
+  - kind: HTTPRouteGroup
+    name: bookwarehouse-service-routes
+    matches:
+    - restock-books
+  sources:
+  - kind: ServiceAccount
+    name: bookstore
+    namespace: ${BOOKSTORE_NS}
+---
+apiVersion: specs.smi-spec.io/v1alpha4
+kind: HTTPRouteGroup
+metadata:
+  name: bookwarehouse-service-routes
+  namespace: ${BOOKWAREHOUSE_NS}
+spec:
+  matches:
+    - name: restock-books
+      methods:
+      - POST
+---
+kind: TrafficTarget
+apiVersion: access.smi-spec.io/v1alpha3
+metadata:
+  name: mysql
+  namespace: ${BOOKWAREHOUSE_NS}
+spec:
+  destination:
+    kind: ServiceAccount
+    name: mysql
+    namespace: ${BOOKWAREHOUSE_NS}
+  rules:
+  - kind: TCPRoute
+    name: mysql
+  sources:
+  - kind: ServiceAccount
+    name: bookwarehouse
+    namespace: ${BOOKWAREHOUSE_NS}
+---
+apiVersion: specs.smi-spec.io/v1alpha4
+kind: TCPRoute
+metadata:
+  name: mysql
+  namespace: ${BOOKWAREHOUSE_NS}
+spec:
+  matches:
+    ports:
+    - 3306

@@ -1,0 +1,56 @@
+# Create bookwarehouse Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookwarehouse
+  namespace: ${BOOKWAREHOUSE_NS}
+
+---
+
+# Create bookwarehouse Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: bookwarehouse
+  namespace: ${BOOKWAREHOUSE_NS}
+  labels:
+    app: bookwarehouse
+spec:
+  ports:
+  - port: 14001
+    name: bookwarehouse-port
+  selector:
+    app: bookwarehouse
+
+---
+
+# Create bookwarehouse Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookwarehouse
+  namespace: ${BOOKWAREHOUSE_NS}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookwarehouse
+  template:
+    metadata:
+      labels:
+        app: bookwarehouse
+        version: v1
+    spec:
+      serviceAccountName: bookwarehouse
+      nodeSelector:
+        kubernetes.io/arch: amd64
+        kubernetes.io/os: linux
+      containers:
+        - name: bookwarehouse
+          image: openservicemesh/bookwarehouse:v${OSM_VERSION}
+          imagePullPolicy: Never
+          command: ["/bookwarehouse"]
+          resources:
+            limits:
+              cpu: "0.1"
+              memory: "10Mi"

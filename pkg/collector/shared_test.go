@@ -34,7 +34,7 @@ func runTests(m *testing.M, fixture *test.ClusterFixture) int {
 	}
 
 	// Check our tests haven't resulted in any unexpected Docker image usage
-	err := test.CheckDockerImages(fixture.Clientset)
+	err := fixture.CheckDockerImages()
 	if err != nil {
 		// Fail the test run (even if the actual tests passed) to avoid merging code that
 		// pulls images during tests.

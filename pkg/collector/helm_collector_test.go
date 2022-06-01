@@ -2,6 +2,7 @@ package collector
 
 import (
 	"encoding/json"
+	"fmt"
 	"testing"
 
 	"github.com/Azure/aks-periscope/pkg/test"
@@ -9,20 +10,23 @@ import (
 	"k8s.io/client-go/rest"
 )
 
-func setup(t *testing.T) *rest.Config {
+const (
+	namespacePrefix = "helmtest"
+	releaseName     = "helmtest-release"
+)
+
+func setupHelmTest(t *testing.T) *rest.Config {
 	fixture, _ := test.GetClusterFixture()
 
-	// Install the helm chart stored in test resources into a unique new namespace
-	namespace := fixture.GetTestNamespace("helmtest")
-	err := test.CreateTestNamespace(fixture.Clientset, namespace)
+	namespace, err := fixture.CreateTestNamespace(namespacePrefix)
 	if err != nil {
-		t.Fatalf("Error creating namespace %s: %v", namespace, err)
+		t.Fatalf("Error creating test namespace %s: %v", namespace, err)
 	}
 
-	installChartCommand, installHelmBinds := test.GetInstallHelmChartCommand("test", namespace, fixture.KubeConfigFile.Name())
-	_, err = fixture.CommandRunner.Run(installChartCommand, installHelmBinds...)
+	installChartCommand := fmt.Sprintf("helm install %s /resources/testchart --namespace %s", releaseName, namespace)
+	_, err = fixture.CommandRunner.Run(installChartCommand, fixture.GetKubeConfigBinding())
 	if err != nil {
-		t.Fatalf("Error installing helm chart: %v", err)
+		t.Fatalf("Error installing helm release %s into %s namespace: %v", releaseName, namespace, err)
 	}
 
 	return fixture.ClientConfig
@@ -69,7 +73,7 @@ func TestHelmCollectorCheckSupported(t *testing.T) {
 }
 
 func TestHelmCollectorCollect(t *testing.T) {
-	clientConfig := setup(t)
+	clientConfig := setupHelmTest(t)
 
 	tests := []struct {
 		name    string

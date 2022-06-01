@@ -1,0 +1,45 @@
+# Create bookbuyer Service Account
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: bookbuyer
+  namespace: ${BOOKBUYER_NS}
+
+---
+
+# Create bookbuyer Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: bookbuyer
+  namespace: ${BOOKBUYER_NS}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: bookbuyer
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: bookbuyer
+        version: v1
+    spec:
+      serviceAccountName: bookbuyer
+      nodeSelector:
+        kubernetes.io/arch: amd64
+        kubernetes.io/os: linux
+      containers:
+        - name: bookbuyer
+          image: openservicemesh/bookbuyer:v${OSM_VERSION}
+          imagePullPolicy: Never
+          command: ["/bookbuyer"]
+          env:
+            - name: "BOOKSTORE_NAMESPACE"
+              value: ${BOOKSTORE_NS}
+            - name: "BOOKSTORE_SVC"
+              value: bookstore
+          resources:
+            limits:
+              cpu: "0.1"
+              memory: "10Mi"

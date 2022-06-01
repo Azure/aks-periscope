@@ -44,11 +44,15 @@ func (builder *ToolsImageBuilder) Build() error {
 
 	dockerFileTarReader := bytes.NewReader(archiveContent)
 
+	osmVersionVar := osmVersion // need a variable here, because we can't get a pointer to a const string
 	buildOptions := types.ImageBuildOptions{
 		Context:    dockerFileTarReader,
 		Dockerfile: "Dockerfile",
 		Remove:     true,
 		Tags:       []string{ToolsImageName},
+		BuildArgs: map[string]*string{
+			"OSM_VERSION": &osmVersionVar,
+		},
 	}
 
 	imageBuildResponse, err := builder.client.ImageBuild(ctx, dockerFileTarReader, buildOptions)

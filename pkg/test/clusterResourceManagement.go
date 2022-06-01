@@ -12,15 +12,12 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// CreateTestNamespace creates a Kuberenetes namespace with a well-known label. This is used for cleanup
-// purposes, so that it is easy to identify which namespaces have been created for testing and delete
-// just those.
-func CreateTestNamespace(clientset *kubernetes.Clientset, name string) error {
+func createTestNamespace(clientset *kubernetes.Clientset, name string) error {
 	namespace := &v1.Namespace{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 			Labels: map[string]string{
-				"app": testingLabel,
+				"app": testingLabelValue,
 			},
 		},
 	}
@@ -32,10 +29,10 @@ func CreateTestNamespace(clientset *kubernetes.Clientset, name string) error {
 	return nil
 }
 
-// CleanTestNamespace deletes all namespaces that have been created for testing purposes.
-func CleanTestNamespaces(clientset *kubernetes.Clientset) error {
+// cleanTestNamespaces deletes all namespaces that have been created for testing purposes.
+func cleanTestNamespaces(clientset *kubernetes.Clientset) error {
 	namespaceList, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{
-		LabelSelector: fmt.Sprintf("app=%s", testingLabel),
+		LabelSelector: fmt.Sprintf("app=%s", testingLabelValue),
 	})
 	if err != nil {
 		return fmt.Errorf("error listing namespaces: %w", err)
@@ -68,14 +65,77 @@ func CleanTestNamespaces(clientset *kubernetes.Clientset) error {
 	return nil
 }
 
-// InstallMetricsServer installs metrics-server (https://github.com/kubernetes-sigs/metrics-server)
+// installMetricsServer installs metrics-server (https://github.com/kubernetes-sigs/metrics-server)
 // to the cluster. This is used by the SystemPerf collector.
-func InstallMetricsServer(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
-	command, binds := GetInstallMetricsServerCommand(kubeConfigFile.Name())
+func installMetricsServer(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
+	command, binds := getInstallMetricsServerCommand(kubeConfigFile.Name())
 	output, err := commandRunner.Run(command, binds...)
 	fmt.Printf("%s\n%s\n\n", command, output)
 	if err != nil {
 		return fmt.Errorf("error installing metrics server: %w", err)
+	}
+
+	return nil
+}
+
+func installOsm(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File, namespace string) error {
+	err := createTestNamespace(clientset, namespace)
+	if err != nil {
+		return fmt.Errorf("error creating %s namespace: %w", namespace, err)
+	}
+
+	command, binds := getInstallOsmCommand(kubeConfigFile.Name(), namespace)
+	output, err := commandRunner.Run(command, binds...)
+	fmt.Printf("%s\n%s\n\n", command, output)
+	if err != nil {
+		return fmt.Errorf("error running install command for OSM: %w", err)
+	}
+
+	return nil
+}
+
+func uninstallHelmReleases(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
+	command, binds := getUninstallHelmReleasesCommand(kubeConfigFile.Name())
+	output, err := commandRunner.Run(command, binds...)
+	fmt.Printf("%s\n%s\n\n", command, output)
+	if err != nil {
+		return fmt.Errorf("error running uninstall command for OSM: %w", err)
+	}
+
+	return nil
+}
+
+func deployOsmApplications(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File, knownNamespaces *KnownNamespaces) error {
+	// https://release-v1-1.docs.openservicemesh.io/docs/getting_started/install_apps/
+	err := createTestNamespace(clientset, knownNamespaces.OsmBookStore)
+	if err != nil {
+		return fmt.Errorf("error creating %s namespace: %w", knownNamespaces.OsmBookStore, err)
+	}
+	err = createTestNamespace(clientset, knownNamespaces.OsmBookBuyer)
+	if err != nil {
+		return fmt.Errorf("error creating %s namespace: %w", knownNamespaces.OsmBookBuyer, err)
+	}
+	err = createTestNamespace(clientset, knownNamespaces.OsmBookThief)
+	if err != nil {
+		return fmt.Errorf("error creating %s namespace: %w", knownNamespaces.OsmBookThief, err)
+	}
+	err = createTestNamespace(clientset, knownNamespaces.OsmBookWarehouse)
+	if err != nil {
+		return fmt.Errorf("error creating %s namespace: %w", knownNamespaces.OsmBookWarehouse, err)
+	}
+
+	command, binds := getAddOsmNamespacesCommand(kubeConfigFile.Name(), knownNamespaces)
+	output, err := commandRunner.Run(command, binds...)
+	fmt.Printf("%s\n%s\n\n", command, output)
+	if err != nil {
+		return fmt.Errorf("error adding namespaces to OSM control plane: %w", err)
+	}
+
+	command, binds = getDeployOsmAppsCommand(kubeConfigFile.Name(), knownNamespaces)
+	_, err = commandRunner.Run(command, binds...)
+	fmt.Printf("%s\n%s\n\n", command, output)
+	if err != nil {
+		return fmt.Errorf("error installing applications for OSM: %w", err)
 	}
 
 	return nil

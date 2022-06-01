@@ -14,7 +14,14 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-const testingLabel = "aks-periscope-test"
+const (
+	testClusterName   = "aks-periscope-testing"
+	kindNodeTag       = "v1.23.5" // https://hub.docker.com/r/kindest/node/tags
+	kubeConfigPath    = "/root/.kube/config"
+	osmVersion        = "1.1.0"
+	testingLabelValue = "aks-periscope-test"
+	meshName          = "test-osm" // used for both the helm release name, *and* the mesh name referred to by the CLI (e.g. for adding namespaces)
+)
 
 var once sync.Once
 
@@ -23,10 +30,19 @@ var once sync.Once
 // Docker image containing any desired tools for test setup.
 type ClusterFixture struct {
 	NamespaceSuffix string
+	KnownNamespaces *KnownNamespaces
 	CommandRunner   *ToolsCommandRunner
 	ClientConfig    *rest.Config
 	Clientset       *kubernetes.Clientset
 	KubeConfigFile  *os.File
+}
+
+type KnownNamespaces struct {
+	OsmSystem        string
+	OsmBookBuyer     string
+	OsmBookStore     string
+	OsmBookThief     string
+	OsmBookWarehouse string
 }
 
 var fixtureInstance *ClusterFixture
@@ -43,6 +59,40 @@ func GetClusterFixture() (*ClusterFixture, error) {
 	}
 
 	return fixtureInstance, fixtureError
+}
+
+// CreateTestNamespace creates a Kuberenetes namespace with a suffix that changes for each test run,and a well-known label.
+// The label is used for cleanup purposes, so that it is easy to identify which namespaces have been created for testing and delete
+// just those. The suffix ensures that different namespace resources will be created on each test run, meaning a test run won't
+// be impacted by slow deletion of namespaces from previous runs.
+func (fixture *ClusterFixture) CreateTestNamespace(prefix string) (string, error) {
+	namespace := getTestNamespace(prefix, fixture.NamespaceSuffix)
+	err := createTestNamespace(fixture.Clientset, namespace)
+	return namespace, err
+}
+
+// CheckDockerImages checks our list of required images is up-to-date based on images stored in the cluster's nodes.
+// If any images are superfluous or missing it will return an error specifying the image tags that need to be added or removed.
+// It also verifies the pull policies to ensure that no unnecessary downloading of images occurs during test runs.
+func (fixture *ClusterFixture) CheckDockerImages() error {
+	return checkDockerImages(fixture.Clientset)
+}
+
+// PrintDiagnostics logs information to stdout that might be helpful for diagnosing test failures
+// (particularly helpful in a CI environment where it is not possible to break execution with a debugger).
+func (fixture *ClusterFixture) PrintDiagnostics() {
+	diagnosticsCommand, binds := getTestDiagnosticsCommand(fixture.KubeConfigFile.Name())
+	diagnosticsOutput, err := fixture.CommandRunner.Run(diagnosticsCommand, binds...)
+	fmt.Println(diagnosticsOutput)
+	if err != nil {
+		fmt.Printf("error running test diagnostics command: %v", err)
+	}
+}
+
+// GetKubeConfigBinding gets the Docker volume binding required to map the fixture's kubeconfig file
+// to the expected location in the testing tools container.
+func (fixture *ClusterFixture) GetKubeConfigBinding() string {
+	return getKubeConfigBinding(fixture.KubeConfigFile.Name())
 }
 
 // Cleanup is intended to be called after all tests have run. It does not delete the cluster itself, because
@@ -66,8 +116,16 @@ func (fixture *ClusterFixture) Cleanup() {
 }
 
 func buildInstance() (*ClusterFixture, error) {
+	namespaceSuffix := time.Now().UTC().Format("20060102-150405")
 	fixture := &ClusterFixture{
-		NamespaceSuffix: time.Now().UTC().Format("20060102-150405"),
+		NamespaceSuffix: namespaceSuffix,
+		KnownNamespaces: &KnownNamespaces{
+			OsmSystem:        getTestNamespace("osm", namespaceSuffix),
+			OsmBookBuyer:     getTestNamespace("bookbuyer", namespaceSuffix),
+			OsmBookStore:     getTestNamespace("bookstore", namespaceSuffix),
+			OsmBookThief:     getTestNamespace("bookthief", namespaceSuffix),
+			OsmBookWarehouse: getTestNamespace("bookwarehouse", namespaceSuffix),
+		},
 	}
 
 	client, err := client.NewClientWithOpts()
@@ -83,13 +141,13 @@ func buildInstance() (*ClusterFixture, error) {
 
 	fixture.CommandRunner = NewToolsCommandRunner(client)
 
-	createClusterCommand := GetCreateClusterCommand()
+	createClusterCommand := getCreateClusterCommand()
 	kubeConfigContent, err := fixture.CommandRunner.Run(createClusterCommand)
 	if err != nil {
 		return fixture, fmt.Errorf("error creating cluster: %w", err)
 	}
 
-	err = PullAndLoadDockerImages(client, fixture.CommandRunner)
+	err = pullAndLoadDockerImages(client, fixture.CommandRunner)
 	if err != nil {
 		return fixture, fmt.Errorf("error pulling and loading Docker images: %w", err)
 	}
@@ -130,7 +188,7 @@ func buildInstance() (*ClusterFixture, error) {
 	}
 
 	// Install shared cluster resources
-	err = installResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile)
+	err = installResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile, fixture.KnownNamespaces)
 	if err != nil {
 		return fixture, fmt.Errorf("error installing resources: %w", err)
 	}
@@ -138,21 +196,20 @@ func buildInstance() (*ClusterFixture, error) {
 	return fixture, nil
 }
 
-// PrintDiagnostics logs information to stdout that might be helpful for diagnosing test failures
-// (particularly helpful in a CI environment where it is not possible to break execution with a debugger).
-func (fixture *ClusterFixture) PrintDiagnostics() {
-	diagnosticsCommand, binds := GetTestDiagnosticsCommand(fixture.KubeConfigFile.Name())
-	diagnosticsOutput, err := fixture.CommandRunner.Run(diagnosticsCommand, binds...)
-	fmt.Println(diagnosticsOutput)
-	if err != nil {
-		fmt.Printf("error running test diagnostics command: %v", err)
-	}
-}
-
-func installResources(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
-	err := InstallMetricsServer(commandRunner, kubeConfigFile)
+func installResources(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File, knownNamespaces *KnownNamespaces) error {
+	err := installMetricsServer(commandRunner, kubeConfigFile)
 	if err != nil {
 		return fmt.Errorf("error installing metrics server: %w", err)
+	}
+
+	err = installOsm(clientset, commandRunner, kubeConfigFile, knownNamespaces.OsmSystem)
+	if err != nil {
+		return fmt.Errorf("error installing OSM: %w", err)
+	}
+
+	err = deployOsmApplications(clientset, commandRunner, kubeConfigFile, knownNamespaces)
+	if err != nil {
+		return fmt.Errorf("error deploying OSM applications: %w", err)
 	}
 
 	return nil
@@ -160,17 +217,15 @@ func installResources(clientset *kubernetes.Clientset, commandRunner *ToolsComma
 
 func cleanupResources(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {
 	// We only bother to clean up those resources which would cause problems next time we try and install
-	err := CleanTestNamespaces(clientset)
+	err := uninstallHelmReleases(commandRunner, kubeConfigFile)
+	if err != nil {
+		return err
+	}
+	err = cleanTestNamespaces(clientset)
 	if err != nil {
 		return err
 	}
 	return nil
-}
-
-// GetTestNamespace generates a namespace name with a suffix that changes for each test run. Using this allows serial test runs
-// to start faster and more reliably, because they won't be impacted by slow deletion of namespaces from previous runs.
-func (fixture *ClusterFixture) GetTestNamespace(prefix string) string {
-	return getTestNamespace(prefix, fixture.NamespaceSuffix)
 }
 
 func getTestNamespace(prefix, suffix string) string { return fmt.Sprintf("%s-%s", prefix, suffix) }
