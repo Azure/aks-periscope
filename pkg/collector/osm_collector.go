@@ -89,6 +89,7 @@ func (collector *OsmCollector) Collect() error {
 			// If no monitored namespaces are found, just log and continue - this is not an error.
 			if k8sErrors.IsNotFound(err) {
 				log.Printf("Failed to find any namespaces monitored by OSM named '%s'\n", meshName)
+				continue
 			}
 			return fmt.Errorf("error listing namespaces monitored by OSM named %s: %w", meshName, err)
 		} else {
@@ -349,28 +350,29 @@ func (collector *OsmCollector) collectGroundTruth(clientset *kubernetes.Clientse
 		{GroupVersionResource: schema.GroupVersionResource{Group: "admissionregistration.k8s.io", Version: "v1", Resource: "validatingwebhookconfigurations"}, kind: "ValidatingWebhookConfiguration"},
 	}
 
-	gvrForMeshConfig, err := collector.commandRunner.GetGVRForCRD("meshconfigs.config.openservicemesh.io")
-	if err != nil {
-		log.Printf("Failed to read MeshConfig CRD: %v", err)
-		return
-	}
-
-	gvrksForMeshConfig := []groupVersionResourceKind{
-		{GroupVersionResource: *gvrForMeshConfig, kind: "MeshConfig"},
-	}
-
 	meshLabelSelector := fmt.Sprintf("app.kubernetes.io/instance=%s", meshName)
-	queryDefinitions := []struct {
+	type queryDefinition struct {
 		collectorKey  string
 		gvrks         []groupVersionResourceKind
 		labelSelector string
 		asJson        bool
-	}{
+	}
+	queryDefinitions := []queryDefinition{
 		{collectorKey: "all_resources_list", gvrks: gvrksForGetAll, labelSelector: meshLabelSelector, asJson: false},
 		{collectorKey: "all_resources_configs", gvrks: gvrksForGetAll, labelSelector: meshLabelSelector, asJson: true},
 		{collectorKey: "mutating_webhook_configurations", gvrks: gvrksForMutatingWebhookConfig, labelSelector: meshLabelSelector, asJson: true},
 		{collectorKey: "validating_webhook_configurations", gvrks: gvrksForValidatingWebhookConfig, labelSelector: meshLabelSelector, asJson: true},
-		{collectorKey: "mesh_configs", gvrks: gvrksForMeshConfig, labelSelector: "", asJson: true},
+	}
+
+	// Add another query definition for meshconfigs, if we can retrieve the metadata for them.
+	gvrForMeshConfig, err := collector.commandRunner.GetGVRForCRD("meshconfigs.config.openservicemesh.io")
+	if err == nil {
+		gvrksForMeshConfig := []groupVersionResourceKind{
+			{GroupVersionResource: *gvrForMeshConfig, kind: "MeshConfig"},
+		}
+		queryDefinitions = append(queryDefinitions, queryDefinition{collectorKey: "mesh_configs", gvrks: gvrksForMeshConfig, labelSelector: "", asJson: true})
+	} else {
+		log.Printf("Failed to read MeshConfig CRD: %v", err)
 	}
 
 	for _, defn := range queryDefinitions {
