@@ -391,7 +391,7 @@ func (collector *OsmCollector) collectGroundTruth(clientset *kubernetes.Clientse
 				})
 			}
 			if err != nil {
-				output = fmt.Sprintf("Error retrieving %s for all namespaces for mesh %s: %+v\n", gvrk.kind, meshName, err)
+				output = fmt.Sprintf("Error retrieving %s for mesh %s: %+v\n", gvrk.kind, meshName, err)
 				log.Print(output)
 			}
 			sb.WriteString(output)
