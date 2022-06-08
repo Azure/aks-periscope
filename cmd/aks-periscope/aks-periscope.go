@@ -57,7 +57,7 @@ func main() {
 		collector.NewIPTablesCollector(runtimeInfo),
 		collector.NewKubeObjectsCollector(config, runtimeInfo),
 		collector.NewNodeLogsCollector(runtimeInfo, fileContentReader),
-		collector.NewOsmCollector(runtimeInfo),
+		collector.NewOsmCollector(config, runtimeInfo),
 		collector.NewPDBCollector(config, runtimeInfo),
 		collector.NewPodsContainerLogsCollector(config, runtimeInfo),
 		collector.NewSmiCollector(runtimeInfo),

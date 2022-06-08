@@ -17,7 +17,7 @@ import (
 func TestOsmCollectorGetName(t *testing.T) {
 	const expectedName = "osm"
 
-	c := NewOsmCollector(nil)
+	c := NewOsmCollector(nil, nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
@@ -56,7 +56,7 @@ func TestOsmCollectorCheckSupported(t *testing.T) {
 			OSIdentifier:  tt.osIdentifier,
 			CollectorList: tt.collectors,
 		}
-		c := NewOsmCollector(runtimeInfo)
+		c := NewOsmCollector(nil, runtimeInfo)
 		err := c.CheckSupported()
 		if (err != nil) != tt.wantErr {
 			t.Errorf("CheckSupported() for %s error = %v, wantErr %v", tt.name, err, tt.wantErr)
@@ -111,7 +111,7 @@ func TestOsmCollectorCollect(t *testing.T) {
 		CollectorList: []string{"OSM"},
 	}
 
-	c := NewOsmCollector(runtimeInfo)
+	c := NewOsmCollector(fixture.ClientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
