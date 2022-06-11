@@ -20,11 +20,6 @@ RUN go build ./cmd/aks-periscope
 # Runner
 FROM alpine
 
-RUN apk --no-cache add ca-certificates curl openssl bash
-
-ADD https://storage.googleapis.com/kubernetes-release/release/v1.16.0/bin/linux/amd64/kubectl /usr/local/bin/kubectl
-RUN chmod +x /usr/local/bin/kubectl
-
 COPY --from=builder /build/aks-periscope /
 
 ENTRYPOINT ["/aks-periscope"]

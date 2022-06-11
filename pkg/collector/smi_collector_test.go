@@ -23,40 +23,29 @@ func TestSmiCollectorGetName(t *testing.T) {
 
 func TestSmiCollectorCheckSupported(t *testing.T) {
 	tests := []struct {
-		name         string
-		osIdentifier string
-		collectors   []string
-		wantErr      bool
+		name       string
+		collectors []string
+		wantErr    bool
 	}{
 		{
-			name:         "windows",
-			osIdentifier: "windows",
-			collectors:   []string{"SMI"},
-			wantErr:      true,
+			name:       "no OSM or SMI included",
+			collectors: []string{"NOT_OSM", "NOT_SMI"},
+			wantErr:    true,
 		},
 		{
-			name:         "linux without OSM or SMI included",
-			osIdentifier: "linux",
-			collectors:   []string{"NOT_OSM", "NOT_SMI"},
-			wantErr:      true,
+			name:       "only OSM included",
+			collectors: []string{"OSM", "NOT_SMI"},
+			wantErr:    false,
 		},
 		{
-			name:         "linux with OSM included",
-			osIdentifier: "linux",
-			collectors:   []string{"OSM", "NOT_SMI"},
-			wantErr:      false,
-		},
-		{
-			name:         "linux with SMI included",
-			osIdentifier: "linux",
-			collectors:   []string{"NOT_OSM", "SMI"},
-			wantErr:      false,
+			name:       "only SMI included",
+			collectors: []string{"NOT_OSM", "SMI"},
+			wantErr:    false,
 		},
 	}
 
 	for _, tt := range tests {
 		runtimeInfo := &utils.RuntimeInfo{
-			OSIdentifier:  tt.osIdentifier,
 			CollectorList: tt.collectors,
 		}
 		c := NewSmiCollector(nil, runtimeInfo)
@@ -84,7 +73,6 @@ func TestSmiCollectorCollect(t *testing.T) {
 	}
 
 	runtimeInfo := &utils.RuntimeInfo{
-		OSIdentifier:  "linux",
 		CollectorList: []string{"SMI"},
 	}
 
