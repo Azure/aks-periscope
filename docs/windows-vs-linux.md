@@ -9,7 +9,6 @@ The following collectors are currently unavailable on Windows:
 - DNS: This relies on `resolv.conf`, which is unavailable in Windows.
 - IPTables: The `iptables` command is not available on Windows.
 - Kubelet: This shows the arguments used to invoke the kubelet process. Windows containers do not support shared process namespaces, and so we cannot see processes on the host node.
-- OSM and SMI: These collectors currently invoke the `kubectl` binary as a shell command, rather than using the cross-platform `client-go` SDK.
 - SystemLogs: This uses `journalctl` to retrieve system logs, which is not available on Windows.
 
 ## Node Logs differences

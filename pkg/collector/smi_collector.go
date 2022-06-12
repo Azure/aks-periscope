@@ -34,12 +34,6 @@ func (collector *SmiCollector) GetName() string {
 }
 
 func (collector *SmiCollector) CheckSupported() error {
-	// This is not currently supported on Windows because it launches `kubectl` as a separate process (within GetResourceList).
-	// If/when it is reimplemented using the go client API for k8s, we can re-enable this.
-	if collector.runtimeInfo.OSIdentifier != "linux" {
-		return fmt.Errorf("unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
-	}
-
 	if !utils.Contains(collector.runtimeInfo.CollectorList, "OSM") && !utils.Contains(collector.runtimeInfo.CollectorList, "SMI") {
 		return fmt.Errorf("not included because neither 'OSM' or 'SMI' are in COLLECTOR_LIST variable. Included values: %s", strings.Join(collector.runtimeInfo.CollectorList, " "))
 	}

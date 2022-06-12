@@ -26,34 +26,24 @@ func TestOsmCollectorGetName(t *testing.T) {
 
 func TestOsmCollectorCheckSupported(t *testing.T) {
 	tests := []struct {
-		name         string
-		osIdentifier string
-		collectors   []string
-		wantErr      bool
+		name       string
+		collectors []string
+		wantErr    bool
 	}{
 		{
-			name:         "windows",
-			osIdentifier: "windows",
-			collectors:   []string{"OSM"},
-			wantErr:      true,
+			name:       "OSM not included",
+			collectors: []string{"NOT_OSM"},
+			wantErr:    true,
 		},
 		{
-			name:         "linux without OSM included",
-			osIdentifier: "linux",
-			collectors:   []string{"NOT_OSM"},
-			wantErr:      true,
-		},
-		{
-			name:         "linux with OSM included",
-			osIdentifier: "linux",
-			collectors:   []string{"OSM"},
-			wantErr:      false,
+			name:       "OSM included",
+			collectors: []string{"OSM"},
+			wantErr:    false,
 		},
 	}
 
 	for _, tt := range tests {
 		runtimeInfo := &utils.RuntimeInfo{
-			OSIdentifier:  tt.osIdentifier,
 			CollectorList: tt.collectors,
 		}
 		c := NewOsmCollector(nil, runtimeInfo)
@@ -107,7 +97,6 @@ func TestOsmCollectorCollect(t *testing.T) {
 	}
 
 	runtimeInfo := &utils.RuntimeInfo{
-		OSIdentifier:  "linux",
 		CollectorList: []string{"OSM"},
 	}
 

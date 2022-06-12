@@ -200,23 +200,6 @@ func GetCreationTimeStamp(config *restclient.Config) (string, error) {
 	return creationTimeStamp, nil
 }
 
-// GetResourceList gets a list of all resources of given type in a specified namespace
-func GetResourceList(kubeCmds []string, separator string) ([]string, error) {
-	outputStreams, err := RunCommandOnContainerWithOutputStreams("kubectl", kubeCmds...)
-
-	if err != nil {
-		return nil, err
-	}
-
-	resourceList := outputStreams.Stdout
-	// If the resource is not found within the cluster, then log a message and do not return any resources.
-	if len(resourceList) == 0 {
-		return nil, fmt.Errorf("no '%s' resource found in the cluster for given kubectl command", kubeCmds[1])
-	}
-
-	return strings.Split(strings.Trim(resourceList, "\""), separator), nil
-}
-
 func GetPods(clientset *kubernetes.Clientset, namespace string) (*v1.PodList, error) {
 	// Create a pod interface for the given namespace
 	podInterface := clientset.CoreV1().Pods(namespace)
