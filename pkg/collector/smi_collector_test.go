@@ -2,7 +2,6 @@ package collector
 
 import (
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -58,7 +57,6 @@ func TestSmiCollectorCheckSupported(t *testing.T) {
 
 func TestSmiCollectorCollect(t *testing.T) {
 	fixture, _ := test.GetClusterFixture()
-	os.Setenv("KUBECONFIG", fixture.KubeConfigFile.Name())
 
 	tests := []struct {
 		name    string
@@ -76,7 +74,7 @@ func TestSmiCollectorCollect(t *testing.T) {
 		CollectorList: []string{"SMI"},
 	}
 
-	c := NewSmiCollector(fixture.ClientConfig, runtimeInfo)
+	c := NewSmiCollector(fixture.PeriscopeAccess.ClientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

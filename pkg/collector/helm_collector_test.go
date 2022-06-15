@@ -24,12 +24,12 @@ func setupHelmTest(t *testing.T) *rest.Config {
 	}
 
 	installChartCommand := fmt.Sprintf("helm install %s /resources/testchart --namespace %s", releaseName, namespace)
-	_, err = fixture.CommandRunner.Run(installChartCommand, fixture.GetKubeConfigBinding())
+	_, err = fixture.CommandRunner.Run(installChartCommand, fixture.AdminAccess.GetKubeConfigBinding())
 	if err != nil {
 		t.Fatalf("Error installing helm release %s into %s namespace: %v", releaseName, namespace, err)
 	}
 
-	return fixture.ClientConfig
+	return fixture.PeriscopeAccess.ClientConfig
 }
 
 func TestHelmCollectorGetName(t *testing.T) {

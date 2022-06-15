@@ -25,6 +25,13 @@ const (
 
 var once sync.Once
 
+// ClusterAccess groups the objects used for connecting to a cluster as a single user/serviceaccount.
+type ClusterAccess struct {
+	ClientConfig   *rest.Config
+	Clientset      *kubernetes.Clientset
+	KubeConfigFile *os.File
+}
+
 // ClusterFixture holds all information required to connect to a local cluster, generated on the fly
 // for testing purposes. It supports running arbitrary command-line tools available via a locally-built
 // Docker image containing any desired tools for test setup.
@@ -32,9 +39,8 @@ type ClusterFixture struct {
 	NamespaceSuffix string
 	KnownNamespaces *KnownNamespaces
 	CommandRunner   *ToolsCommandRunner
-	ClientConfig    *rest.Config
-	Clientset       *kubernetes.Clientset
-	KubeConfigFile  *os.File
+	AdminAccess     *ClusterAccess
+	PeriscopeAccess *ClusterAccess
 }
 
 type KnownNamespaces struct {
@@ -43,6 +49,7 @@ type KnownNamespaces struct {
 	OsmBookStore     string
 	OsmBookThief     string
 	OsmBookWarehouse string
+	Periscope        string
 }
 
 var fixtureInstance *ClusterFixture
@@ -67,7 +74,7 @@ func GetClusterFixture() (*ClusterFixture, error) {
 // be impacted by slow deletion of namespaces from previous runs.
 func (fixture *ClusterFixture) CreateTestNamespace(prefix string) (string, error) {
 	namespace := getTestNamespace(prefix, fixture.NamespaceSuffix)
-	err := createTestNamespace(fixture.Clientset, namespace)
+	err := createTestNamespace(fixture.AdminAccess.Clientset, namespace)
 	return namespace, err
 }
 
@@ -75,13 +82,13 @@ func (fixture *ClusterFixture) CreateTestNamespace(prefix string) (string, error
 // If any images are superfluous or missing it will return an error specifying the image tags that need to be added or removed.
 // It also verifies the pull policies to ensure that no unnecessary downloading of images occurs during test runs.
 func (fixture *ClusterFixture) CheckDockerImages() error {
-	return checkDockerImages(fixture.Clientset)
+	return checkDockerImages(fixture.AdminAccess.Clientset)
 }
 
 // PrintDiagnostics logs information to stdout that might be helpful for diagnosing test failures
 // (particularly helpful in a CI environment where it is not possible to break execution with a debugger).
 func (fixture *ClusterFixture) PrintDiagnostics() {
-	diagnosticsCommand, binds := getTestDiagnosticsCommand(fixture.KubeConfigFile.Name())
+	diagnosticsCommand, binds := getTestDiagnosticsCommand(fixture.AdminAccess.KubeConfigFile.Name())
 	diagnosticsOutput, err := fixture.CommandRunner.Run(diagnosticsCommand, binds...)
 	fmt.Println(diagnosticsOutput)
 	if err != nil {
@@ -91,26 +98,37 @@ func (fixture *ClusterFixture) PrintDiagnostics() {
 
 // GetKubeConfigBinding gets the Docker volume binding required to map the fixture's kubeconfig file
 // to the expected location in the testing tools container.
-func (fixture *ClusterFixture) GetKubeConfigBinding() string {
-	return getKubeConfigBinding(fixture.KubeConfigFile.Name())
+func (clusterAccess *ClusterAccess) GetKubeConfigBinding() string {
+	return getKubeConfigBinding(clusterAccess.KubeConfigFile.Name())
 }
 
 // Cleanup is intended to be called after all tests have run. It does not delete the cluster itself, because
 // re-creating it is an expensive operation, and the goal here is to allow fast re-runs when testing locally.
 func (fixture *ClusterFixture) Cleanup() {
 	// Assume errors will not be handled by caller - just log them here and continue
-	if fixture.Clientset != nil && fixture.CommandRunner != nil && fixture.KubeConfigFile != nil {
-		err := cleanupResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile)
-		if err != nil {
-			log.Printf("Error cleaning up resources: %v", err)
-		}
+	if fixture.PeriscopeAccess != nil {
+		cleanupFile(fixture.PeriscopeAccess.KubeConfigFile)
 	}
 
-	if fixture.KubeConfigFile != nil {
-		kubeConfigFileName := fixture.KubeConfigFile.Name()
-		err := os.Remove(kubeConfigFileName)
+	if fixture.AdminAccess != nil {
+		if fixture.AdminAccess.Clientset != nil && fixture.CommandRunner != nil && fixture.AdminAccess.KubeConfigFile != nil {
+			err := cleanupResources(fixture.AdminAccess.Clientset, fixture.CommandRunner, fixture.AdminAccess.KubeConfigFile)
+			if err != nil {
+				log.Printf("Error cleaning up resources: %v", err)
+			}
+		}
+
+		cleanupFile(fixture.AdminAccess.KubeConfigFile)
+	}
+}
+
+func cleanupFile(file *os.File) {
+	// Assume errors will not be handled by caller - just log them here and continue
+	if file != nil {
+		fileName := file.Name()
+		err := os.Remove(fileName)
 		if err != nil {
-			log.Printf("Error deleting kubeconfig file %s: %v", kubeConfigFileName, err)
+			log.Printf("Error deleting file %s: %v", fileName, err)
 		}
 	}
 }
@@ -125,6 +143,7 @@ func buildInstance() (*ClusterFixture, error) {
 			OsmBookStore:     getTestNamespace("bookstore", namespaceSuffix),
 			OsmBookThief:     getTestNamespace("bookthief", namespaceSuffix),
 			OsmBookWarehouse: getTestNamespace("bookwarehouse", namespaceSuffix),
+			Periscope:        getTestNamespace("aks-periscope", namespaceSuffix),
 		},
 	}
 
@@ -142,7 +161,7 @@ func buildInstance() (*ClusterFixture, error) {
 	fixture.CommandRunner = NewToolsCommandRunner(client)
 
 	createClusterCommand := getCreateClusterCommand()
-	kubeConfigContent, err := fixture.CommandRunner.Run(createClusterCommand)
+	adminKubeConfigContent, err := fixture.CommandRunner.Run(createClusterCommand)
 	if err != nil {
 		return fixture, fmt.Errorf("error creating cluster: %w", err)
 	}
@@ -152,48 +171,82 @@ func buildInstance() (*ClusterFixture, error) {
 		return fixture, fmt.Errorf("error pulling and loading Docker images: %w", err)
 	}
 
-	kubeConfigContentBytes := []byte(kubeConfigContent)
-	config, err := clientcmd.NewClientConfigFromBytes(kubeConfigContentBytes)
+	fixture.AdminAccess, err = createClusterAccess([]byte(adminKubeConfigContent))
 	if err != nil {
-		return fixture, fmt.Errorf("error reading kubeconfig: %w", err)
-	}
-
-	fixture.ClientConfig, err = config.ClientConfig()
-	if err != nil {
-		return fixture, fmt.Errorf("error creating client config from config: %w", err)
-	}
-
-	fixture.Clientset, err = kubernetes.NewForConfig(fixture.ClientConfig)
-	if err != nil {
-		return fixture, fmt.Errorf("failed to create client connection to kubernetes from kubeconfig: %w", err)
-	}
-
-	fixture.KubeConfigFile, err = ioutil.TempFile("", "")
-	if err != nil {
-		return fixture, fmt.Errorf("error creating temp file for kubeconfig: %w", err)
-	}
-	_, err = fixture.KubeConfigFile.Write(kubeConfigContentBytes)
-	if err != nil {
-		return fixture, fmt.Errorf("error creating kubeconfig file %s: %w", fixture.KubeConfigFile.Name(), err)
-	}
-	err = fixture.KubeConfigFile.Close()
-	if err != nil {
-		return fixture, fmt.Errorf("error closing kubeconfig file %s: %w", fixture.KubeConfigFile.Name(), err)
+		return fixture, fmt.Errorf("error creating admin access to cluster: %w", err)
 	}
 
 	// Now we have a kubeconfig and cluster, cleanup any leftovers within the cluster from previous tests
-	err = cleanupResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile)
+	err = cleanupResources(fixture.AdminAccess.Clientset, fixture.CommandRunner, fixture.AdminAccess.KubeConfigFile)
 	if err != nil {
 		return fixture, fmt.Errorf("error cleaning up resources: %w", err)
 	}
 
+	// Create Periscope deployment resources
+	err = createTestNamespace(fixture.AdminAccess.Clientset, fixture.KnownNamespaces.Periscope)
+	if err != nil {
+		return fixture, fmt.Errorf("error creating Periscope namespace %s: %w", fixture.KnownNamespaces.Periscope, err)
+	}
+
+	err = deployPeriscopeServiceAccount(fixture.CommandRunner, fixture.AdminAccess.KubeConfigFile, fixture.KnownNamespaces.Periscope)
+	if err != nil {
+		return fixture, fmt.Errorf("error deploying Periscope service account: %w", err)
+	}
+
+	periscopeServiceAccountKubeconfigCommand, binds := getPeriscopeServiceAccountKubeconfigCommand(fixture.AdminAccess.KubeConfigFile.Name(), fixture.KnownNamespaces.Periscope)
+	periscopeKubeConfigContent, err := fixture.CommandRunner.Run(periscopeServiceAccountKubeconfigCommand, binds...)
+	if err != nil {
+		return fixture, fmt.Errorf("error getting kubeconfig for Periscope SA user: %w", err)
+	}
+
+	fixture.PeriscopeAccess, err = createClusterAccess([]byte(periscopeKubeConfigContent))
+	if err != nil {
+		return fixture, fmt.Errorf("error creating Periscope access to cluster: %w", err)
+	}
+
 	// Install shared cluster resources
-	err = installResources(fixture.Clientset, fixture.CommandRunner, fixture.KubeConfigFile, fixture.KnownNamespaces)
+	err = installResources(fixture.AdminAccess.Clientset, fixture.CommandRunner, fixture.AdminAccess.KubeConfigFile, fixture.KnownNamespaces)
 	if err != nil {
 		return fixture, fmt.Errorf("error installing resources: %w", err)
 	}
 
 	return fixture, nil
+}
+
+func createClusterAccess(kubeConfigContentBytes []byte) (*ClusterAccess, error) {
+	clusterAccess := &ClusterAccess{}
+
+	config, err := clientcmd.NewClientConfigFromBytes(kubeConfigContentBytes)
+	if err != nil {
+		return clusterAccess, fmt.Errorf("error reading kubeconfig: %w", err)
+	}
+
+	clusterAccess.ClientConfig, err = config.ClientConfig()
+	if err != nil {
+		return clusterAccess, fmt.Errorf("error creating client config from config: %w", err)
+	}
+
+	clusterAccess.Clientset, err = kubernetes.NewForConfig(clusterAccess.ClientConfig)
+	if err != nil {
+		return clusterAccess, fmt.Errorf("failed to create client connection to kubernetes from kubeconfig: %w", err)
+	}
+
+	clusterAccess.KubeConfigFile, err = ioutil.TempFile("", "")
+	if err != nil {
+		return clusterAccess, fmt.Errorf("error creating temp file for kubeconfig: %w", err)
+	}
+
+	_, err = clusterAccess.KubeConfigFile.Write(kubeConfigContentBytes)
+	if err != nil {
+		return clusterAccess, fmt.Errorf("error creating kubeconfig file %s: %w", clusterAccess.KubeConfigFile.Name(), err)
+	}
+
+	err = clusterAccess.KubeConfigFile.Close()
+	if err != nil {
+		return clusterAccess, fmt.Errorf("error closing kubeconfig file %s: %w", clusterAccess.KubeConfigFile.Name(), err)
+	}
+
+	return clusterAccess, nil
 }
 
 func installResources(clientset *kubernetes.Clientset, commandRunner *ToolsCommandRunner, kubeConfigFile *os.File, knownNamespaces *KnownNamespaces) error {
