@@ -65,6 +65,17 @@ func cleanTestNamespaces(clientset *kubernetes.Clientset) error {
 	return nil
 }
 
+func deployPeriscopeServiceAccount(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File, saNamespace string) error {
+	command, binds := getDeployPeriscopeServiceAccountCommand(kubeConfigFile.Name(), saNamespace)
+	output, err := commandRunner.Run(command, binds...)
+	fmt.Printf("%s\n%s\n\n", command, output)
+	if err != nil {
+		return fmt.Errorf("error deploying Periscope service account: %w", err)
+	}
+
+	return nil
+}
+
 // installMetricsServer installs metrics-server (https://github.com/kubernetes-sigs/metrics-server)
 // to the cluster. This is used by the SystemPerf collector.
 func installMetricsServer(commandRunner *ToolsCommandRunner, kubeConfigFile *os.File) error {

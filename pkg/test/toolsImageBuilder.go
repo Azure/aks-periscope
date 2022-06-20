@@ -10,6 +10,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/Azure/aks-periscope/deployment"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 )
@@ -76,9 +77,16 @@ func createArchive() ([]byte, error) {
 	tarWriter := tar.NewWriter(buffer)
 	defer tarWriter.Close()
 
+	// Include resources from the test package
 	err := addToArchive(tarWriter, resources, "resources", "")
 	if err != nil {
 		return nil, fmt.Errorf("error creating archive for resources: %w", err)
+	}
+
+	// Include resources from the repo deployment folder
+	err = addToArchive(tarWriter, deployment.Resources, ".", "deployment")
+	if err != nil {
+		return nil, fmt.Errorf("error creating archive for deployment resources: %w", err)
 	}
 
 	return buffer.Bytes(), nil

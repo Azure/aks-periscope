@@ -66,7 +66,7 @@ func TestPDBCollectorCollect(t *testing.T) {
 		CollectorList: []string{},
 	}
 
-	c := NewPDBCollector(fixture.ClientConfig, runtimeInfo)
+	c := NewPDBCollector(fixture.PeriscopeAccess.ClientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

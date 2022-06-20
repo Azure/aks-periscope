@@ -3,7 +3,6 @@ package collector
 import (
 	"context"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 	"testing"
@@ -67,7 +66,7 @@ func setupOsmTest(t *testing.T) *test.ClusterFixture {
 		fmt.Sprintf("kubectl rollout status -n %s statefulset/mysql --timeout=240s", fixture.KnownNamespaces.OsmBookWarehouse),
 	}
 
-	_, err := fixture.CommandRunner.Run(strings.Join(commands, " && "), fixture.GetKubeConfigBinding())
+	_, err := fixture.CommandRunner.Run(strings.Join(commands, " && "), fixture.AdminAccess.GetKubeConfigBinding())
 	if err != nil {
 		t.Fatalf("error waiting for OSM application rollout to complete: %v", err)
 	}
@@ -77,9 +76,8 @@ func setupOsmTest(t *testing.T) *test.ClusterFixture {
 
 func TestOsmCollectorCollect(t *testing.T) {
 	fixture := setupOsmTest(t)
-	os.Setenv("KUBECONFIG", fixture.KubeConfigFile.Name())
 
-	expectedData, err := getExpectedOsmData(fixture.Clientset, fixture.KnownNamespaces)
+	expectedData, err := getExpectedOsmData(fixture.AdminAccess.Clientset, fixture.KnownNamespaces)
 	if err != nil {
 		t.Fatalf("unable to get expected OSM data keys: %v", err)
 	}
@@ -100,7 +98,7 @@ func TestOsmCollectorCollect(t *testing.T) {
 		CollectorList: []string{"OSM"},
 	}
 
-	c := NewOsmCollector(fixture.ClientConfig, runtimeInfo)
+	c := NewOsmCollector(fixture.PeriscopeAccess.ClientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -67,7 +67,7 @@ func TestSystemPerfCollectorCollect(t *testing.T) {
 		CollectorList: []string{},
 	}
 
-	c := NewSystemPerfCollector(fixture.ClientConfig, runtimeInfo)
+	c := NewSystemPerfCollector(fixture.PeriscopeAccess.ClientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

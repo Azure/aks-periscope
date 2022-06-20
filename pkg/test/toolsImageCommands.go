@@ -23,6 +23,40 @@ func getLoadDockerImagesCommand(images, nodes []string) string {
 	return fmt.Sprintf(`echo "%s" | xargs -P8 -n1 kind load docker-image --name %s --nodes %s`, strings.Join(images, " "), testClusterName, strings.Join(nodes, ","))
 }
 
+func getDeployPeriscopeServiceAccountCommand(hostKubeconfigPath string, saNamespace string) (string, []string) {
+	commands := []string{
+		// Enclose heredoc command in curly braces to allow chaining with '&&' (https://stackoverflow.com/a/27301889)
+		fmt.Sprintf(`{ cat <<EOF > /deployment/base/kustomization.yaml
+namespace: %s
+resources:
+- cluster-role.yaml
+- cluster-role-binding.yaml
+- service-account.yaml
+EOF
+}`, saNamespace),
+		"kubectl apply -k /deployment/base",
+	}
+
+	return strings.Join(commands, " && "), []string{getKubeConfigBinding(hostKubeconfigPath)}
+}
+
+func getPeriscopeServiceAccountKubeconfigCommand(hostKubeconfigPath string, saNamespace string) (string, []string) {
+	commands := []string{
+		// Create and use a copy of the KUBECONFIG file
+		fmt.Sprintf("new_config=$(mktemp) && cat %s >> $new_config && export KUBECONFIG=$new_config", kubeConfigPath),
+		// Get the sa user token
+		fmt.Sprintf("secret_name=$(kubectl get sa -n %s aks-periscope-service-account -o jsonpath='{.secrets[0].name}')", saNamespace),
+		fmt.Sprintf("periscope_token=$(kubectl get secret -n %s $secret_name -o jsonpath={.data.token} | base64 -d)", saNamespace),
+		// Set the token as a credential for a new 'periscope-user' and change the context to use that (redirecting stdout because we'll capture stdout for the KUBECONFIG)
+		"kubectl config set-credentials periscope-user --token=$periscope_token &> /dev/null",
+		"kubectl config set-context $(kubectl config current-context) --user periscope-user &> /dev/null",
+		// Print out the new kubeconfig file
+		"cat $KUBECONFIG",
+	}
+
+	return strings.Join(commands, " && "), []string{getKubeConfigBinding(hostKubeconfigPath)}
+}
+
 func getInstallMetricsServerCommand(hostKubeconfigPath string) (string, []string) {
 	installCommand := "kubectl apply -f /resources/metrics-server/components.yaml"
 	waitCommand := "kubectl rollout status -n kube-system deploy/metrics-server --timeout=240s"

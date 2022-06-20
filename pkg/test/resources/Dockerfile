@@ -17,3 +17,4 @@ RUN chmod 755 /usr/local/bin/kind && \
 
 # Copy resources
 ADD tools-resources /resources
+ADD deployment /deployment

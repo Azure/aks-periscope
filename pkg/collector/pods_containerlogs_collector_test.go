@@ -65,7 +65,7 @@ func TestPodsContainerLogsCollectorCollect(t *testing.T) {
 	runtimeInfo := &utils.RuntimeInfo{
 		ContainerLogsNamespaces: []string{"kube-system"},
 	}
-	c := NewPodsContainerLogsCollector(fixture.ClientConfig, runtimeInfo)
+	c := NewPodsContainerLogsCollector(fixture.PeriscopeAccess.ClientConfig, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
