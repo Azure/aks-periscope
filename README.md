@@ -17,9 +17,9 @@ Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster.
 3. [Compatibility](#Compatibility)
 4. [Current Feature Set](#current-feature-set)
 5. [User Guide](#user-guide)
-   1. [Raw Kustomize]
-   2. [Azure CLI Kollect Command]
-   2. [VS Code AKS Extension]
+   1. [Raw Kustomize] 
+   2. [Azure CLI Kollect Command](#az-cli-tool)
+   3. [VS Code AKS Extension](#vscode-aks-ext)
 6. [Programming Guide](#prog-guide)
    1. [Automated Tests](#automated-test)
 7. [Dependent Consuming Tools and Working Contract](#consuming-tool-contract)
@@ -62,12 +62,10 @@ Periscope collects the following logs and metrics:
 8. Kubelet command arguments.
 9. System performance (kubectl top nodes and kubectl top pods).
 
-It also generates the following diagnostic signals:
-
-1. Network outbound connectivity, reports the down period for a specific connection.
-2. Network configuration, includes Network Plugin, DNS, and Max Pods per Node settings.
-
 ## User Guide <a name="user-guide" />
+
+
+### AKS Periscope using Azure Command-Line tool <a name="az-cli-tool" />
 
 AKS Periscope can be deployed by using Azure Command-Line tool (CLI). The steps are:
 
@@ -148,6 +146,12 @@ This directory is also mounted to container as:
 After export, they will also be stored in Azure Blob Storage in a container named with the cluster's API Server FQDN. A zip file is also created for easy download.
 
 Alternatively, AKS Periscope can be deployed directly with `kubectl`. See instructions in [Appendix].
+
+### AKS Periscope deployment using VsCode AKS Extension tool <a name="vscode-aks-ext" />
+
+AKS Periscope can also be deployed by using vscode extension like [VsCode AKS extension](https://marketplace.visualstudio.com/items?itemName=ms-kubernetes-tools.vscode-aks-tools).
+
+All useer need to do is to configure their storage account to their [diagnostic setting as explained here](https://github.com/Azure/vscode-aks-tools#configuring-storage-account). There after, just on a right-click `Run AKS Periscope` vscode will run the tool against users aks-cluster and uplaod the result with much usable download screen. For more detail how vscode feature works [please refer here](https://github.com/Azure/vscode-aks-tools#aks-periscope).
 
 ## Programming Guide <a name="prog-guide" />
 
