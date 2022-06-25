@@ -10,6 +10,22 @@ Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster.
 
 ![Icon](https://user-images.githubusercontent.com/33297523/69174241-4075a980-0ab6-11ea-9e33-76afc588e7fb.png)
 
+
+# Table of contents
+1. [Overview](#Overview)
+2. [Data Privacy and Collection](#data-privacy)
+3. [Compatibility](#Compatibility)
+4. [Current Feature Set](#current-feature-set)
+5. [User Guide](#user-guide)
+   1. [Raw Kustomize]
+   2. [Azure CLI Kollect Command]
+   2. [VS Code AKS Extension]
+6. [Programming Guide](#prog-guide)
+   1. [Automated Tests](#automated-test)
+7. [Dependent Consuming Tools and Working Contract](#consuming-tool-contract)
+8. [Debugging Guide](#debugging-guide)
+9. [Contributing](#contributing)
+
 ## Overview
 
 Hopefully most of the time, your AKS cluster is running happily and healthy. However, when things do go wrong, AKS customers need a tool to help them diagnose and collect the logs necessary to troubleshoot the issue. It can be difficult to collect the appropriate node and pod logs to figure what's wrong, how to fix the problem, or even to pass on those logs to others to help.
@@ -22,7 +38,7 @@ Raw Logs and metrics from an AKS cluster are collected and basic diagnostic sign
 
 ![Signals](https://user-images.githubusercontent.com/33297523/68249891-90dc0a00-ffd4-11e9-9eeb-fe9f35cbd173.png)
 
-## Data Privacy and Collection
+## Data Privacy and Collection <a name="data-privacy" />
 
 AKS Periscope runs on customer's agent pool nodes and collects VM and container level data. It is important that the customer is aware and gives consent before the tool is deployed/information shared. Microsoft guidelines can be found in the link below:
 
@@ -32,7 +48,7 @@ https://azure.microsoft.com/en-us/support/legal/support-diagnostic-information-c
 
 AKS Periscope can run on both Linux and Windows nodes, but there are some [functional differences between Windows and Linux behaviour](./docs/windows-vs-linux.md).
 
-## Current Feature Set
+## Current Feature Set <a name="current-feature-set" />
 
 Periscope collects the following logs and metrics:
 
@@ -51,7 +67,7 @@ It also generates the following diagnostic signals:
 1. Network outbound connectivity, reports the down period for a specific connection.
 2. Network configuration, includes Network Plugin, DNS, and Max Pods per Node settings.
 
-## User Guide
+## User Guide <a name="user-guide" />
 
 AKS Periscope can be deployed by using Azure Command-Line tool (CLI). The steps are:
 
@@ -133,15 +149,15 @@ After export, they will also be stored in Azure Blob Storage in a container name
 
 Alternatively, AKS Periscope can be deployed directly with `kubectl`. See instructions in [Appendix].
 
-## Programming Guide
+## Programming Guide <a name="prog-guide" />
 
 To locally build this project from the root of this repository:
 
 ```sh
-CGO_ENABLED=0 GOOS=linux go build -mod=vendor github.com/Azure/aks-periscope/cmd/aks-periscope
+CGO_ENABLED=0 GOOS=linux go build -mod=mod github.com/Azure/aks-periscope/cmd/aks-periscope
 ```
 
-### Automated Tests
+### Automated Tests <a name="automated-test" />
 
 See [this guide](./docs/testing.md) for running automated tests in a CI or development environment.
 
@@ -149,7 +165,7 @@ See [this guide](./docs/testing.md) for running automated tests in a CI or devel
 
 **Tip**: To test changes in a GitHub branch, there are instructions for running images published to a local GHCR registry in the ['dynamic-image' Kustomize overlay notes](./deployment/overlays/dynamic-image/README.md#ghcr).This is especially useful for verifying Windows images.
 
-## Dependent Consuming Tools and Working Contract
+## Dependent Consuming Tools and Working Contract <a name="consuming-tool-contract" />
 
 Dependent tools need access to an immutable, versioned Periscope resource definition. We provide two ways to obtain this:
 1. [Deprecated] Build the `external` overlay using instructions [here](./deployment/overlays/external/README.md) and include the output as a static resource in consuming tools. This will require runtime string substitution to configure appropriately for any given deployment, before being deployed using `kubectl -f`.
@@ -176,7 +192,7 @@ configMapGenerator:
   - DIAGNOSTIC_KUBEOBJECTS_LIST={KUBEOBJECTS_OVERRIDE}
 ```
 
-## Debugging Guide
+## Debugging Guide <a name="debugging-guide" />
 
 This section intends to add some tips for debugging pod logs using aks-periscope.
 
