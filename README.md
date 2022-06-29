@@ -12,17 +12,17 @@ Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster.
 
 
 # Table of contents
-1. [Overview](#Overview)
-2. [Data Privacy and Collection](#data-privacy)
-3. [Compatibility](#Compatibility)
+1. [Overview](#overview)
+2. [Data Privacy and Collection](#data-privacy-and-collection)
+3. [Compatibility](#compatibility)
 4. [Current Feature Set](#current-feature-set)
 5. [User Guide](#user-guide)
    1. [Raw Kustomize](#kustomize-deployment)
-   2. [Azure CLI Kollect Command](#az-cli-tool)
-   3. [VS Code AKS Extension](#vscode-aks-ext)
-6. [Programming Guide](#prog-guide)
-   1. [Automated Tests](#automated-test)
-7. [Dependent Consuming Tools and Working Contract](#consuming-tool-contract)
+   2. [Azure CLI Kollect Command](#using-azure-command-line-tool)
+   3. [VS Code AKS Extension](#using-vs-code-aks-extension)
+6. [Programming Guide](#programming-guide)
+   1. [Automated Tests](#automated-tests)
+7. [Dependent Consuming Tools and Working Contract](#dependent-consuming-tools-and-working-contract)
 8. [Debugging Guide](#debugging-guide)
 9. [Contributing](#contributing)
 
@@ -38,7 +38,7 @@ Raw Logs and metrics from an AKS cluster are collected and basic diagnostic sign
 
 ![Signals](https://user-images.githubusercontent.com/33297523/68249891-90dc0a00-ffd4-11e9-9eeb-fe9f35cbd173.png)
 
-## Data Privacy and Collection <a name="data-privacy"></a>
+## Data Privacy and Collection
 
 AKS Periscope runs on customer's agent pool nodes and collects VM and container level data. It is important that the customer is aware and gives consent before the tool is deployed/information shared. Microsoft guidelines can be found in the link below:
 
@@ -48,7 +48,7 @@ https://azure.microsoft.com/en-us/support/legal/support-diagnostic-information-c
 
 AKS Periscope can run on both Linux and Windows nodes, but there are some [functional differences between Windows and Linux behaviour](./docs/windows-vs-linux.md).
 
-## Current Feature Set <a name="current-feature-set"></a>
+## Current Feature Set
 
 Periscope collects the following logs and metrics:
 
@@ -62,7 +62,7 @@ Periscope collects the following logs and metrics:
 8. Kubelet command arguments.
 9. System performance (kubectl top nodes and kubectl top pods).
 
-## User Guide <a name="user-guide"></a>
+## User Guide
 
 You can deploy Periscope to your cluster in different ways, depending on your preferred working environment and the degree of control over precisely how it needs to be run.
 
@@ -118,7 +118,7 @@ You can then deploy Periscope by running:
 kubectl apply -k <path-to-kustomize-directory>
 ```
 
-### AKS Periscope using Azure Command-Line tool <a name="az-cli-tool"></a>
+### Using Azure Command-Line tool
 
 AKS Periscope can be deployed by using Azure Command-Line tool (CLI). The steps are:
 
@@ -190,23 +190,15 @@ AKS Periscope can be deployed by using Azure Command-Line tool (CLI). The steps 
       --node-logs "/var/log/azure-vnet.log /var/log/azure-vnet-ipam.log"
       ```
 
-All collected logs, metrics and node level diagnostic information is stored on host nodes under directory:  
-> `/var/log/aks-periscope`.
-
-This directory is also mounted to container as:  
-> `/aks-periscope`.
-
 After export, they will also be stored in Azure Blob Storage in a container named with the cluster's API Server FQDN. A zip file is also created for easy download.
 
-Alternatively, AKS Periscope can be deployed directly with `kubectl`. See instructions in [Appendix].
+### Using VS Code AKS Extension
 
-### AKS Periscope deployment using VsCode AKS Extension tool <a name="vscode-aks-ext"></a>
+AKS Periscope can also be deployed by using the [VS Code AKS extension](https://marketplace.visualstudio.com/items?itemName=ms-kubernetes-tools.vscode-aks-tools).
 
-AKS Periscope can also be deployed by using vscode extension like [VsCode AKS extension](https://marketplace.visualstudio.com/items?itemName=ms-kubernetes-tools.vscode-aks-tools).
+You first need to configure your cluster's diagnostic settings to use a storage account [as explained here](https://github.com/Azure/vscode-aks-tools#configuring-storage-account). You can then right-click on the cluster and select `Run AKS Periscope` to run the tool and upload the result. The results can be downloaded directly from VS Code. For more detail how this feature works [please refer here](https://github.com/Azure/vscode-aks-tools#aks-periscope).
 
-All useer need to do is to configure their storage account to their [diagnostic setting as explained here](https://github.com/Azure/vscode-aks-tools#configuring-storage-account). There after, just on a right-click `Run AKS Periscope` vscode will run the tool against users aks-cluster and uplaod the result with much usable download screen. For more detail how vscode feature works [please refer here](https://github.com/Azure/vscode-aks-tools#aks-periscope).
-
-## Programming Guide <a name="prog-guide"></a>
+## Programming Guide
 
 To locally build this project from the root of this repository:
 
@@ -214,7 +206,7 @@ To locally build this project from the root of this repository:
 CGO_ENABLED=0 GOOS=linux go build -mod=mod github.com/Azure/aks-periscope/cmd/aks-periscope
 ```
 
-### Automated Tests <a name="automated-test"></a>
+### Automated Tests
 
 See [this guide](./docs/testing.md) for running automated tests in a CI or development environment.
 
@@ -222,7 +214,7 @@ See [this guide](./docs/testing.md) for running automated tests in a CI or devel
 
 **Tip**: To test changes in a GitHub branch, there are instructions for running images published to a local GHCR registry in the ['dynamic-image' Kustomize overlay notes](./deployment/overlays/dynamic-image/README.md#ghcr).This is especially useful for verifying Windows images.
 
-## Dependent Consuming Tools and Working Contract <a name="consuming-tool-contract"></a>
+## Dependent Consuming Tools and Working Contract
 
 Dependent tools need access to an immutable, versioned Periscope resource definition. We provide two ways to obtain this:
 1. [Deprecated] Build the `external` overlay using instructions [here](./deployment/overlays/external/README.md) and include the output as a static resource in consuming tools. This will require runtime string substitution to configure appropriately for any given deployment, before being deployed using `kubectl -f`.
@@ -249,7 +241,7 @@ configMapGenerator:
   - DIAGNOSTIC_KUBEOBJECTS_LIST={KUBEOBJECTS_OVERRIDE}
 ```
 
-## Debugging Guide <a name="debugging-guide"></a>
+## Debugging Guide
 
 This section intends to add some tips for debugging pod logs using aks-periscope.
 
