@@ -109,30 +109,7 @@ func TestOsmCollectorCollect(t *testing.T) {
 			}
 			data := c.GetData()
 
-			missingDataKeys := []string{}
-			for key, regexp := range tt.want {
-				value, ok := data[key]
-				if ok {
-					if !regexp.MatchString(value) {
-						t.Errorf("unexpected value for %s\n\texpected: %s\n\tfound: %s", key, regexp.String(), value)
-					}
-				} else {
-					missingDataKeys = append(missingDataKeys, key)
-				}
-			}
-			if len(missingDataKeys) > 0 {
-				t.Errorf("missing keys in Collect result:\n%s", strings.Join(missingDataKeys, "\n"))
-			}
-
-			unexpectedDataKeys := []string{}
-			for key := range data {
-				if _, ok := tt.want[key]; !ok {
-					unexpectedDataKeys = append(unexpectedDataKeys, key)
-				}
-			}
-			if len(unexpectedDataKeys) > 0 {
-				t.Errorf("unexpected keys in Collect result:\n%s", strings.Join(unexpectedDataKeys, "\n"))
-			}
+			compareCollectorData(t, tt.want, data)
 		})
 	}
 }

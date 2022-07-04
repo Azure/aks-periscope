@@ -1,10 +1,15 @@
 package collector
 
 import (
+	"context"
+	"fmt"
+	"regexp"
 	"testing"
 
 	"github.com/Azure/aks-periscope/pkg/test"
 	"github.com/Azure/aks-periscope/pkg/utils"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 )
 
 func TestKubeObjectsCollectorGetName(t *testing.T) {
@@ -25,39 +30,148 @@ func TestKubeObjectsCollectorCheckSupported(t *testing.T) {
 	}
 }
 
+var defaultKubeObjects = []string{"kube-system/pod", "kube-system/service", "kube-system/deployment"}
+
+func getDefaultKubeObjectResults(fixture *test.ClusterFixture) (map[string]*regexp.Regexp, error) {
+	results := map[string]*regexp.Regexp{}
+
+	podList, err := fixture.AdminAccess.Clientset.CoreV1().Pods("kube-system").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error listing pods: %w", err)
+	}
+
+	for _, pod := range podList.Items {
+		key := fmt.Sprintf("kube-system_pod_%s", pod.Name)
+		results[key] = regexp.MustCompile(fmt.Sprintf(`^Name:\s+%s\n(.*\n)*Containers:\n(.*\n)*Conditions:\n(.*\n)*Events:`, pod.Name))
+	}
+
+	svcList, err := fixture.AdminAccess.Clientset.CoreV1().Services("kube-system").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error listing services: %w", err)
+	}
+
+	for _, svc := range svcList.Items {
+		key := fmt.Sprintf("kube-system_service_%s", svc.Name)
+		results[key] = regexp.MustCompile(fmt.Sprintf(`^Name:\s+%s\n(.*\n)*Type:(.*\n)*IP:(.*\n)*Endpoints:(.*\n)*Events:`, svc.Name))
+	}
+
+	deployList, err := fixture.AdminAccess.Clientset.AppsV1().Deployments("kube-system").List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error listing deployments: %w", err)
+	}
+
+	for _, deploy := range deployList.Items {
+		key := fmt.Sprintf("kube-system_deployment_%s", deploy.Name)
+		results[key] = regexp.MustCompile(fmt.Sprintf(`^Name:\s+%s\n(.*\n)*Pod Template:\n(.*\n)*Conditions:\n(.*\n)*Events:`, deploy.Name))
+	}
+
+	return results, nil
+}
+
 func TestKubeObjectsCollectorCollect(t *testing.T) {
+	fixture, _ := test.GetClusterFixture()
+
+	testNamespace, err := fixture.CreateTestNamespace("kubeobjectstest")
+	if err != nil {
+		t.Fatalf("Error creating test namespace %s: %v", testNamespace, err)
+	}
+
+	deployResourcesCommand := fmt.Sprintf("kubectl apply -n %s -f /resources/kube-objects/test-resources.yaml", testNamespace)
+	_, err = fixture.CommandRunner.Run(deployResourcesCommand, fixture.AdminAccess.GetKubeConfigBinding())
+	if err != nil {
+		t.Fatalf("Error deploying test resources into %s namespace: %v", testNamespace, err)
+	}
+
+	defaultResults, err := getDefaultKubeObjectResults(fixture)
+	if err != nil {
+		t.Fatalf("Error determining expected results for default configuration: %v", err)
+	}
+
 	tests := []struct {
-		name    string
-		want    int
-		wantErr bool
+		name             string
+		requestedObjects []string
+		config           *rest.Config
+		wantErr          bool
+		want             map[string]*regexp.Regexp
 	}{
 		{
-			name:    "get kube objects logs",
-			want:    1,
-			wantErr: false,
+			name:             "bad kubeconfig",
+			requestedObjects: defaultKubeObjects,
+			config:           &rest.Config{Host: string([]byte{0})},
+			wantErr:          true,
+			want:             nil,
+		},
+		{
+			name:             "too few kubeobject parts should be skipped",
+			requestedObjects: []string{"kube-system"},
+			config:           fixture.PeriscopeAccess.ClientConfig,
+			wantErr:          false,
+			want:             map[string]*regexp.Regexp{},
+		},
+		{
+			name:             "unknown resource should be skipped",
+			requestedObjects: []string{"kube-system/notaresource"},
+			config:           fixture.PeriscopeAccess.ClientConfig,
+			wantErr:          false,
+			want:             map[string]*regexp.Regexp{},
+		},
+		{
+			name:             "unknown namespace should be skipped",
+			requestedObjects: []string{"notanamespace/pod"},
+			config:           fixture.PeriscopeAccess.ClientConfig,
+			wantErr:          false,
+			want:             map[string]*regexp.Regexp{},
+		},
+		{
+			name:             "specified resources",
+			requestedObjects: []string{fmt.Sprintf("%s/configmaps", testNamespace)},
+			config:           fixture.PeriscopeAccess.ClientConfig,
+			wantErr:          false,
+			want: map[string]*regexp.Regexp{
+				fmt.Sprintf("%s_configmaps_kube-root-ca.crt", testNamespace): regexp.MustCompile(`^Name:\s+kube-root-ca.crt\n(.*\n)*Data`),
+				fmt.Sprintf("%s_configmaps_test-configmap-1", testNamespace): regexp.MustCompile(`^Name:\s+test-configmap-1\n(.*\n)*Data`),
+				fmt.Sprintf("%s_configmaps_test-configmap-2", testNamespace): regexp.MustCompile(`^Name:\s+test-configmap-2\n(.*\n)*Data`),
+				fmt.Sprintf("%s_configmaps_test-configmap-3", testNamespace): regexp.MustCompile(`^Name:\s+test-configmap-3\n(.*\n)*Data`),
+			},
+		},
+		{
+			name:             "single resource",
+			requestedObjects: []string{fmt.Sprintf("%s/configmaps/test-configmap-2", testNamespace)},
+			config:           fixture.PeriscopeAccess.ClientConfig,
+			wantErr:          false,
+			want: map[string]*regexp.Regexp{
+				fmt.Sprintf("%s_configmaps_test-configmap-2", testNamespace): regexp.MustCompile(`^Name:\s+test-configmap-2\n(.*\n)*Data`),
+			},
+		},
+		{
+			name:             "default kubeobjects",
+			requestedObjects: defaultKubeObjects,
+			config:           fixture.PeriscopeAccess.ClientConfig,
+			wantErr:          false,
+			want:             defaultResults,
 		},
 	}
 
-	fixture, _ := test.GetClusterFixture()
-
-	runtimeInfo := &utils.RuntimeInfo{
-		KubernetesObjects: []string{"kube-system/pod", "kube-system/service", "kube-system/deployment"},
-	}
-
-	c := NewKubeObjectsCollector(fixture.PeriscopeAccess.ClientConfig, runtimeInfo)
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			runtimeInfo := &utils.RuntimeInfo{
+				KubernetesObjects: tt.requestedObjects,
+			}
+
+			c := NewKubeObjectsCollector(tt.config, runtimeInfo)
+
 			err := c.Collect()
 
-			if (err != nil) != tt.wantErr {
-				t.Errorf("Collect() error = %v, wantErr %v", err, tt.wantErr)
+			if tt.wantErr {
+				if err == nil {
+					t.Error("expected error but none found")
+				}
+				return
 			}
-			raw := c.GetData()
 
-			if len(raw) < tt.want {
-				t.Errorf("len(GetData()) = %v, want %v", len(raw), tt.want)
-			}
+			data := c.GetData()
+
+			compareCollectorData(t, tt.want, data)
 		})
 	}
 }
