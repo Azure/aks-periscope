@@ -109,8 +109,22 @@ func TestKubeObjectsCollectorCollect(t *testing.T) {
 			want:             map[string]*regexp.Regexp{},
 		},
 		{
-			name:             "unknown resource should be skipped",
+			name:             "unknown resource type should be skipped",
 			requestedObjects: []string{"kube-system/notaresource"},
+			config:           fixture.PeriscopeAccess.ClientConfig,
+			wantErr:          false,
+			want:             map[string]*regexp.Regexp{},
+		},
+		{
+			name:             "undescribable resource type should be skipped",
+			requestedObjects: []string{"kube-system/events"},
+			config:           fixture.PeriscopeAccess.ClientConfig,
+			wantErr:          false,
+			want:             map[string]*regexp.Regexp{},
+		},
+		{
+			name:             "missing resource should be skipped",
+			requestedObjects: []string{"kube-system/pod/notexisting"},
 			config:           fixture.PeriscopeAccess.ClientConfig,
 			wantErr:          false,
 			want:             map[string]*regexp.Regexp{},
