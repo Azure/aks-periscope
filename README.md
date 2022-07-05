@@ -98,7 +98,7 @@ secretGenerator:
 #   behavior: replace
 #   literals:
 #   - DIAGNOSTIC_CONTAINERLOGS_LIST=kube-system # space-separated namespaces
-#   - DIAGNOSTIC_KUBEOBJECTS_LIST=kube-system/pod kube-system/service kube-system/deployment # space-separated namespace/kind pairs
+#   - DIAGNOSTIC_KUBEOBJECTS_LIST=kube-system/pod kube-system/service kube-system/deployment # space-separated list of namespace/resource-type[/resource]
 #   - DIAGNOSTIC_NODELOGS_LIST_LINUX="/var/log/azure/cluster-provision.log /var/log/cloud-init.log" # space-separated log file locations
 #   - DIAGNOSTIC_NODELOGS_LIST_WINDOWS="C:\AzureData\CustomDataSetupScript.log" # space-separated log file locations
 ```
