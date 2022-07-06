@@ -3,6 +3,8 @@ package collector
 import (
 	"log"
 	"os"
+	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/Azure/aks-periscope/pkg/test"
@@ -43,4 +45,31 @@ func runTests(m *testing.M, fixture *test.ClusterFixture) int {
 	}
 
 	return code
+}
+
+func compareCollectorData(t *testing.T, expectedData map[string]*regexp.Regexp, actualData map[string]string) {
+	missingDataKeys := []string{}
+	for key, regexp := range expectedData {
+		value, ok := actualData[key]
+		if ok {
+			if !regexp.MatchString(value) {
+				t.Errorf("unexpected value for %s\n\texpected: %s\n\tfound: %s", key, regexp.String(), value)
+			}
+		} else {
+			missingDataKeys = append(missingDataKeys, key)
+		}
+	}
+	if len(missingDataKeys) > 0 {
+		t.Errorf("missing keys in actual data:\n%s", strings.Join(missingDataKeys, "\n"))
+	}
+
+	unexpectedDataKeys := []string{}
+	for key := range actualData {
+		if _, ok := expectedData[key]; !ok {
+			unexpectedDataKeys = append(unexpectedDataKeys, key)
+		}
+	}
+	if len(unexpectedDataKeys) > 0 {
+		t.Errorf("unexpected keys in actual data:\n%s", strings.Join(unexpectedDataKeys, "\n"))
+	}
 }

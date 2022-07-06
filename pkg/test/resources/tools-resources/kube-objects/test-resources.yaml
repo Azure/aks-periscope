@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-1
+data:
+  test_value_1: "a"
+  test_value_2: "b"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-2
+data:
+  test_value_1: "c"
+  test_value_2: "d"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-configmap-3
+data:
+  test_value_1: "e"
+  test_value_2: "f"
