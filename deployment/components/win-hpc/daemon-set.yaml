@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: aks-periscope-win
+spec:
+  template:
+    spec:
+      hostNetwork: true
+      securityContext:
+        privileged: true
+        windowsOptions:
+          hostProcess: true
+          runAsUserName: "NT AUTHORITY\\SYSTEM"
