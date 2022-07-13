@@ -1,13 +1,46 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: aks-periscope-win
+  name: diagnostics-collection-win
+  labels:
+    app: diagnostics-collection
 spec:
+  selector:
+    matchLabels:
+      app: diagnostics-collection
   template:
+    metadata:
+      labels:
+        app: diagnostics-collection
     spec:
+      hostPID: true
+      nodeSelector:
+        kubernetes.io/os: windows
       hostNetwork: true
       securityContext:
-        privileged: true
         windowsOptions:
           hostProcess: true
           runAsUserName: "NT AUTHORITY\\SYSTEM"
+      containers:
+      - name: diagnostics-collection
+        image: mcr.microsoft.com/windows/servercore:1809
+        imagePullPolicy: Always
+        command:
+        - powershell
+        args:
+        - scripts\CollectDiagnostics.ps1
+        volumeMounts:
+        - name: diag-config-volume
+          mountPath: config
+        - name: script-config-volume
+          mountPath: scripts
+      volumes:
+      - name: diag-config-volume
+        configMap:
+          name: diagnostic-config
+          items:
+          - key: DIAGNOSTIC_RUN_ID
+            path: run_id
+      - name: script-config-volume
+        configMap:
+          name: script-config

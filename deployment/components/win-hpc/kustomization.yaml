@@ -1,5 +1,20 @@
 apiVersion: kustomize.config.k8s.io/v1alpha1
 kind: Component
 
-patchesStrategicMerge:
+namespace: aks-periscope
+
+resources:
 - daemon-set.yaml
+
+configMapGenerator:
+- name: diagnostic-config
+  behavior: merge
+  literals:
+  - FEATURE_WINHPC=1
+- name: script-config
+  behavior: create
+  files:
+  - CollectDiagnostics.ps1
+
+generatorOptions:
+  disableNameSuffixHash: true
