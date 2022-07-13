@@ -17,9 +17,10 @@ Quick troubleshooting for your Azure Kubernetes Service (AKS) cluster.
 3. [Compatibility](#compatibility)
 4. [Current Feature Set](#current-feature-set)
 5. [User Guide](#user-guide)
+   1. [Prerequisites](#prerequisites)
    1. [Raw Kustomize](#kustomize-deployment)
-   2. [Azure CLI Kollect Command](#using-azure-command-line-tool)
-   3. [VS Code AKS Extension](#using-vs-code-aks-extension)
+   1. [Azure CLI Kollect Command](#using-azure-command-line-tool)
+   1. [VS Code AKS Extension](#using-vs-code-aks-extension)
 6. [Programming Guide](#programming-guide)
    1. [Automated Tests](#automated-tests)
 7. [Dependent Consuming Tools and Working Contract](#dependent-consuming-tools-and-working-contract)
@@ -65,6 +66,10 @@ Periscope collects the following logs and metrics:
 ## User Guide
 
 You can deploy Periscope to your cluster in different ways, depending on your preferred working environment and the degree of control over precisely how it needs to be run.
+
+### Prerequisites
+
+Whichever method you choose to deploy Periscope, you will need to have [kubectl](https://kubernetes.io/docs/tasks/tools/#kubectl) **version 1.21** or later installed on your system.
 
 ### Kustomize Deployment
 
