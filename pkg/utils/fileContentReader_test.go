@@ -59,3 +59,39 @@ func TestGetFileContentForMissingFile(t *testing.T) {
 		t.Errorf("no error reading missing file %s", missingFilePath)
 	}
 }
+
+func TestFileExistsForExistingFile(t *testing.T) {
+	testFile, teardown := setup(t)
+	defer teardown()
+
+	reader := NewFileContentReader()
+	exists, err := reader.FileExists(testFile.Name())
+
+	if err != nil {
+		t.Errorf("error checking existence of file %s", testFile.Name())
+	}
+
+	if !exists {
+		t.Errorf("file exists but FileExists returned false")
+	}
+}
+
+func TestFileExistsForMissingFile(t *testing.T) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Errorf("error getting current directory: %v", err)
+	}
+
+	missingFilePath := path.Join(cwd, uuid.New().String())
+
+	reader := NewFileContentReader()
+	exists, err := reader.FileExists(missingFilePath)
+
+	if err != nil {
+		t.Errorf("error checking existence of missing file %s", missingFilePath)
+	}
+
+	if exists {
+		t.Errorf("file does not exist but FileExists returned true")
+	}
+}

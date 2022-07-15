@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/Azure/aks-periscope/pkg/collector"
 	"github.com/Azure/aks-periscope/pkg/diagnoser"
@@ -63,6 +64,7 @@ func main() {
 		collector.NewSmiCollector(config, runtimeInfo),
 		collector.NewSystemLogsCollector(runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
+		collector.NewWindowsLogsCollector(runtimeInfo, knownFilePaths, fileContentReader, 10*time.Second, 20*time.Minute),
 	}
 
 	collectorGrp := new(sync.WaitGroup)

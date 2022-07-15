@@ -7,6 +7,7 @@ import (
 type KnownFilePaths struct {
 	AzureJson               string
 	AzureStackCloudJson     string
+	WindowsLogsOutput       string
 	ResolvConfHost          string
 	ResolvConfContainer     string
 	AzureStackCertHost      string
@@ -21,6 +22,7 @@ func GetKnownFilePaths(runtimeInfo *RuntimeInfo) (*KnownFilePaths, error) {
 		return &KnownFilePaths{
 			AzureJson:           "/k/azure.json",
 			AzureStackCloudJson: "/k/azurestackcloud.json",
+			WindowsLogsOutput:   "/k/periscope-diagnostic-output",
 		}, nil
 	case "linux":
 		// Since Azure Stack Hub does not support multiple node pools, we assume we don't need to worry about this for Windows
