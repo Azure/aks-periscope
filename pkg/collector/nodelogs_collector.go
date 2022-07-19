@@ -10,17 +10,17 @@ import (
 
 // NodeLogsCollector defines a NodeLogs Collector struct
 type NodeLogsCollector struct {
-	data        map[string]string
+	data        map[string]interfaces.DataValue
 	runtimeInfo *utils.RuntimeInfo
-	fileReader  interfaces.FileContentReader
+	fileSystem  interfaces.FileSystemAccessor
 }
 
 // NewNodeLogsCollector is a constructor
-func NewNodeLogsCollector(runtimeInfo *utils.RuntimeInfo, fileReader interfaces.FileContentReader) *NodeLogsCollector {
+func NewNodeLogsCollector(runtimeInfo *utils.RuntimeInfo, fileSystem interfaces.FileSystemAccessor) *NodeLogsCollector {
 	return &NodeLogsCollector{
-		data:        make(map[string]string),
+		data:        make(map[string]interfaces.DataValue),
 		runtimeInfo: runtimeInfo,
-		fileReader:  fileReader,
+		fileSystem:  fileSystem,
 	}
 }
 
@@ -46,17 +46,17 @@ func (collector *NodeLogsCollector) Collect() error {
 			normalizedNodeLog = normalizedNodeLog[1:]
 		}
 
-		output, err := collector.fileReader.GetFileContent(nodeLog)
+		size, err := collector.fileSystem.GetFileSize(nodeLog)
 		if err != nil {
-			return err
+			return fmt.Errorf("error getting file size for %s: %w", nodeLog, err)
 		}
 
-		collector.data[normalizedNodeLog] = output
+		collector.data[normalizedNodeLog] = utils.NewFilePathDataValue(collector.fileSystem, nodeLog, size)
 	}
 
 	return nil
 }
 
-func (collector *NodeLogsCollector) GetData() map[string]string {
+func (collector *NodeLogsCollector) GetData() map[string]interfaces.DataValue {
 	return collector.data
 }

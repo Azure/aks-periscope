@@ -130,9 +130,9 @@ func TestWindowsLogsCollectorCollect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reader := test.NewFakeFileContentReader(map[string]string{})
+			fs := test.NewFakeFileSystem(map[string]string{})
 
-			c := NewWindowsLogsCollector(runtimeInfo, filePaths, reader, time.Microsecond, tt.timeout)
+			c := NewWindowsLogsCollector(runtimeInfo, filePaths, fs, time.Microsecond, tt.timeout)
 			err := c.Collect()
 
 			if err != nil {
@@ -142,14 +142,16 @@ func TestWindowsLogsCollectorCollect(t *testing.T) {
 			} else {
 				dataItems := c.GetData()
 				for key, expectedValue := range tt.wantData {
-					actualValue, ok := dataItems[key]
+					result, ok := dataItems[key]
 					if !ok {
 						t.Errorf("missing key %s", key)
 					}
 
-					if actualValue != expectedValue {
-						t.Errorf("unexpected value for key %s.\nExpected '%s'\nFound '%s'", key, expectedValue, actualValue)
-					}
+					testDataValue(t, result, func(actualValue string) {
+						if actualValue != expectedValue {
+							t.Errorf("unexpected value for key %s.\nExpected '%s'\nFound '%s'", key, expectedValue, actualValue)
+						}
+					})
 				}
 			}
 		})

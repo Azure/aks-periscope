@@ -13,20 +13,20 @@ import (
 )
 
 type WindowsLogsCollector struct {
-	data         map[string]string
+	data         map[string]interfaces.DataValue
 	runtimeInfo  *utils.RuntimeInfo
 	filePaths    *utils.KnownFilePaths
-	fileReader   interfaces.FileContentReader
+	fileSystem   interfaces.FileSystemAccessor
 	pollInterval time.Duration
 	timeout      time.Duration
 }
 
-func NewWindowsLogsCollector(runtimeInfo *utils.RuntimeInfo, filePaths *utils.KnownFilePaths, fileReader interfaces.FileContentReader, pollInterval, timeout time.Duration) *WindowsLogsCollector {
+func NewWindowsLogsCollector(runtimeInfo *utils.RuntimeInfo, filePaths *utils.KnownFilePaths, fileSystem interfaces.FileSystemAccessor, pollInterval, timeout time.Duration) *WindowsLogsCollector {
 	return &WindowsLogsCollector{
-		data:         make(map[string]string),
+		data:         make(map[string]interfaces.DataValue),
 		runtimeInfo:  runtimeInfo,
 		filePaths:    filePaths,
-		fileReader:   fileReader,
+		fileSystem:   fileSystem,
 		pollInterval: pollInterval,
 		timeout:      timeout,
 	}
@@ -65,7 +65,7 @@ func (collector *WindowsLogsCollector) Collect() error {
 
 	// Poll to check existence of this file.
 	err := wait.Poll(collector.pollInterval, collector.timeout, func() (bool, error) {
-		return collector.fileReader.FileExists(completionNotificationPath)
+		return collector.fileSystem.FileExists(completionNotificationPath)
 	})
 
 	if err != nil {
@@ -74,24 +74,24 @@ func (collector *WindowsLogsCollector) Collect() error {
 
 	// We should now expect to find a 'logs' directory containing all the logs for this run.
 	logsDirectory := path.Join(collector.filePaths.WindowsLogsOutput, "logs")
-	logFilePaths, err := collector.fileReader.ListFiles(logsDirectory)
+	logFilePaths, err := collector.fileSystem.ListFiles(logsDirectory)
 	if err != nil {
 		return fmt.Errorf("error listing files in %s: %w", logsDirectory, err)
 	}
 
 	for _, logFilePath := range logFilePaths {
-		content, err := collector.fileReader.GetFileContent(logFilePath)
+		size, err := collector.fileSystem.GetFileSize(logFilePath)
 		if err != nil {
-			return fmt.Errorf("error reading file %s: %w", logFilePath, err)
+			return fmt.Errorf("error getting file size %s: %w", logFilePath, err)
 		}
 
 		relativePath := strings.TrimPrefix(logFilePath, logsDirectory+"/")
-		collector.data[relativePath] = content
+		collector.data[relativePath] = utils.NewFilePathDataValue(collector.fileSystem, logFilePath, size)
 	}
 
 	return nil
 }
 
-func (collector *WindowsLogsCollector) GetData() map[string]string {
+func (collector *WindowsLogsCollector) GetData() map[string]interfaces.DataValue {
 	return collector.data
 }

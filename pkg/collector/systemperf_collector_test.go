@@ -76,16 +76,18 @@ func TestSystemPerfCollectorCollect(t *testing.T) {
 				t.Errorf("Collect() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			raw := c.GetData()["nodes"]
-			var nodeMetrices []NodeMetrics
+			result := c.GetData()["nodes"]
+			testDataValue(t, result, func(raw string) {
+				var nodeMetrices []NodeMetrics
 
-			if err := json.Unmarshal([]byte(raw), &nodeMetrices); err != nil {
-				t.Errorf("unmarshal GetData(): %v", err)
-			}
+				if err := json.Unmarshal([]byte(raw), &nodeMetrices); err != nil {
+					t.Errorf("unmarshal GetData(): %v", err)
+				}
 
-			if len(nodeMetrices) < tt.want {
-				t.Errorf("len(GetData()) = %v, want %v", len(nodeMetrices), tt.want)
-			}
+				if len(nodeMetrices) < tt.want {
+					t.Errorf("len(GetData()) = %v, want %v", len(nodeMetrices), tt.want)
+				}
+			})
 		})
 	}
 }

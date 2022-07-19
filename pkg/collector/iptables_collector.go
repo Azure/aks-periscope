@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -50,6 +51,6 @@ func (collector *IPTablesCollector) Collect() error {
 	return nil
 }
 
-func (collector *IPTablesCollector) GetData() map[string]string {
-	return collector.data
+func (collector *IPTablesCollector) GetData() map[string]interfaces.DataValue {
+	return utils.ToDataValueMap(collector.data)
 }

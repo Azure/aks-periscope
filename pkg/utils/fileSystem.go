@@ -3,35 +3,22 @@ package utils
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 )
 
-type FileContentReader struct{}
+type FileSystem struct{}
 
-// NewFileContentReader is a constructor
-func NewFileContentReader() *FileContentReader {
-	return &FileContentReader{}
+func NewFileSystem() *FileSystem {
+	return &FileSystem{}
 }
 
-func (reader *FileContentReader) GetFileContent(filePath string) (string, error) {
-	output, err := os.Open(filePath)
-	if err != nil {
-		return "", err
-	}
-
-	defer output.Close()
-
-	b, err := ioutil.ReadAll(output)
-	if err != nil {
-		return "", err
-	}
-
-	return string(b), nil
+func (fs *FileSystem) GetFileReader(filePath string) (io.ReadCloser, error) {
+	return os.Open(filePath)
 }
 
-func (reader *FileContentReader) FileExists(filePath string) (bool, error) {
+func (fs *FileSystem) FileExists(filePath string) (bool, error) {
 	if _, err := os.Stat(filePath); err == nil {
 		return true, nil
 	} else if errors.Is(err, os.ErrNotExist) {
@@ -41,7 +28,16 @@ func (reader *FileContentReader) FileExists(filePath string) (bool, error) {
 	}
 }
 
-func (reader *FileContentReader) ListFiles(directoryPath string) ([]string, error) {
+func (fs *FileSystem) GetFileSize(filePath string) (int64, error) {
+	info, err := os.Stat(filePath)
+	if err != nil {
+		return 0, fmt.Errorf("error getting file info for %s: %w", filePath, err)
+	}
+
+	return info.Size(), nil
+}
+
+func (fs *FileSystem) ListFiles(directoryPath string) ([]string, error) {
 	paths := []string{}
 	pathAdder := func(path string, info os.FileInfo, err error) error {
 		if err == nil && !info.IsDir() {

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
@@ -122,8 +123,8 @@ func (collector *PodsContainerLogsCollector) Collect() error {
 	return nil
 }
 
-func (collector *PodsContainerLogsCollector) GetData() map[string]string {
-	return collector.data
+func (collector *PodsContainerLogsCollector) GetData() map[string]interfaces.DataValue {
+	return utils.ToDataValueMap(collector.data)
 }
 
 func getPodContainerLogs(

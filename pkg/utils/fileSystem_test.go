@@ -23,7 +23,7 @@ func setup(t *testing.T) (*os.File, func()) {
 	return file, teardown
 }
 
-func TestGetFileContentForExistingFile(t *testing.T) {
+func TestGetFileReaderForExistingFile(t *testing.T) {
 	testFile, teardown := setup(t)
 	defer teardown()
 
@@ -34,12 +34,20 @@ func TestGetFileContentForExistingFile(t *testing.T) {
 		t.Errorf("failed to write to file %s: %s", testFile.Name(), expectedContent)
 	}
 
-	reader := NewFileContentReader()
-	actualContent, err := reader.GetFileContent(testFile.Name())
+	fs := NewFileSystem()
+	reader, err := fs.GetFileReader(testFile.Name())
+	if err != nil {
+		t.Errorf("error getting reader for %s", testFile.Name())
+	}
+
+	defer reader.Close()
+
+	b, err := ioutil.ReadAll(reader)
 	if err != nil {
 		t.Errorf("error reading content from %s", testFile.Name())
 	}
 
+	actualContent := string(b)
 	if actualContent != expectedContent {
 		t.Errorf("unexpected file content.\nExpected '%s'\nFound '%s'", expectedContent, actualContent)
 	}
@@ -53,8 +61,8 @@ func TestGetFileContentForMissingFile(t *testing.T) {
 
 	missingFilePath := path.Join(cwd, uuid.New().String())
 
-	reader := NewFileContentReader()
-	_, err = reader.GetFileContent(missingFilePath)
+	fs := NewFileSystem()
+	_, err = fs.GetFileReader(missingFilePath)
 	if err == nil {
 		t.Errorf("no error reading missing file %s", missingFilePath)
 	}
@@ -64,8 +72,8 @@ func TestFileExistsForExistingFile(t *testing.T) {
 	testFile, teardown := setup(t)
 	defer teardown()
 
-	reader := NewFileContentReader()
-	exists, err := reader.FileExists(testFile.Name())
+	fs := NewFileSystem()
+	exists, err := fs.FileExists(testFile.Name())
 
 	if err != nil {
 		t.Errorf("error checking existence of file %s", testFile.Name())
@@ -84,8 +92,8 @@ func TestFileExistsForMissingFile(t *testing.T) {
 
 	missingFilePath := path.Join(cwd, uuid.New().String())
 
-	reader := NewFileContentReader()
-	exists, err := reader.FileExists(missingFilePath)
+	fs := NewFileSystem()
+	exists, err := fs.FileExists(missingFilePath)
 
 	if err != nil {
 		t.Errorf("error checking existence of missing file %s", missingFilePath)

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/collector"
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -43,41 +44,25 @@ func (collector *NetworkConfigDiagnoser) GetName() string {
 // Diagnose implements the interface method
 func (diagnoser *NetworkConfigDiagnoser) Diagnose() error {
 	networkConfigDiagnosticData := networkConfigDiagnosticDatum{HostName: diagnoser.runtimeInfo.HostNodeName}
-	for key, data := range diagnoser.dnsCollector.GetData() {
-		var dns []string
-		words := strings.Split(data, " ")
-		for i := range words {
-			if words[i] == "nameserver" {
-				dns = append(dns, strings.TrimSuffix(words[i+1], "\n"))
-			}
-		}
 
-		if key == "virtualmachine" {
-			networkConfigDiagnosticData.VirtualMachineDNS = dns
-		}
+	networkConfigDiagnosticData.VirtualMachineDNS = diagnoser.getDns(diagnoser.dnsCollector.HostConf)
+	networkConfigDiagnosticData.KubernetesDNS = diagnoser.getDns(diagnoser.dnsCollector.ContainerConf)
 
-		if key == "kubernetes" {
-			networkConfigDiagnosticData.KubernetesDNS = dns
-		}
-	}
-
-	for _, data := range diagnoser.kubeletCmdCollector.GetData() {
-		parts := strings.Split(data, " ")
-		for _, part := range parts {
-			if strings.HasPrefix(part, "--network-plugin=") {
-				networkPlugin := part[17:]
-				if networkPlugin == "cni" {
-					networkPlugin = "azurecni"
-				}
-
-				networkConfigDiagnosticData.NetworkPlugin = networkPlugin
+	parts := strings.Split(diagnoser.kubeletCmdCollector.KubeletCommand, " ")
+	for _, part := range parts {
+		if strings.HasPrefix(part, "--network-plugin=") {
+			networkPlugin := part[17:]
+			if networkPlugin == "cni" {
+				networkPlugin = "azurecni"
 			}
 
-			if strings.HasPrefix(part, "--max-pods=") {
-				maxPodsPerNodeString := part[11:]
-				maxPodsPerNode, _ := strconv.Atoi(maxPodsPerNodeString)
-				networkConfigDiagnosticData.MaxPodsPerNode = maxPodsPerNode
-			}
+			networkConfigDiagnosticData.NetworkPlugin = networkPlugin
+		}
+
+		if strings.HasPrefix(part, "--max-pods=") {
+			maxPodsPerNodeString := part[11:]
+			maxPodsPerNode, _ := strconv.Atoi(maxPodsPerNodeString)
+			networkConfigDiagnosticData.MaxPodsPerNode = maxPodsPerNode
 		}
 	}
 
@@ -91,6 +76,18 @@ func (diagnoser *NetworkConfigDiagnoser) Diagnose() error {
 	return nil
 }
 
-func (collector *NetworkConfigDiagnoser) GetData() map[string]string {
-	return collector.data
+func (diagnoser *NetworkConfigDiagnoser) getDns(confFileContent string) []string {
+	var dns []string
+	words := strings.Split(confFileContent, " ")
+	for i := range words {
+		if words[i] == "nameserver" {
+			dns = append(dns, strings.TrimSuffix(words[i+1], "\n"))
+		}
+	}
+
+	return dns
+}
+
+func (collector *NetworkConfigDiagnoser) GetData() map[string]interfaces.DataValue {
+	return utils.ToDataValueMap(collector.data)
 }

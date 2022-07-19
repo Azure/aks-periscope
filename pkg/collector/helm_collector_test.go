@@ -100,16 +100,18 @@ func TestHelmCollectorCollect(t *testing.T) {
 				t.Errorf("Collect() error = %v, wantErr %v", err, tt.wantErr)
 			}
 
-			raw := c.GetData()["helm_list"]
-			var releases []HelmRelease
+			result := c.GetData()["helm_list"]
+			testDataValue(t, result, func(raw string) {
+				var releases []HelmRelease
 
-			if err := json.Unmarshal([]byte(raw), &releases); err != nil {
-				t.Errorf("unmarshal GetData(): %v", err)
-			}
+				if err := json.Unmarshal([]byte(raw), &releases); err != nil {
+					t.Errorf("unmarshal GetData(): %v", err)
+				}
 
-			if len(releases) < tt.want {
-				t.Errorf("len(GetData()) = %v, want %v", len(releases), tt.want)
-			}
+				if len(releases) < tt.want {
+					t.Errorf("len(GetData()) = %v, want %v", len(releases), tt.want)
+				}
+			})
 		})
 	}
 }

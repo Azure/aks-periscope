@@ -85,11 +85,24 @@ func (exporter *AzureBlobExporter) Export(producer interfaces.DataProducer) erro
 		return err
 	}
 
-	for key, data := range producer.GetData() {
+	for key, value := range producer.GetData() {
 		blobURL := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.runtimeInfo.HostNodeName, key))
 
-		log.Printf("\tAppend blob file: %s (of size %d bytes)", key, len(data))
-		if _, err = azblob.UploadStreamToBlockBlob(context.Background(), strings.NewReader(data), blobURL, azblob.UploadStreamToBlockBlobOptions{}); err != nil {
+		log.Printf("\tAppend blob file: %s (of size %d bytes)", key, value.GetLength())
+
+		err = func() error {
+			valueReadCloser, err := value.GetReader()
+			if err != nil {
+				return err
+			}
+
+			defer valueReadCloser.Close()
+
+			_, err = azblob.UploadStreamToBlockBlob(context.Background(), valueReadCloser, blobURL, azblob.UploadStreamToBlockBlobOptions{})
+			return err
+		}()
+
+		if err != nil {
 			return fmt.Errorf("append file %s to blob: %w", key, err)
 		}
 	}

@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -121,6 +122,6 @@ func (collector *KubeObjectsCollector) getResourcesInNamespace(mapper meta.RESTM
 	return resourceNames, nil
 }
 
-func (collector *KubeObjectsCollector) GetData() map[string]string {
-	return collector.data
+func (collector *KubeObjectsCollector) GetData() map[string]interfaces.DataValue {
+	return utils.ToDataValueMap(collector.data)
 }

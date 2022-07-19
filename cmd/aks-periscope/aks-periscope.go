@@ -45,9 +45,9 @@ func main() {
 		}
 	}
 
-	fileContentReader := utils.NewFileContentReader()
+	fileSystem := utils.NewFileSystem()
 
-	dnsCollector := collector.NewDNSCollector(runtimeInfo, knownFilePaths, fileContentReader)
+	dnsCollector := collector.NewDNSCollector(runtimeInfo, knownFilePaths, fileSystem)
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(runtimeInfo)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector()
 	collectors := []interfaces.Collector{
@@ -57,14 +57,14 @@ func main() {
 		collector.NewHelmCollector(config, runtimeInfo),
 		collector.NewIPTablesCollector(runtimeInfo),
 		collector.NewKubeObjectsCollector(config, runtimeInfo),
-		collector.NewNodeLogsCollector(runtimeInfo, fileContentReader),
+		collector.NewNodeLogsCollector(runtimeInfo, fileSystem),
 		collector.NewOsmCollector(config, runtimeInfo),
 		collector.NewPDBCollector(config, runtimeInfo),
 		collector.NewPodsContainerLogsCollector(config, runtimeInfo),
 		collector.NewSmiCollector(config, runtimeInfo),
 		collector.NewSystemLogsCollector(runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
-		collector.NewWindowsLogsCollector(runtimeInfo, knownFilePaths, fileContentReader, 10*time.Second, 20*time.Minute),
+		collector.NewWindowsLogsCollector(runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
 	}
 
 	collectorGrp := new(sync.WaitGroup)

@@ -3,11 +3,13 @@ package diagnoser
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"strings"
 	"time"
 
 	"github.com/Azure/aks-periscope/pkg/collector"
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -43,8 +45,36 @@ func (collector *NetworkOutboundDiagnoser) GetName() string {
 func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 	outboundDiagnosticData := []networkOutboundDiagnosticDatum{}
 
-	for _, data := range diagnoser.networkOutboundCollector.GetData() {
+	for _, value := range diagnoser.networkOutboundCollector.GetData() {
 		dataPoint := networkOutboundDiagnosticDatum{HostName: diagnoser.runtimeInfo.HostNodeName}
+
+		// TODO: We could read this directly from the collector object, rather than deserializing it from the output.
+		// However, this diagnoser no longer does what it was originally intended to do, and as it is it doesn't
+		// really provide any value.
+		// The NetworkOutboundCollector used to append to a file that could potentially contain multiple status values
+		// over time, and this diagnoser would aggregate this data into timestamps for each status change. But now
+		// its output is effectively identical to that of the collector.
+		data, err := func() (string, error) {
+			reader, err := value.GetReader()
+			if err != nil {
+				return "", err
+			}
+
+			defer reader.Close()
+
+			b, err := ioutil.ReadAll(reader)
+			if err != nil {
+				return "", err
+			}
+
+			return string(b), nil
+		}()
+
+		if err != nil {
+			log.Printf("Retrieving data failed: %v", err)
+			continue
+		}
+
 		lines := strings.Split(data, "\n")
 		for _, line := range lines {
 			var outboundDatum collector.NetworkOutboundDatum
@@ -86,8 +116,8 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 	return nil
 }
 
-func (collector *NetworkOutboundDiagnoser) GetData() map[string]string {
-	return collector.data
+func (collector *NetworkOutboundDiagnoser) GetData() map[string]interfaces.DataValue {
+	return utils.ToDataValueMap(collector.data)
 }
 
 func setDataPoint(outboundDatum *collector.NetworkOutboundDatum, dataPoint *networkOutboundDiagnosticDatum) {
