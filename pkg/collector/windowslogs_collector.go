@@ -12,6 +12,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 )
 
+const windowsLogsCollectorPrefix = "collect-windows-logs/"
+
 type WindowsLogsCollector struct {
 	data         map[string]interfaces.DataValue
 	runtimeInfo  *utils.RuntimeInfo
@@ -85,7 +87,7 @@ func (collector *WindowsLogsCollector) Collect() error {
 			return fmt.Errorf("error getting file size %s: %w", logFilePath, err)
 		}
 
-		relativePath := strings.TrimPrefix(logFilePath, logsDirectory+"/")
+		relativePath := windowsLogsCollectorPrefix + strings.TrimPrefix(logFilePath, logsDirectory+"/")
 		collector.data[relativePath] = utils.NewFilePathDataValue(collector.fileSystem, logFilePath, size)
 	}
 

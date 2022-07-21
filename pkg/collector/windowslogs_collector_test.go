@@ -60,8 +60,14 @@ func TestWindowsLogsCollectorCheckSupported(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			runtimeInfo := &utils.RuntimeInfo{
+				RunId:        tt.runId,
 				OSIdentifier: tt.osIdentifier,
+				Features:     map[utils.Feature]bool{},
 			}
+			for _, feature := range tt.features {
+				runtimeInfo.Features[feature] = true
+			}
+
 			c := NewWindowsLogsCollector(runtimeInfo, nil, nil, 0, 0)
 			err := c.CheckSupported()
 			if (err != nil) != tt.wantErr {
@@ -74,48 +80,64 @@ func TestWindowsLogsCollectorCheckSupported(t *testing.T) {
 func TestWindowsLogsCollectorCollect(t *testing.T) {
 	const expectedLogOutput = "log file content"
 	const runId = "test_run"
+	notificationPath := fmt.Sprintf("/output/%s", runId)
 
 	tests := []struct {
 		name          string
-		timeout       time.Duration
-		timeToExport  time.Duration
 		exportedFiles map[string]string
+		errorPaths    []string
 		wantErr       bool
 		wantData      map[string]string
 	}{
 		{
-			name:         "timeout elapses",
-			timeout:      0,
-			timeToExport: time.Minute,
+			name: "timeout elapses - no completion notification",
 			exportedFiles: map[string]string{
-				fmt.Sprintf("/output/%s", runId): "",
-				"/output/logs/test.log":          expectedLogOutput,
+				"/output/logs/test.log": expectedLogOutput,
 			},
-			wantErr:  true,
-			wantData: nil,
+			errorPaths: []string{},
+			wantErr:    true,
+			wantData:   nil,
 		},
 		{
-			name:         "missing logs directory",
-			timeout:      time.Minute,
-			timeToExport: 0,
+			name: "missing logs directory",
 			exportedFiles: map[string]string{
-				fmt.Sprintf("/output/%s", runId): "",
-				"/output/not-in-logs.log":        expectedLogOutput,
+				notificationPath:          "",
+				"/output/not-in-logs.log": expectedLogOutput,
 			},
-			wantErr:  true,
-			wantData: nil,
+			errorPaths: []string{},
+			wantErr:    true,
+			wantData:   nil,
 		},
 		{
-			name:         "successful log collection",
-			timeout:      time.Minute,
-			timeToExport: 0,
+			name: "list files error",
 			exportedFiles: map[string]string{
-				fmt.Sprintf("/output/%s", runId): "",
-				"/output/logs/test.log":          expectedLogOutput,
+				notificationPath:        "",
+				"/output/logs/test.log": expectedLogOutput,
 			},
-			wantErr: false,
+			errorPaths: []string{"/output/logs"},
+			wantErr:    true,
+			wantData:   nil,
+		},
+		{
+			name: "read log files error",
+			exportedFiles: map[string]string{
+				notificationPath:        "",
+				"/output/logs/test.log": expectedLogOutput,
+			},
+			errorPaths: []string{"/output/logs/test.log"},
+			wantErr:    true,
+			wantData:   nil,
+		},
+		{
+			name: "successful log collection",
+			exportedFiles: map[string]string{
+				notificationPath:        "",
+				"/output/logs/test.log": expectedLogOutput,
+			},
+			errorPaths: []string{},
+			wantErr:    false,
 			wantData: map[string]string{
-				"test.log": expectedLogOutput,
+				"collect-windows-logs/test.log": expectedLogOutput,
 			},
 		},
 	}
@@ -132,7 +154,16 @@ func TestWindowsLogsCollectorCollect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := test.NewFakeFileSystem(map[string]string{})
 
-			c := NewWindowsLogsCollector(runtimeInfo, filePaths, fs, time.Microsecond, tt.timeout)
+			c := NewWindowsLogsCollector(runtimeInfo, filePaths, fs, time.Microsecond, time.Second)
+
+			for path, content := range tt.exportedFiles {
+				fs.AddOrUpdateFile(path, content)
+			}
+
+			for _, path := range tt.errorPaths {
+				fs.SetFileAccessError(path, fmt.Errorf("expected error accessing %s", path))
+			}
+
 			err := c.Collect()
 
 			if err != nil {
@@ -145,6 +176,7 @@ func TestWindowsLogsCollectorCollect(t *testing.T) {
 					result, ok := dataItems[key]
 					if !ok {
 						t.Errorf("missing key %s", key)
+						continue
 					}
 
 					testDataValue(t, result, func(actualValue string) {

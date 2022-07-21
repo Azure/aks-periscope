@@ -49,14 +49,6 @@ func runTests(m *testing.M, fixture *test.ClusterFixture) int {
 	return code
 }
 
-// func compareDataValueLiteral(t *testing.T, expectedValue string, actualDataValue interfaces.DataValue, failureMessage func(string) string) {
-// 	testDataValue(t, actualDataValue, func(actualValue string) bool { return actualValue == expectedValue }, failureMessage)
-// }
-
-// func compareDataValueRegexp(t *testing.T, expectedValueRegexp *regexp.Regexp, actualDataValue interfaces.DataValue, failureMessage func(string) string) {
-// 	testDataValue(t, actualDataValue, func(actualValue string) bool { return expectedValueRegexp.MatchString(actualValue) }, failureMessage)
-// }
-
 func testDataValue(t *testing.T, dataValue interfaces.DataValue, test func(string)) {
 	reader, err := dataValue.GetReader()
 	if err != nil {
@@ -73,25 +65,6 @@ func testDataValue(t *testing.T, dataValue interfaces.DataValue, test func(strin
 	value := string(bytes)
 	test(value)
 }
-
-// func testDataValue(t *testing.T, dataValue interfaces.DataValue, tester func(string) bool, failureMessage func(string) string) {
-// 	reader, err := dataValue.GetReader()
-// 	if err != nil {
-// 		t.Errorf("error getting reader for value: %v", err)
-// 	}
-
-// 	defer reader.Close()
-
-// 	bytes, err := ioutil.ReadAll(reader)
-// 	if err != nil {
-// 		t.Errorf("error reading value: %v", err)
-// 	}
-
-// 	value := string(bytes)
-// 	if !tester(value) {
-// 		t.Error(failureMessage(value))
-// 	}
-// }
 
 func compareCollectorData(t *testing.T, expectedData map[string]*regexp.Regexp, actualData map[string]interfaces.DataValue) {
 	missingDataKeys := []string{}
