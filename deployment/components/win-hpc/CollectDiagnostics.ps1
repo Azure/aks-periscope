@@ -20,7 +20,7 @@ while ($true) {
         $logsZipFileInfo = $outputs[$outputs.Length - 1]
 
         # Replace any existing log files with the unzipped content
-        Remove-Item -LiteralPath "${outputFolder}\*" -Force -Recurse
+        Remove-Item -Path "${outputFolder}\*" -Force -Recurse
         Expand-Archive -Path $logsZipFileInfo.FullName -Force -DestinationPath $logsPath
 
         # Create an empty file to notify any watchers that log collection is completed for this run,
