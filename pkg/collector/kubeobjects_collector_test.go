@@ -86,7 +86,7 @@ func getNodeResults(nodeNames []string) map[string]*regexp.Regexp {
 	results := map[string]*regexp.Regexp{}
 	for _, nodeName := range nodeNames {
 		key := fmt.Sprintf("_nodes_%s", nodeName)
-		results[key] = regexp.MustCompile(fmt.Sprintf(`^Name:\s+%s\n(.*\n)*Conditions:\n(.*\n)*System Info:\n(.*\n)*Events:\n`, nodeName))
+		results[key] = regexp.MustCompile(fmt.Sprintf(`^Name:\s+%s\n(.*\n)*Conditions:\n(.*\n)*System Info:\n(.*\n)*Events:`, nodeName))
 	}
 
 	return results

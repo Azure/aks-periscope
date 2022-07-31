@@ -11,6 +11,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 	"helm.sh/helm/v3/pkg/action"
 	"helm.sh/helm/v3/pkg/release"
@@ -133,6 +134,6 @@ func (collector *HelmCollector) Collect() error {
 	return nil
 }
 
-func (collector *HelmCollector) GetData() map[string]string {
-	return collector.data
+func (collector *HelmCollector) GetData() map[string]interfaces.DataValue {
+	return utils.ToDataValueMap(collector.data)
 }

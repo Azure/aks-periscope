@@ -4,20 +4,21 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // KubeletCmdCollector defines a KubeletCmd Collector struct
 type KubeletCmdCollector struct {
-	data        map[string]string
-	runtimeInfo *utils.RuntimeInfo
+	KubeletCommand string
+	runtimeInfo    *utils.RuntimeInfo
 }
 
 // NewKubeletCmdCollector is a constructor
 func NewKubeletCmdCollector(runtimeInfo *utils.RuntimeInfo) *KubeletCmdCollector {
 	return &KubeletCmdCollector{
-		data:        make(map[string]string),
-		runtimeInfo: runtimeInfo,
+		KubeletCommand: "",
+		runtimeInfo:    runtimeInfo,
 	}
 }
 
@@ -47,11 +48,13 @@ func (collector *KubeletCmdCollector) Collect() error {
 		return err
 	}
 
-	collector.data["kubeletcmd"] = output
+	collector.KubeletCommand = output
 
 	return nil
 }
 
-func (collector *KubeletCmdCollector) GetData() map[string]string {
-	return collector.data
+func (collector *KubeletCmdCollector) GetData() map[string]interfaces.DataValue {
+	return map[string]interfaces.DataValue{
+		"kubeletcmd": utils.NewStringDataValue(collector.KubeletCommand),
+	}
 }

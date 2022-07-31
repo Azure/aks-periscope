@@ -8,5 +8,5 @@ type Collector interface {
 
 	Collect() error
 
-	GetData() map[string]string
+	GetData() map[string]DataValue
 }

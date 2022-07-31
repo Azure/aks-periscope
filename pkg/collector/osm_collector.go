@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
 	k8sErrors "k8s.io/apimachinery/pkg/api/errors"
@@ -396,6 +397,6 @@ func (collector *OsmCollector) collectGroundTruth(clientset *kubernetes.Clientse
 	}
 }
 
-func (collector *OsmCollector) GetData() map[string]string {
-	return collector.data
+func (collector *OsmCollector) GetData() map[string]interfaces.DataValue {
+	return utils.ToDataValueMap(collector.data)
 }

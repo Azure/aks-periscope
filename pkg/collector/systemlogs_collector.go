@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
@@ -56,6 +57,6 @@ func (collector *SystemLogsCollector) Collect() error {
 	return nil
 }
 
-func (collector *SystemLogsCollector) GetData() map[string]string {
-	return collector.data
+func (collector *SystemLogsCollector) GetData() map[string]interfaces.DataValue {
+	return utils.ToDataValueMap(collector.data)
 }

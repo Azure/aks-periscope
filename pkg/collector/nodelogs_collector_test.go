@@ -92,7 +92,7 @@ func TestNodeLogsCollectorCollect(t *testing.T) {
 		},
 	}
 
-	reader := test.NewFakeFileContentReader(testLogFiles)
+	fs := test.NewFakeFileSystem(testLogFiles)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -100,7 +100,7 @@ func TestNodeLogsCollectorCollect(t *testing.T) {
 				NodeLogs:      []string{file1Name, file2Name},
 				CollectorList: []string{},
 			}
-			c := NewNodeLogsCollector(runtimeInfo, reader)
+			c := NewNodeLogsCollector(runtimeInfo, fs)
 			err := c.Collect()
 
 			if err != nil {
@@ -110,14 +110,16 @@ func TestNodeLogsCollectorCollect(t *testing.T) {
 			} else {
 				dataItems := c.GetData()
 				for key, expectedValue := range tt.wantData {
-					actualValue, ok := dataItems[key]
+					result, ok := dataItems[key]
 					if !ok {
 						t.Errorf("missing key %s", key)
 					}
 
-					if actualValue != expectedValue {
-						t.Errorf("unexpected value for key %s.\nExpected '%s'\nFound '%s'", key, expectedValue, actualValue)
-					}
+					testDataValue(t, result, func(actualValue string) {
+						if actualValue != expectedValue {
+							t.Errorf("unexpected value for key %s.\nExpected '%s'\nFound '%s'", key, expectedValue, actualValue)
+						}
+					})
 				}
 			}
 		})

@@ -6,5 +6,5 @@ type Diagnoser interface {
 
 	Diagnose() error
 
-	GetData() map[string]string
+	GetData() map[string]DataValue
 }

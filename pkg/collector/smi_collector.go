@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -41,8 +42,8 @@ func (collector *SmiCollector) CheckSupported() error {
 	return nil
 }
 
-func (collector *SmiCollector) GetData() map[string]string {
-	return collector.data
+func (collector *SmiCollector) GetData() map[string]interfaces.DataValue {
+	return utils.ToDataValueMap(collector.data)
 }
 
 // Collect implements the interface method

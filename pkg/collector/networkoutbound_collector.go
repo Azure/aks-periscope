@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"net"
 	"time"
+
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 type networkOutboundType struct {
@@ -93,6 +96,6 @@ func (collector *NetworkOutboundCollector) Collect() error {
 	return nil
 }
 
-func (collector *NetworkOutboundCollector) GetData() map[string]string {
-	return collector.data
+func (collector *NetworkOutboundCollector) GetData() map[string]interfaces.DataValue {
+	return utils.ToDataValueMap(collector.data)
 }
