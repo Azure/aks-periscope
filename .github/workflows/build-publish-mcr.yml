@@ -21,8 +21,8 @@ jobs:
         env:
             GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
         with:
-          tag_name : ${{ steps.changelog_reader.outputs.current-version}}
-          release_name: ${{ steps.changelog_reader.outputs.current-version}}
+          tag_name : ${{ steps.changelog_reader.outputs.version}}
+          release_name: ${{ steps.changelog_reader.outputs.version}}
           body: Publish ${{ steps.changelog_reader.outputs.changes }}
   publish:
     runs-on: ${{ matrix.os }}
