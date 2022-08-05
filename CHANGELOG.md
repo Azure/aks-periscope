@@ -1,5 +1,20 @@
 # Change Log
 
+## [0.0.10]
+
+* Add test coverage for OSM and SMI collectors by @peterbom in https://github.com/Azure/aks-periscope/pull/173
+* Use client-go for OSM collector by @peterbom in https://github.com/Azure/aks-periscope/pull/178
+* Use client-go for SMI collector by @peterbom in https://github.com/Azure/aks-periscope/pull/179
+* Remove dependency on kubectl binary by @peterbom in https://github.com/Azure/aks-periscope/pull/181
+* Add required permissions for OSM and SMI collectors by @peterbom in https://github.com/Azure/aks-periscope/pull/182
+* update containerd package. by @Tatsinnit in https://github.com/Azure/aks-periscope/pull/185
+* Update read-me.  by @Tatsinnit in https://github.com/Azure/aks-periscope/pull/186
+* Allow specified resource types and names for kube-objects collector by @peterbom in https://github.com/Azure/aks-periscope/pull/188
+* Add note to readme about kubectl version by @peterbom in https://github.com/Azure/aks-periscope/pull/190
+* Add Windows log collection collector by @peterbom in https://github.com/Azure/aks-periscope/pull/191
+
+Thanks to @Tatsinnit, @SanyaKochhar, @johnsonshi, @AbelHu
+
 ## [0.0.9]
 
 * Return error from createContainerURL if storage settings are not configured by @peterbom in https://github.com/Azure/aks-periscope/pull/156
