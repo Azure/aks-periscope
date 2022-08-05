@@ -5,7 +5,27 @@ permissions:
       id-token: write
       contents: read
 
-jobs: 
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v2
+      - name: Get Changelog Entry
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          path: ./CHANGELOG.md
+      - name: Create a Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+        with:
+          tag_name : ${{ steps.changelog_reader.outputs.version}}
+          release_name: ${{ steps.changelog_reader.outputs.version}}
+          body: Publish ${{ steps.changelog_reader.outputs.changes }}
   publish:
     runs-on: ${{ matrix.os }}
     strategy:
