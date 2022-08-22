@@ -31,10 +31,14 @@ func main() {
 			// If the run ID has changed, run Periscope
 			if runtimeInfo.RunId != lastRunId {
 				lastRunId = runtimeInfo.RunId
+
+				log.Printf("Starting Periscope run %s", runtimeInfo.RunId)
 				err := run(runtimeInfo)
 				if err != nil {
 					errChan <- err
 				}
+
+				log.Printf("Completed Periscope run %s", runtimeInfo.RunId)
 			}
 		}
 	}()
