@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -15,33 +16,53 @@ import (
 )
 
 func main() {
+	// Create a watcher that checks runtime configuration every 10 seconds
+	runtimeInfoWatcher := utils.NewRuntimeInfoWatcher(10 * time.Second)
+
+	runtimeInfoChan := make(chan *utils.RuntimeInfo)
+	runtimeInfoWatcher.AddHandler(runtimeInfoChan)
+
+	errChan := make(chan error)
+	go func() {
+		lastRunId := ""
+		// Continually check each runtime configuration.
+		for {
+			runtimeInfo := <-runtimeInfoChan
+			// If the run ID has changed, run Periscope
+			if runtimeInfo.RunId != lastRunId {
+				lastRunId = runtimeInfo.RunId
+				err := run(runtimeInfo)
+				if err != nil {
+					errChan <- err
+				}
+			}
+		}
+	}()
+
+	// Run until error
+	runtimeInfoWatcher.Start()
+	err := <-errChan
+	log.Fatalf("Error running Periscope: %v", err)
+}
+
+func run(runtimeInfo *utils.RuntimeInfo) error {
 	config, err := restclient.InClusterConfig()
 	if err != nil {
-		log.Fatalf("Cannot load kubeconfig: %v", err)
-	}
-
-	creationTimeStamp, err := utils.GetCreationTimeStamp(config)
-	if err != nil {
-		log.Fatalf("Failed to get creation timestamp: %v", err)
-	}
-
-	runtimeInfo, err := utils.GetRuntimeInfo()
-	if err != nil {
-		log.Fatalf("Failed to get runtime information: %v", err)
+		return fmt.Errorf("cannot load kubeconfig: %w", err)
 	}
 
 	knownFilePaths, err := utils.GetKnownFilePaths(runtimeInfo)
 	if err != nil {
-		log.Fatalf("Failed to get file paths: %v", err)
+		return fmt.Errorf("failed to get file paths: %w", err)
 	}
 
-	exp := exporter.NewAzureBlobExporter(runtimeInfo, knownFilePaths, creationTimeStamp)
+	exp := exporter.NewAzureBlobExporter(runtimeInfo, knownFilePaths, runtimeInfo.RunId)
 
 	// Copies self-signed cert information to container if application is running on Azure Stack Cloud.
 	// We need the cert in order to communicate with the storage account.
 	if utils.IsAzureStackCloud(knownFilePaths) {
 		if err := utils.CopyFile(knownFilePaths.AzureStackCertHost, knownFilePaths.AzureStackCertContainer); err != nil {
-			log.Fatalf("Cannot copy cert for Azure Stack Cloud environment: %v", err)
+			return fmt.Errorf("cannot copy cert for Azure Stack Cloud environment: %w", err)
 		}
 	}
 
@@ -136,10 +157,5 @@ func main() {
 		}
 	}
 
-	// TODO: Hack: for now AKS-Periscope is running as a deamonset so it shall not stop (or the pod will be restarted)
-	// Revert from https://github.com/Azure/aks-periscope/blob/b98d66a238e942158ef2628a9315b58937ff9c8f/cmd/aks-periscope/aks-periscope.go#L70
-	select {}
-
-	// TODO: remove this //nolint comment once the select{} has been removed
-	//nolint:govet
+	return nil
 }

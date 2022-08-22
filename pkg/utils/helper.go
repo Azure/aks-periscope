@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,11 +12,6 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
 )
 
 const (
@@ -176,42 +170,6 @@ func GetUrlWithRetries(url string, maxRetries int) ([]byte, error) {
 			return ioutil.ReadAll(resp.Body)
 		}
 	}
-}
-
-// GetCreationTimeStamp returns a create timestamp
-func GetCreationTimeStamp(config *restclient.Config) (string, error) {
-	// Creates the clientset
-	creationTimeStamp := ""
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", fmt.Errorf("getting access to K8S failed: %w", err)
-	}
-	podList, err := GetPods(clientset, "aks-periscope")
-
-	if err != nil {
-		return "", err
-	}
-
-	// List all the pods similar to kubectl get pods -n <my namespace>
-	for _, pod := range podList.Items {
-		creationTimeStamp = pod.CreationTimestamp.Format(time.RFC3339Nano)
-	}
-
-	return creationTimeStamp, nil
-}
-
-func GetPods(clientset *kubernetes.Clientset, namespace string) (*v1.PodList, error) {
-	// Create a pod interface for the given namespace
-	podInterface := clientset.CoreV1().Pods(namespace)
-
-	// List the pods in the given namespace
-	podList, err := podInterface.List(context.TODO(), metav1.ListOptions{})
-
-	if err != nil {
-		return nil, fmt.Errorf("getting pods failed: %w", err)
-	}
-
-	return podList, nil
 }
 
 func Contains(flagsList []string, flag string) bool {
