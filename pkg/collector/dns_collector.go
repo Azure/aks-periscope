@@ -2,6 +2,7 @@ package collector
 
 import (
 	"fmt"
+	"io"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
@@ -51,7 +52,7 @@ func (collector *DNSCollector) Collect() error {
 }
 
 func (collector *DNSCollector) getConfFileContent(filePath string) string {
-	content, err := utils.GetFileContent(collector.fileSystem, filePath)
+	content, err := utils.GetContent(func() (io.ReadCloser, error) { return collector.fileSystem.GetFileReader(filePath) })
 	if err != nil {
 		return err.Error()
 	}

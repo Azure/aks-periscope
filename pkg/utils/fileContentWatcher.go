@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"io"
 	"log"
 	"time"
 )
@@ -62,7 +63,7 @@ func (item *fileContentItem) handleUpdated(filePath string) {
 
 func (w *FileContentWatcher) checkFilePaths() {
 	for filePath, item := range w.items {
-		content, err := GetFileContent(w.fileSystem, filePath)
+		content, err := GetContent(func() (io.ReadCloser, error) { return w.fileSystem.GetFileReader(filePath) })
 		if err != nil {
 			item.err = err
 		} else if content != item.content {

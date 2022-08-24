@@ -3,6 +3,7 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -102,7 +103,7 @@ func readFileContent(fs interfaces.FileSystemAccessor, filePath string, mandator
 		return "", readErrors
 	}
 
-	value, err := GetFileContent(fs, filePath)
+	value, err := GetContent(func() (io.ReadCloser, error) { return fs.GetFileReader(filePath) })
 	if err != nil {
 		return "", multierror.Append(readErrors, fmt.Errorf("error reading %s: %w", filePath, err))
 	}

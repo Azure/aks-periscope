@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,8 +11,6 @@ import (
 	"os/exec"
 	"strings"
 	"time"
-
-	"github.com/Azure/aks-periscope/pkg/interfaces"
 )
 
 const (
@@ -105,57 +102,6 @@ func RunCommandOnHost(command string, arg ...string) (string, error) {
 	return string(out), nil
 }
 
-// RunCommandOnContainerWithOutputStreams runs a command on container system and returns both the stdout and stderr output streams
-func RunCommandOnContainerWithOutputStreams(command string, arg ...string) (CommandOutputStreams, error) {
-	cmd := exec.Command(command, arg...)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	outputStreams := CommandOutputStreams{stdout.String(), stderr.String()}
-
-	if err != nil {
-		return outputStreams, fmt.Errorf("run command in container: %w", err)
-	}
-
-	return outputStreams, nil
-}
-
-// RunCommandOnContainer  runs a command on container system and returns the stdout output stream
-func RunCommandOnContainer(command string, arg ...string) (string, error) {
-	outputStreams, err := RunCommandOnContainerWithOutputStreams(command, arg...)
-	return outputStreams.Stdout, err
-}
-
-// RunBackgroundCommand starts running a command on a container system in the background and returns its process ID
-func RunBackgroundCommand(command string, arg ...string) (int, error) {
-	cmd := exec.Command(command, arg...)
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	err := cmd.Start()
-	if err != nil {
-		return 0, fmt.Errorf("start background command in container exited with message %s: %w", stderr.String(), err)
-	}
-	return cmd.Process.Pid, nil
-}
-
-// Finds and kills a process with a given process ID
-func KillProcess(pid int) error {
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		return fmt.Errorf("find process with pid %d to kill: %w", pid, err)
-	}
-	if err := process.Kill(); err != nil {
-		return err
-	}
-	return nil
-}
-
 // Tries to issue an HTTP GET request up to maxRetries times
 func GetUrlWithRetries(url string, maxRetries int) ([]byte, error) {
 	retry := 1
@@ -183,8 +129,8 @@ func Contains(flagsList []string, flag string) bool {
 	return false
 }
 
-func GetFileContent(fs interfaces.FileSystemAccessor, filePath string) (string, error) {
-	reader, err := fs.GetFileReader(filePath)
+func GetContent(readCloserProvider func() (io.ReadCloser, error)) (string, error) {
+	reader, err := readCloserProvider()
 	if err != nil {
 		return "", err
 	}
