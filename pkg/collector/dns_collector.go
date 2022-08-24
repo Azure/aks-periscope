@@ -2,7 +2,6 @@ package collector
 
 import (
 	"fmt"
-	"io/ioutil"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
@@ -12,17 +11,17 @@ import (
 type DNSCollector struct {
 	HostConf      string
 	ContainerConf string
-	runtimeInfo   *utils.RuntimeInfo
+	osIdentifier  utils.OSIdentifier
 	filePaths     *utils.KnownFilePaths
 	fileSystem    interfaces.FileSystemAccessor
 }
 
 // NewDNSCollector is a constructor
-func NewDNSCollector(runtimeInfo *utils.RuntimeInfo, filePaths *utils.KnownFilePaths, fileSystem interfaces.FileSystemAccessor) *DNSCollector {
+func NewDNSCollector(osIdentifier utils.OSIdentifier, filePaths *utils.KnownFilePaths, fileSystem interfaces.FileSystemAccessor) *DNSCollector {
 	return &DNSCollector{
 		HostConf:      "",
 		ContainerConf: "",
-		runtimeInfo:   runtimeInfo,
+		osIdentifier:  osIdentifier,
 		filePaths:     filePaths,
 		fileSystem:    fileSystem,
 	}
@@ -36,8 +35,8 @@ func (collector *DNSCollector) CheckSupported() error {
 	// NOTE: This *might* be achievable in Windows using APIs that query the registry, see:
 	// https://kubernetes.io/docs/setup/production-environment/windows/intro-windows-in-kubernetes/#networking
 	// But for now it's restricted to Linux containers only, in which we can read `resolv.conf`.
-	if collector.runtimeInfo.OSIdentifier != "linux" {
-		return fmt.Errorf("unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
+	if collector.osIdentifier != utils.Linux {
+		return fmt.Errorf("unsupported OS: %s", collector.osIdentifier)
 	}
 
 	return nil
@@ -52,19 +51,12 @@ func (collector *DNSCollector) Collect() error {
 }
 
 func (collector *DNSCollector) getConfFileContent(filePath string) string {
-	reader, err := collector.fileSystem.GetFileReader(filePath)
+	content, err := utils.GetFileContent(collector.fileSystem, filePath)
 	if err != nil {
 		return err.Error()
 	}
 
-	defer reader.Close()
-
-	content, err := ioutil.ReadAll(reader)
-	if err != nil {
-		return err.Error()
-	}
-
-	return string(content)
+	return content
 }
 
 func (collector *DNSCollector) GetData() map[string]interfaces.DataValue {

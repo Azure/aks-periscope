@@ -12,6 +12,8 @@ import (
 	"os/exec"
 	"strings"
 	"time"
+
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 )
 
 const (
@@ -179,4 +181,20 @@ func Contains(flagsList []string, flag string) bool {
 		}
 	}
 	return false
+}
+
+func GetFileContent(fs interfaces.FileSystemAccessor, filePath string) (string, error) {
+	reader, err := fs.GetFileReader(filePath)
+	if err != nil {
+		return "", err
+	}
+
+	defer reader.Close()
+
+	content, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
+
+	return string(content), nil
 }

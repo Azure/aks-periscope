@@ -9,7 +9,7 @@ import (
 func TestSystemLogsCollectorGetName(t *testing.T) {
 	const expectedName = "systemlogs"
 
-	c := NewSystemLogsCollector(nil)
+	c := NewSystemLogsCollector("", nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
@@ -19,25 +19,25 @@ func TestSystemLogsCollectorGetName(t *testing.T) {
 func TestSystemLogsCollectorCheckSupported(t *testing.T) {
 	tests := []struct {
 		name          string
-		osIdentifier  string
+		osIdentifier  utils.OSIdentifier
 		collectorList []string
 		wantErr       bool
 	}{
 		{
 			name:          "windows",
-			osIdentifier:  "windows",
+			osIdentifier:  utils.Windows,
 			collectorList: []string{"connectedCluster"},
 			wantErr:       true,
 		},
 		{
 			name:          "'connectedCluster' in COLLECTOR_LIST",
-			osIdentifier:  "linux",
+			osIdentifier:  utils.Linux,
 			collectorList: []string{"connectedCluster"},
 			wantErr:       true,
 		},
 		{
 			name:          "'connectedCluster' not in COLLECTOR_LIST",
-			osIdentifier:  "linux",
+			osIdentifier:  utils.Linux,
 			collectorList: []string{},
 			wantErr:       false,
 		},
@@ -45,10 +45,9 @@ func TestSystemLogsCollectorCheckSupported(t *testing.T) {
 
 	for _, tt := range tests {
 		runtimeInfo := &utils.RuntimeInfo{
-			OSIdentifier:  tt.osIdentifier,
 			CollectorList: tt.collectorList,
 		}
-		c := NewSystemLogsCollector(runtimeInfo)
+		c := NewSystemLogsCollector(tt.osIdentifier, runtimeInfo)
 		err := c.CheckSupported()
 		if (err != nil) != tt.wantErr {
 			t.Errorf("%s error = %v, wantErr %v", tt.name, err, tt.wantErr)
@@ -70,11 +69,10 @@ func TestSystemLogsCollectorCollect(t *testing.T) {
 	}
 
 	runtimeInfo := &utils.RuntimeInfo{
-		OSIdentifier:  "linux",
 		CollectorList: []string{},
 	}
 
-	c := NewSystemLogsCollector(runtimeInfo)
+	c := NewSystemLogsCollector(utils.Linux, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

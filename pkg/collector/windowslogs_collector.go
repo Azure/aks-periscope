@@ -16,6 +16,7 @@ const windowsLogsCollectorPrefix = "collect-windows-logs/"
 
 type WindowsLogsCollector struct {
 	data         map[string]interfaces.DataValue
+	osIdentifier utils.OSIdentifier
 	runtimeInfo  *utils.RuntimeInfo
 	filePaths    *utils.KnownFilePaths
 	fileSystem   interfaces.FileSystemAccessor
@@ -23,9 +24,10 @@ type WindowsLogsCollector struct {
 	timeout      time.Duration
 }
 
-func NewWindowsLogsCollector(runtimeInfo *utils.RuntimeInfo, filePaths *utils.KnownFilePaths, fileSystem interfaces.FileSystemAccessor, pollInterval, timeout time.Duration) *WindowsLogsCollector {
+func NewWindowsLogsCollector(osIdentifier utils.OSIdentifier, runtimeInfo *utils.RuntimeInfo, filePaths *utils.KnownFilePaths, fileSystem interfaces.FileSystemAccessor, pollInterval, timeout time.Duration) *WindowsLogsCollector {
 	return &WindowsLogsCollector{
 		data:         make(map[string]interfaces.DataValue),
+		osIdentifier: osIdentifier,
 		runtimeInfo:  runtimeInfo,
 		filePaths:    filePaths,
 		fileSystem:   fileSystem,
@@ -40,8 +42,8 @@ func (collector *WindowsLogsCollector) GetName() string {
 
 func (collector *WindowsLogsCollector) CheckSupported() error {
 	// This is specifically for Windows.
-	if collector.runtimeInfo.OSIdentifier != "windows" {
-		return fmt.Errorf("unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
+	if collector.osIdentifier != utils.Windows {
+		return fmt.Errorf("unsupported OS: %s", collector.osIdentifier)
 	}
 
 	// Even for Windows, this is only supported on kubernetes v1.23 or higher. It is up to consumers

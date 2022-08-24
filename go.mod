@@ -9,6 +9,7 @@ require (
 	github.com/containerd/containerd v1.4.13 // indirect
 	github.com/docker/docker v20.10.14+incompatible
 	github.com/google/uuid v1.2.0
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/onsi/gomega v1.13.0 // indirect
 	helm.sh/helm/v3 v3.6.3
 	k8s.io/api v0.21.3

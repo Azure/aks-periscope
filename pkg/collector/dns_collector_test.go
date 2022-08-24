@@ -10,7 +10,7 @@ import (
 func TestDNSCollectorGetName(t *testing.T) {
 	const expectedName = "dns"
 
-	c := NewDNSCollector(nil, nil, nil)
+	c := NewDNSCollector("", nil, nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
@@ -19,24 +19,21 @@ func TestDNSCollectorGetName(t *testing.T) {
 
 func TestDNSCollectorCheckSupported(t *testing.T) {
 	tests := []struct {
-		osIdentifier string
+		osIdentifier utils.OSIdentifier
 		wantErr      bool
 	}{
 		{
-			osIdentifier: "windows",
+			osIdentifier: utils.Windows,
 			wantErr:      true,
 		},
 		{
-			osIdentifier: "linux",
+			osIdentifier: utils.Linux,
 			wantErr:      false,
 		},
 	}
 
 	for _, tt := range tests {
-		runtimeInfo := &utils.RuntimeInfo{
-			OSIdentifier: tt.osIdentifier,
-		}
-		c := NewDNSCollector(runtimeInfo, nil, nil)
+		c := NewDNSCollector(tt.osIdentifier, nil, nil)
 		err := c.CheckSupported()
 		if (err != nil) != tt.wantErr {
 			t.Errorf("CheckSupported() error = %v, wantErr %v", err, tt.wantErr)
@@ -84,10 +81,6 @@ func TestDNSCollectorCollect(t *testing.T) {
 		},
 	}
 
-	runtimeInfo := &utils.RuntimeInfo{
-		OSIdentifier: "linux",
-	}
-
 	filePaths := &utils.KnownFilePaths{
 		ResolvConfHost:      "/host/etc/resolv.conf",
 		ResolvConfContainer: "/etc/resolv.conf",
@@ -97,7 +90,7 @@ func TestDNSCollectorCollect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := test.NewFakeFileSystem(tt.files)
 
-			c := NewDNSCollector(runtimeInfo, filePaths, fs)
+			c := NewDNSCollector(utils.Linux, filePaths, fs)
 			err := c.Collect()
 
 			if err != nil {

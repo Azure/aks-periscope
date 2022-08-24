@@ -10,15 +10,17 @@ import (
 
 // SystemLogsCollector defines a SystemLogs Collector struct
 type SystemLogsCollector struct {
-	data        map[string]string
-	runtimeInfo *utils.RuntimeInfo
+	data         map[string]string
+	osIdentifier utils.OSIdentifier
+	runtimeInfo  *utils.RuntimeInfo
 }
 
 // NewSystemLogsCollector is a constructor
-func NewSystemLogsCollector(runtimeInfo *utils.RuntimeInfo) *SystemLogsCollector {
+func NewSystemLogsCollector(osIdentifier utils.OSIdentifier, runtimeInfo *utils.RuntimeInfo) *SystemLogsCollector {
 	return &SystemLogsCollector{
-		data:        make(map[string]string),
-		runtimeInfo: runtimeInfo,
+		data:         make(map[string]string),
+		osIdentifier: osIdentifier,
+		runtimeInfo:  runtimeInfo,
 	}
 }
 
@@ -30,8 +32,8 @@ func (collector *SystemLogsCollector) CheckSupported() error {
 	// This uses `journalctl` to retrieve system logs, which is not available on Windows.
 	// It may be possible in future to identify useful Windows log files and configure this to
 	// output those.
-	if collector.runtimeInfo.OSIdentifier != "linux" {
-		return fmt.Errorf("unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
+	if collector.osIdentifier != utils.Linux {
+		return fmt.Errorf("unsupported OS: %s", collector.osIdentifier)
 	}
 
 	if utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {

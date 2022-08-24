@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log"
+	"runtime"
 	"sync"
 	"time"
 
@@ -16,48 +17,57 @@ import (
 )
 
 func main() {
-	// Create a watcher that checks runtime configuration every 10 seconds
-	runtimeInfoWatcher := utils.NewRuntimeInfoWatcher(10 * time.Second)
+	osIdentifier, err := utils.StringToOSIdentifier(runtime.GOOS)
+	if err != nil {
+		log.Fatalf("cannot determine OS: %v", err)
+	}
 
-	runtimeInfoChan := make(chan *utils.RuntimeInfo)
-	runtimeInfoWatcher.AddHandler(runtimeInfoChan)
+	knownFilePaths, err := utils.GetKnownFilePaths(osIdentifier)
+	if err != nil {
+		log.Fatalf("failed to get file paths: %v", err)
+	}
 
+	fileSystem := utils.NewFileSystem()
+
+	// Create a watcher for the Run ID file that checks its content every 10 seconds
+	fileWatcher := utils.NewFileContentWatcher(fileSystem, 10*time.Second)
+
+	// Create a channel for unrecoverable errors
 	errChan := make(chan error)
+
+	// Add a watcher for the run ID file content
+	runIdChan := make(chan string)
+	fileWatcher.AddHandler(knownFilePaths.GetConfigPath(utils.RunIdKey), runIdChan, errChan)
+
 	go func() {
-		lastRunId := ""
-		// Continually check each runtime configuration.
 		for {
-			runtimeInfo := <-runtimeInfoChan
-			// If the run ID has changed, run Periscope
-			if runtimeInfo.RunId != lastRunId {
-				lastRunId = runtimeInfo.RunId
-
-				log.Printf("Starting Periscope run %s", runtimeInfo.RunId)
-				err := run(runtimeInfo)
-				if err != nil {
-					errChan <- err
-				}
-
-				log.Printf("Completed Periscope run %s", runtimeInfo.RunId)
+			runId := <-runIdChan
+			log.Printf("Starting Periscope run %s", runId)
+			err := run(osIdentifier, knownFilePaths, fileSystem)
+			if err != nil {
+				errChan <- err
 			}
+
+			log.Printf("Completed Periscope run %s", runId)
 		}
 	}()
 
-	// Run until error
-	runtimeInfoWatcher.Start()
-	err := <-errChan
+	fileWatcher.Start()
+
+	// Run until unrecoverable error
+	err = <-errChan
 	log.Fatalf("Error running Periscope: %v", err)
 }
 
-func run(runtimeInfo *utils.RuntimeInfo) error {
+func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, fileSystem interfaces.FileSystemAccessor) error {
+	runtimeInfo, err := utils.GetRuntimeInfo(fileSystem, knownFilePaths)
+	if err != nil {
+		log.Fatalf("Failed to get runtime information: %v", err)
+	}
+
 	config, err := restclient.InClusterConfig()
 	if err != nil {
 		return fmt.Errorf("cannot load kubeconfig: %w", err)
-	}
-
-	knownFilePaths, err := utils.GetKnownFilePaths(runtimeInfo)
-	if err != nil {
-		return fmt.Errorf("failed to get file paths: %w", err)
 	}
 
 	exp := exporter.NewAzureBlobExporter(runtimeInfo, knownFilePaths, runtimeInfo.RunId)
@@ -70,26 +80,24 @@ func run(runtimeInfo *utils.RuntimeInfo) error {
 		}
 	}
 
-	fileSystem := utils.NewFileSystem()
-
-	dnsCollector := collector.NewDNSCollector(runtimeInfo, knownFilePaths, fileSystem)
-	kubeletCmdCollector := collector.NewKubeletCmdCollector(runtimeInfo)
+	dnsCollector := collector.NewDNSCollector(osIdentifier, knownFilePaths, fileSystem)
+	kubeletCmdCollector := collector.NewKubeletCmdCollector(osIdentifier, runtimeInfo)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector()
 	collectors := []interfaces.Collector{
 		dnsCollector,
 		kubeletCmdCollector,
 		networkOutboundCollector,
 		collector.NewHelmCollector(config, runtimeInfo),
-		collector.NewIPTablesCollector(runtimeInfo),
+		collector.NewIPTablesCollector(osIdentifier, runtimeInfo),
 		collector.NewKubeObjectsCollector(config, runtimeInfo),
 		collector.NewNodeLogsCollector(runtimeInfo, fileSystem),
 		collector.NewOsmCollector(config, runtimeInfo),
 		collector.NewPDBCollector(config, runtimeInfo),
 		collector.NewPodsContainerLogsCollector(config, runtimeInfo),
 		collector.NewSmiCollector(config, runtimeInfo),
-		collector.NewSystemLogsCollector(runtimeInfo),
+		collector.NewSystemLogsCollector(osIdentifier, runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
-		collector.NewWindowsLogsCollector(runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
+		collector.NewWindowsLogsCollector(osIdentifier, runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
 	}
 
 	collectorGrp := new(sync.WaitGroup)
