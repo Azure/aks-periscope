@@ -90,6 +90,18 @@ func GetRuntimeInfo(fs interfaces.FileSystemAccessor, filePaths *KnownFilePaths)
 }
 
 func readFileContent(fs interfaces.FileSystemAccessor, filePath string, mandatory bool, readErrors error) (string, error) {
+	exists, err := fs.FileExists(filePath)
+	if err != nil {
+		return "", multierror.Append(readErrors, fmt.Errorf("error checking existence of %s: %w", filePath, err))
+	}
+	if !exists {
+		if mandatory {
+			return "", multierror.Append(readErrors, fmt.Errorf("mandatory file does not exist: %s", filePath))
+		}
+
+		return "", readErrors
+	}
+
 	value, err := GetFileContent(fs, filePath)
 	if err != nil {
 		return "", multierror.Append(readErrors, fmt.Errorf("error reading %s: %w", filePath, err))
