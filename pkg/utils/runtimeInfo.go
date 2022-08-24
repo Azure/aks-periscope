@@ -1,7 +1,9 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
@@ -51,9 +53,12 @@ func GetRuntimeInfo(fs interfaces.FileSystemAccessor, filePaths *KnownFilePaths)
 
 	// We can't use `os.Hostname` for this, because this gives us the _container_ hostname (i.e. the pod name, by default).
 	// An earlier approach was to `cat /etc/hostname` but that will not work for Windows containers.
-	// Instead we expect the host node name to be exposed to the pod via the 'downward API', see:
-	// https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/
-	hostName, errs := readFileContent(fs, filePaths.GetSpecPath(NodeNameKey), true, errs)
+	// Instead we expect the host node name to be exposed to the pod in an environment variable, via the 'downward API', see:
+	// https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#use-pod-fields-as-values-for-environment-variables
+	hostName := os.Getenv("HOST_NODE_NAME")
+	if len(hostName) == 0 {
+		errs = multierror.Append(errs, errors.New("variable HOST_NODE_NAME value not set for container"))
+	}
 
 	features := map[Feature]bool{}
 	for _, feature := range getKnownFeatures() {

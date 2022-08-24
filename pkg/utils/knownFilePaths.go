@@ -16,12 +16,10 @@ type KnownFilePaths struct {
 	NodeLogsList            string
 	Config                  string
 	Secret                  string
-	Spec                    string
 }
 
 type ConfigKey string
 type SecretKey string
-type SpecKey string
 
 const (
 	CollectorListKey     ConfigKey = "COLLECTOR_LIST"
@@ -39,10 +37,6 @@ const (
 	SasTokenTypeKey  SecretKey = "AZURE_STORAGE_SAS_KEY_TYPE"
 )
 
-const (
-	NodeNameKey SpecKey = "node_name"
-)
-
 // GetKnownFilePaths get known file paths
 func GetKnownFilePaths(osIdentifier OSIdentifier) (*KnownFilePaths, error) {
 	switch osIdentifier {
@@ -54,7 +48,6 @@ func GetKnownFilePaths(osIdentifier OSIdentifier) (*KnownFilePaths, error) {
 			NodeLogsList:        "/config/" + string(NodeLogsWindowsKey),
 			Config:              "/config",
 			Secret:              "/secret",
-			Spec:                "/spec",
 		}, nil
 	case Linux:
 		// Since Azure Stack Hub does not support multiple node pools, we assume we don't need to worry about this for Windows
@@ -69,7 +62,6 @@ func GetKnownFilePaths(osIdentifier OSIdentifier) (*KnownFilePaths, error) {
 			NodeLogsList:            "/config/" + string(NodeLogsLinuxKey),
 			Config:                  "/config",
 			Secret:                  "/secret",
-			Spec:                    "/spec",
 		}, nil
 	default:
 		return nil, fmt.Errorf("unexpected OS: %s", osIdentifier)
@@ -82,10 +74,6 @@ func (p *KnownFilePaths) GetConfigPath(key ConfigKey) string {
 
 func (p *KnownFilePaths) GetSecretPath(key SecretKey) string {
 	return filepath.Join(p.Secret, string(key))
-}
-
-func (p *KnownFilePaths) GetSpecPath(key SpecKey) string {
-	return filepath.Join(p.Spec, string(key))
 }
 
 func (p *KnownFilePaths) GetFeaturePath(feature Feature) string {
