@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -115,7 +114,7 @@ func GetUrlWithRetries(url string, maxRetries int) ([]byte, error) {
 			time.Sleep(5 * time.Second)
 		} else {
 			defer resp.Body.Close()
-			return ioutil.ReadAll(resp.Body)
+			return io.ReadAll(resp.Body)
 		}
 	}
 }
@@ -137,7 +136,7 @@ func GetContent(readCloserProvider func() (io.ReadCloser, error)) (string, error
 
 	defer reader.Close()
 
-	content, err := ioutil.ReadAll(reader)
+	content, err := io.ReadAll(reader)
 	if err != nil {
 		return "", err
 	}

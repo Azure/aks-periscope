@@ -2,7 +2,6 @@ package utils
 
 import (
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -11,7 +10,7 @@ import (
 )
 
 func setup(t *testing.T) (*os.File, func()) {
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
