@@ -2,8 +2,9 @@ package utils
 
 import (
 	"io"
-	"log"
 	"time"
+
+	"github.com/Azure/aks-periscope/pkg/interfaces"
 )
 
 type fileContentItem struct {
@@ -13,14 +14,20 @@ type fileContentItem struct {
 	errorHandlers   []chan error
 }
 
+// FileContentWatcher allows clients to register to receive notifications via a channel when a file's content changes
+// or there is an error reading that file. It uses polling and stores file content in memory, valuing simplicity over
+// sophisticated approaches involving cross-platform inotify or hashing mechanisms. With that in mind, it is appropriate
+// for watching a small number of small files.
 type FileContentWatcher struct {
-	fileSystem   *FileSystem
+	fileSystem   interfaces.FileSystemAccessor
 	pollInterval time.Duration
 	ticker       *time.Ticker
 	items        map[string]*fileContentItem
 }
 
-func NewFileContentWatcher(fileSystem *FileSystem, pollInterval time.Duration) *FileContentWatcher {
+// NewFileContentWatcher constructs a FileContentWatcher based on the specified FileSystemAccessor and polling interval.
+// This will initially contain no handlers, and will not start polling until the Start method is called.
+func NewFileContentWatcher(fileSystem interfaces.FileSystemAccessor, pollInterval time.Duration) *FileContentWatcher {
 	return &FileContentWatcher{
 		fileSystem:   fileSystem,
 		pollInterval: pollInterval,
@@ -29,6 +36,8 @@ func NewFileContentWatcher(fileSystem *FileSystem, pollInterval time.Duration) *
 	}
 }
 
+// AddHandler supplies channels for receiving notifications when the specified file is read or changed, or when there is
+// an error reading it. No files will be read or notifications sent until the Start method is called.
 func (w *FileContentWatcher) AddHandler(filePath string, contentChan chan string, errChan chan error) {
 	if item, ok := w.items[filePath]; ok {
 		w.items[filePath].contentHandlers = append(item.contentHandlers, contentChan)
@@ -47,14 +56,12 @@ func (item *fileContentItem) handleUpdated(filePath string) {
 	if item.err != nil {
 		for _, handler := range item.errorHandlers {
 			go func(handler chan error) {
-				log.Printf("Sending error to handler channel for %s:\n%v", filePath, item.err)
 				handler <- item.err
 			}(handler)
 		}
 	} else {
 		for _, handler := range item.contentHandlers {
 			go func(handler chan string) {
-				log.Printf("Sending content to handler channel for %s:\n%s", filePath, item.content)
 				handler <- item.content
 			}(handler)
 		}
@@ -66,14 +73,16 @@ func (w *FileContentWatcher) checkFilePaths() {
 		content, err := GetContent(func() (io.ReadCloser, error) { return w.fileSystem.GetFileReader(filePath) })
 		if err != nil {
 			item.err = err
+			item.handleUpdated(filePath)
 		} else if content != item.content {
-			log.Printf("File %s updated", filePath)
 			item.content = content
 			item.handleUpdated(filePath)
 		}
 	}
 }
 
+// Start tells the FileContentWatcher to periodically read the files for which a handler has been registered,
+// starting immediately.
 func (w *FileContentWatcher) Start() {
 	if w.ticker == nil {
 		w.ticker = time.NewTicker(w.pollInterval)
