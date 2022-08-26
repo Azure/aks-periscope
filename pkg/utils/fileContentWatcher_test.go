@@ -43,12 +43,15 @@ func newFileEventHandler(handlerName string) *fileEventHandler {
 func (h *fileEventHandler) expect(notifications []fileEventNotification) {
 	h.expectedNotifications = notifications
 	h.finished = make(chan error)
+}
 
+func (h *fileEventHandler) listen() {
 	go func() {
 		for {
 			// If there are no expected notifications then finish with no error.
 			if len(h.expectedNotifications) == 0 {
 				h.finished <- nil
+				return
 			}
 
 			var notification fileEventNotification
@@ -72,6 +75,7 @@ func (h *fileEventHandler) expect(notifications []fileEventNotification) {
 			// Finish with an error if we encountered an unexpected notification.
 			if !wasExpected {
 				h.finished <- fmt.Errorf("unexpected notification for %s. Content: %s, Error: %v", h.name, notification.content, notification.isError)
+				return
 			}
 		}
 	}()
@@ -304,14 +308,15 @@ func TestStart(t *testing.T) {
 				for _, path := range handlerSetup.filePaths {
 					watcher.AddHandler(path, handler.contentHandler, handler.errorHandler)
 				}
+				handler.expect(handlerSetup.preChangeNotifications)
 			}
 
 			// Run test
 			watcher.Start()
 
-			// Start reading pre-change notifications for all handlers
-			for i := range tt.handlerSetups {
-				handlers[i].expect(tt.handlerSetups[i].preChangeNotifications)
+			// Start listening for pre-change notifications for all handlers
+			for _, handler := range handlers {
+				handler.listen()
 			}
 
 			// Wait for handlers to complete
@@ -322,7 +327,7 @@ func TestStart(t *testing.T) {
 				}
 			}
 
-			// Start reading post-change notifications for all handlers
+			// Update expectations for all handlers
 			for i := range tt.handlerSetups {
 				handlers[i].expect(tt.handlerSetups[i].postChangeNotifications)
 			}
@@ -330,6 +335,11 @@ func TestStart(t *testing.T) {
 			// Update file contents
 			for path, content := range tt.changedFileContents {
 				fs.AddOrUpdateFile(path, content)
+			}
+
+			// Start listening for post-change notifications for all handlers
+			for _, handler := range handlers {
+				handler.listen()
 			}
 
 			// Wait for handlers to complete

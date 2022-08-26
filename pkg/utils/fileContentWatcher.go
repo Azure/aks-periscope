@@ -2,6 +2,7 @@ package utils
 
 import (
 	"io"
+	"sync"
 	"time"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
@@ -10,6 +11,7 @@ import (
 type fileContentItem struct {
 	content         string
 	err             error
+	lock            sync.RWMutex
 	contentHandlers []chan string
 	errorHandlers   []chan error
 }
@@ -46,24 +48,37 @@ func (w *FileContentWatcher) AddHandler(filePath string, contentChan chan string
 		w.items[filePath] = &fileContentItem{
 			content:         "",
 			err:             nil,
+			lock:            sync.RWMutex{},
 			contentHandlers: []chan string{contentChan},
 			errorHandlers:   []chan error{errChan},
 		}
 	}
 }
 
+func (item *fileContentItem) updateIfChanged(content string, err error) bool {
+	item.lock.Lock()
+	defer item.lock.Unlock()
+
+	if err != nil || content != item.content {
+		item.content = content
+		item.err = err
+		return true
+	}
+
+	return false
+}
+
 func (item *fileContentItem) handleUpdated(filePath string) {
+	item.lock.RLock()
+	defer item.lock.RUnlock()
+
 	if item.err != nil {
 		for _, handler := range item.errorHandlers {
-			go func(handler chan error) {
-				handler <- item.err
-			}(handler)
+			handler <- item.err
 		}
 	} else {
 		for _, handler := range item.contentHandlers {
-			go func(handler chan string) {
-				handler <- item.content
-			}(handler)
+			handler <- item.content
 		}
 	}
 }
@@ -71,11 +86,7 @@ func (item *fileContentItem) handleUpdated(filePath string) {
 func (w *FileContentWatcher) checkFilePaths() {
 	for filePath, item := range w.items {
 		content, err := GetContent(func() (io.ReadCloser, error) { return w.fileSystem.GetFileReader(filePath) })
-		if err != nil {
-			item.err = err
-			item.handleUpdated(filePath)
-		} else if content != item.content {
-			item.content = content
+		if item.updateIfChanged(content, err) {
 			item.handleUpdated(filePath)
 		}
 	}
