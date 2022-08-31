@@ -1,5 +1,11 @@
 # Change Log
 
+## [0.0.11]
+
+* Allow multiple 'runs' for Periscope by @peterbom in https://github.com/Azure/aks-periscope/pull/196
+
+Thanks to @Tatsinnit
+
 ## [0.0.10]
 
 * Add test coverage for OSM and SMI collectors by @peterbom in https://github.com/Azure/aks-periscope/pull/173
