@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 	"testing"
@@ -10,7 +10,7 @@ import (
 )
 
 func setup(t *testing.T) (*os.File, func()) {
-	file, err := ioutil.TempFile("", "")
+	file, err := os.CreateTemp("", "")
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
@@ -35,19 +35,11 @@ func TestGetFileReaderForExistingFile(t *testing.T) {
 	}
 
 	fs := NewFileSystem()
-	reader, err := fs.GetFileReader(testFile.Name())
-	if err != nil {
-		t.Errorf("error getting reader for %s", testFile.Name())
-	}
-
-	defer reader.Close()
-
-	b, err := ioutil.ReadAll(reader)
+	actualContent, err := GetContent(func() (io.ReadCloser, error) { return fs.GetFileReader(testFile.Name()) })
 	if err != nil {
 		t.Errorf("error reading content from %s", testFile.Name())
 	}
 
-	actualContent := string(b)
 	if actualContent != expectedContent {
 		t.Errorf("unexpected file content.\nExpected '%s'\nFound '%s'", expectedContent, actualContent)
 	}

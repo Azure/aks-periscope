@@ -13,6 +13,17 @@
             "env": {},
             "args": ["-test.v"],
             "showLog": true
-        }  
+        },
+        {
+            "name": "Launch Tests with race check",
+            "type": "go",
+            "request": "launch",
+            "program": "${fileDirname}",
+            "mode": "test",
+            "env": {},
+            "buildFlags": "-race",
+            "args": ["-test.v"],
+            "showLog": true
+        },
     ]
 }

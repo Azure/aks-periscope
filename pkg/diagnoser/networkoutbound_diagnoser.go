@@ -3,7 +3,7 @@ package diagnoser
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"strings"
 	"time"
@@ -54,21 +54,7 @@ func (diagnoser *NetworkOutboundDiagnoser) Diagnose() error {
 		// The NetworkOutboundCollector used to append to a file that could potentially contain multiple status values
 		// over time, and this diagnoser would aggregate this data into timestamps for each status change. But now
 		// its output is effectively identical to that of the collector.
-		data, err := func() (string, error) {
-			reader, err := value.GetReader()
-			if err != nil {
-				return "", err
-			}
-
-			defer reader.Close()
-
-			b, err := ioutil.ReadAll(reader)
-			if err != nil {
-				return "", err
-			}
-
-			return string(b), nil
-		}()
+		data, err := utils.GetContent(func() (io.ReadCloser, error) { return value.GetReader() })
 
 		if err != nil {
 			log.Printf("Retrieving data failed: %v", err)

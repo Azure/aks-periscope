@@ -12,7 +12,7 @@ import (
 func TestWindowsLogsCollectorGetName(t *testing.T) {
 	const expectedName = "windowslogs"
 
-	c := NewWindowsLogsCollector(nil, nil, nil, 0, 0)
+	c := NewWindowsLogsCollector("", nil, nil, nil, 0, 0)
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
@@ -24,35 +24,35 @@ func TestWindowsLogsCollectorCheckSupported(t *testing.T) {
 		name         string
 		runId        string
 		features     []utils.Feature
-		osIdentifier string
+		osIdentifier utils.OSIdentifier
 		wantErr      bool
 	}{
 		{
 			name:         "Run ID not set",
 			runId:        "",
 			features:     []utils.Feature{utils.WindowsHpc},
-			osIdentifier: "windows",
+			osIdentifier: utils.Windows,
 			wantErr:      true,
 		},
 		{
 			name:         "Feature not set",
 			runId:        "this_run",
 			features:     []utils.Feature{},
-			osIdentifier: "windows",
+			osIdentifier: utils.Windows,
 			wantErr:      true,
 		},
 		{
 			name:         "Linux",
 			runId:        "this_run",
 			features:     []utils.Feature{utils.WindowsHpc},
-			osIdentifier: "linux",
+			osIdentifier: utils.Linux,
 			wantErr:      true,
 		},
 		{
 			name:         "Supported",
 			runId:        "this_run",
 			features:     []utils.Feature{utils.WindowsHpc},
-			osIdentifier: "windows",
+			osIdentifier: utils.Windows,
 			wantErr:      false,
 		},
 	}
@@ -60,15 +60,14 @@ func TestWindowsLogsCollectorCheckSupported(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			runtimeInfo := &utils.RuntimeInfo{
-				RunId:        tt.runId,
-				OSIdentifier: tt.osIdentifier,
-				Features:     map[utils.Feature]bool{},
+				RunId:    tt.runId,
+				Features: map[utils.Feature]bool{},
 			}
 			for _, feature := range tt.features {
 				runtimeInfo.Features[feature] = true
 			}
 
-			c := NewWindowsLogsCollector(runtimeInfo, nil, nil, 0, 0)
+			c := NewWindowsLogsCollector(tt.osIdentifier, runtimeInfo, nil, nil, 0, 0)
 			err := c.CheckSupported()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("CheckSupported() error = %v, wantErr %v", err, tt.wantErr)
@@ -143,9 +142,8 @@ func TestWindowsLogsCollectorCollect(t *testing.T) {
 	}
 
 	runtimeInfo := &utils.RuntimeInfo{
-		RunId:        runId,
-		OSIdentifier: "windows",
-		Features:     map[utils.Feature]bool{utils.WindowsHpc: true},
+		RunId:    runId,
+		Features: map[utils.Feature]bool{utils.WindowsHpc: true},
 	}
 
 	filePaths := &utils.KnownFilePaths{WindowsLogsOutput: "/output"}
@@ -154,7 +152,7 @@ func TestWindowsLogsCollectorCollect(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := test.NewFakeFileSystem(map[string]string{})
 
-			c := NewWindowsLogsCollector(runtimeInfo, filePaths, fs, time.Microsecond, time.Second)
+			c := NewWindowsLogsCollector(utils.Windows, runtimeInfo, filePaths, fs, time.Microsecond, time.Second)
 
 			for path, content := range tt.exportedFiles {
 				fs.AddOrUpdateFile(path, content)

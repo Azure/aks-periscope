@@ -3,9 +3,12 @@ package utils
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
-	"runtime"
 	"strings"
+
+	"github.com/Azure/aks-periscope/pkg/interfaces"
+	"github.com/hashicorp/go-multierror"
 )
 
 type Feature string
@@ -20,7 +23,6 @@ func getKnownFeatures() []Feature {
 
 type RuntimeInfo struct {
 	RunId                   string
-	OSIdentifier            string
 	HostNodeName            string
 	CollectorList           []string
 	KubernetesObjects       []string
@@ -34,10 +36,21 @@ type RuntimeInfo struct {
 }
 
 // GetRuntimeInfo gets runtime info
-func GetRuntimeInfo() (*RuntimeInfo, error) {
-	runId := os.Getenv("DIAGNOSTIC_RUN_ID")
+func GetRuntimeInfo(fs interfaces.FileSystemAccessor, filePaths *KnownFilePaths) (*RuntimeInfo, error) {
+	var errs error
 
-	osIdentifier := runtime.GOOS
+	// Config
+	runId, errs := readFileContent(fs, filePaths.GetConfigPath(RunIdKey), true, errs)
+	collectorList, errs := readFileContent(fs, filePaths.GetConfigPath(CollectorListKey), false, errs)
+	kubernetesObjects, errs := readFileContent(fs, filePaths.GetConfigPath(KubeObjectsListKey), false, errs)
+	nodeLogs, errs := readFileContent(fs, filePaths.NodeLogsList, false, errs)
+	containerLogsNamespaces, errs := readFileContent(fs, filePaths.GetConfigPath(ContainerLogsListKey), false, errs)
+
+	// Secret
+	storageAccountName, errs := readFileContent(fs, filePaths.GetSecretPath(AccountNameKey), false, errs)
+	storageSasKey, errs := readFileContent(fs, filePaths.GetSecretPath(SasTokenKey), false, errs)
+	storageContainerName, errs := readFileContent(fs, filePaths.GetSecretPath(ContainerNameKey), false, errs)
+	storageSasKeyType, errs := readFileContent(fs, filePaths.GetSecretPath(SasTokenTypeKey), false, errs)
 
 	// We can't use `os.Hostname` for this, because this gives us the _container_ hostname (i.e. the pod name, by default).
 	// An earlier approach was to `cat /etc/hostname` but that will not work for Windows containers.
@@ -45,46 +58,59 @@ func GetRuntimeInfo() (*RuntimeInfo, error) {
 	// https://kubernetes.io/docs/tasks/inject-data-application/environment-variable-expose-pod-information/#use-pod-fields-as-values-for-environment-variables
 	hostName := os.Getenv("HOST_NODE_NAME")
 	if len(hostName) == 0 {
-		return nil, errors.New("variable HOST_NODE_NAME value not set for container")
+		errs = multierror.Append(errs, errors.New("variable HOST_NODE_NAME value not set for container"))
 	}
-
-	collectorList := strings.Fields(os.Getenv("COLLECTOR_LIST"))
-	kubernetesObjects := strings.Fields(os.Getenv("DIAGNOSTIC_KUBEOBJECTS_LIST"))
-	var nodeLogs []string
-	if osIdentifier == "linux" {
-		nodeLogs = strings.Fields(os.Getenv("DIAGNOSTIC_NODELOGS_LIST_LINUX"))
-	} else {
-		nodeLogs = strings.Fields(os.Getenv("DIAGNOSTIC_NODELOGS_LIST_WINDOWS"))
-	}
-	containerLogsNamespaces := strings.Fields(os.Getenv("DIAGNOSTIC_CONTAINERLOGS_LIST"))
-
-	storageAccountName := os.Getenv("AZURE_BLOB_ACCOUNT_NAME")
-	storageSasKey := os.Getenv("AZURE_BLOB_SAS_KEY")
-	storageContainerName := os.Getenv("AZURE_BLOB_CONTAINER_NAME")
-	storageSasKeyType := os.Getenv("AZURE_STORAGE_SAS_KEY_TYPE")
 
 	features := map[Feature]bool{}
 	for _, feature := range getKnownFeatures() {
-		enabled := os.Getenv(fmt.Sprintf("FEATURE_%s", feature))
+		featureFilePath := filePaths.GetFeaturePath(feature)
+		var enabled string
+		enabled, errs = readFileContent(fs, featureFilePath, false, errs)
 		if len(enabled) > 0 {
 			features[feature] = true
 		}
 	}
 
+	if errs != nil {
+		return nil, errs
+	}
+
 	return &RuntimeInfo{
 		RunId:                   runId,
-		OSIdentifier:            osIdentifier,
 		HostNodeName:            hostName,
-		CollectorList:           collectorList,
-		KubernetesObjects:       kubernetesObjects,
-		NodeLogs:                nodeLogs,
-		ContainerLogsNamespaces: containerLogsNamespaces,
+		CollectorList:           strings.Fields(collectorList),
+		KubernetesObjects:       strings.Fields(kubernetesObjects),
+		NodeLogs:                strings.Fields(nodeLogs),
+		ContainerLogsNamespaces: strings.Fields(containerLogsNamespaces),
 		StorageAccountName:      storageAccountName,
 		StorageSasKey:           storageSasKey,
 		StorageContainerName:    storageContainerName,
 		StorageSasKeyType:       storageSasKeyType,
 		Features:                features,
 	}, nil
+}
+
+func readFileContent(fs interfaces.FileSystemAccessor, filePath string, mandatory bool, readErrors error) (string, error) {
+	exists, err := fs.FileExists(filePath)
+	if err != nil {
+		return "", multierror.Append(readErrors, fmt.Errorf("error checking existence of %s: %w", filePath, err))
+	}
+	if !exists {
+		if mandatory {
+			return "", multierror.Append(readErrors, fmt.Errorf("mandatory file does not exist: %s", filePath))
+		}
+
+		return "", readErrors
+	}
+
+	value, err := GetContent(func() (io.ReadCloser, error) { return fs.GetFileReader(filePath) })
+	if err != nil {
+		return "", multierror.Append(readErrors, fmt.Errorf("error reading %s: %w", filePath, err))
+	}
+	if mandatory && len(value) == 0 {
+		return "", multierror.Append(readErrors, fmt.Errorf("mandatory file has no content: %s", filePath))
+	}
+	return value, readErrors
 }
 
 func (runtimeInfo *RuntimeInfo) HasFeature(feature Feature) bool {

@@ -28,12 +28,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        envFrom:
-        - configMapRef:
-            name: diagnostic-config
-        - secretRef:
-            name: azureblob-secret
         volumeMounts:
+        - name: diag-config-volume
+          mountPath: /config
+        - name: storage-secret-volume
+          mountPath: /secret
         - name: varlog
           mountPath: /var/log
         - name: resolvlog
@@ -48,6 +47,12 @@ spec:
             memory: "2000Mi"
             cpu: "1000m"
       volumes:
+      - name: diag-config-volume
+        configMap:
+          name: diagnostic-config
+      - name: storage-secret-volume
+        secret:
+          secretName: azureblob-secret
       - name: varlog
         hostPath:
           path: /var/log
@@ -86,12 +91,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        envFrom:
-        - configMapRef:
-            name: diagnostic-config
-        - secretRef:
-            name: azureblob-secret
         volumeMounts:
+        - name: diag-config-volume
+          mountPath: /config
+        - name: storage-secret-volume
+          mountPath: /secret
         - name: k
           mountPath: /k
         - name: azuredata
@@ -104,6 +108,12 @@ spec:
             memory: "2000Mi"
             cpu: "1000m"
       volumes:
+      - name: diag-config-volume
+        configMap:
+          name: diagnostic-config
+      - name: storage-secret-volume
+        secret:
+          secretName: azureblob-secret
       - name: k
         hostPath:
           path: /k

@@ -97,15 +97,17 @@ secretGenerator:
   - AZURE_BLOB_CONTAINER_NAME=<CONTAINER_NAME>
   - AZURE_BLOB_SAS_KEY=<SAS_KEY>
 
-# Uncomment for optional configuration (default values shown)
-# configMapGenerator:
-# - name: diagnostic-config
-#   behavior: replace
-#   literals:
-#   - DIAGNOSTIC_CONTAINERLOGS_LIST=kube-system # space-separated namespaces
-#   - DIAGNOSTIC_KUBEOBJECTS_LIST=kube-system/pod kube-system/service kube-system/deployment # space-separated list of namespace/resource-type[/resource]
-#   - DIAGNOSTIC_NODELOGS_LIST_LINUX="/var/log/azure/cluster-provision.log /var/log/cloud-init.log" # space-separated log file locations
-#   - DIAGNOSTIC_NODELOGS_LIST_WINDOWS="C:\AzureData\CustomDataSetupScript.log" # space-separated log file locations
+# Commented-out config values are the defaults. Uncomment to change.
+configMapGenerator:
+- name: diagnostic-config
+  behavior: merge
+  literals:
+  - DIAGNOSTIC_RUN_ID=<RUN_ID>
+  # - DIAGNOSTIC_CONTAINERLOGS_LIST=kube-system # space-separated namespaces
+  # - DIAGNOSTIC_KUBEOBJECTS_LIST=kube-system/pod kube-system/service kube-system/deployment # space-separated list of namespace/resource-type[/resource]
+  # - DIAGNOSTIC_NODELOGS_LIST_LINUX="/var/log/azure/cluster-provision.log /var/log/cloud-init.log" # space-separated log file locations
+  # - DIAGNOSTIC_NODELOGS_LIST_WINDOWS="C:\AzureData\CustomDataSetupScript.log" # space-separated log file locations
+  # - COLLECTOR_LIST="" # space-separated list containing any of 'connectedCluster' (enables helm/pods-containerlogs, disables iptables/kubelet/nodelogs/pdb/systemlogs/systemperf), 'OSM' (enables osm/smi), 'SMI' (enables smi).
 ```
 
 All placeholders in angled brackets (`<`/`>`) need to be substituted for the relevant values:
@@ -117,10 +119,22 @@ All placeholders in angled brackets (`<`/`>`) need to be substituted for the rel
   - `ss`: `b` (Service: blob)
   - `srt`: `sco` (Resource types: service, container and object)
   - `sp`: `rlacwd` (Permissions: read, list, add, create, write, delete)
+- `RUN_ID`: The identifier for a particular 'run' of Periscope, by convention a timestamp formatted as `YYYY-MM-DDThh-mm-ssZ`. This will become the topmost container within `CONTAINER_NAME`.
 
 You can then deploy Periscope by running:
 ```sh
 kubectl apply -k <path-to-kustomize-directory>
+```
+
+To re-run without deleting and recreating resources, you can update the `RUN_ID` value in the ConfigMap. Depending on the expiry of the SAS token, you may need to update the `AZURE_BLOB_SAS_KEY` value in the Secret first:
+```sh
+# Update SAS token (if expired)
+sas=...
+kubectl patch secret -n aks-periscope azureblob-secret -p="{\"data\":{\"AZURE_BLOB_SAS_KEY\": \"$(echo -n ?$sas | base64 -w 0)\"}}"
+
+# Update DIAGNOSTIC_RUN_ID
+runId=$(date -u '+%Y-%m-%dT%H-%M-%SZ')
+kubectl patch configmap -n aks-periscope diagnostic-config -p="{\"data\":{\"DIAGNOSTIC_RUN_ID\": \"$runId\"}}"
 ```
 
 ### Using Azure Command-Line tool

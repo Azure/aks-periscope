@@ -12,6 +12,7 @@ import (
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 )
@@ -64,7 +65,7 @@ func (collector *PodsContainerLogsCollector) Collect() error {
 
 	for _, namespace := range collector.runtimeInfo.ContainerLogsNamespaces {
 		// List the pods in the given namespace
-		podList, err := utils.GetPods(clientset, namespace)
+		podList, err := clientset.CoreV1().Pods(namespace).List(context.TODO(), metav1.ListOptions{})
 
 		if err != nil {
 			return fmt.Errorf("getting pods failed: %w", err)

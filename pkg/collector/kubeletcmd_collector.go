@@ -11,13 +11,15 @@ import (
 // KubeletCmdCollector defines a KubeletCmd Collector struct
 type KubeletCmdCollector struct {
 	KubeletCommand string
+	osIdentifier   utils.OSIdentifier
 	runtimeInfo    *utils.RuntimeInfo
 }
 
 // NewKubeletCmdCollector is a constructor
-func NewKubeletCmdCollector(runtimeInfo *utils.RuntimeInfo) *KubeletCmdCollector {
+func NewKubeletCmdCollector(osIdentifier utils.OSIdentifier, runtimeInfo *utils.RuntimeInfo) *KubeletCmdCollector {
 	return &KubeletCmdCollector{
 		KubeletCommand: "",
+		osIdentifier:   osIdentifier,
 		runtimeInfo:    runtimeInfo,
 	}
 }
@@ -30,8 +32,8 @@ func (collector *KubeletCmdCollector) CheckSupported() error {
 	// This looks to be impossible on Windows, since Windows containers don't support shared process namespaces,
 	// and hence processes on the host are completely isolated from the container. See:
 	// https://docs.microsoft.com/en-us/virtualization/windowscontainers/manage-containers/hyperv-container#piercing-the-isolation-boundary
-	if collector.runtimeInfo.OSIdentifier != "linux" {
-		return fmt.Errorf("unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
+	if collector.osIdentifier != utils.Linux {
+		return fmt.Errorf("unsupported OS: %s", collector.osIdentifier)
 	}
 
 	if utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {

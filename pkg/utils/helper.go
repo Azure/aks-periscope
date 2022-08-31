@@ -1,23 +1,15 @@
 package utils
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
 	"strings"
 	"time"
-
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
-	restclient "k8s.io/client-go/rest"
 )
 
 const (
@@ -109,57 +101,6 @@ func RunCommandOnHost(command string, arg ...string) (string, error) {
 	return string(out), nil
 }
 
-// RunCommandOnContainerWithOutputStreams runs a command on container system and returns both the stdout and stderr output streams
-func RunCommandOnContainerWithOutputStreams(command string, arg ...string) (CommandOutputStreams, error) {
-	cmd := exec.Command(command, arg...)
-
-	var stdout bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-
-	err := cmd.Run()
-	outputStreams := CommandOutputStreams{stdout.String(), stderr.String()}
-
-	if err != nil {
-		return outputStreams, fmt.Errorf("run command in container: %w", err)
-	}
-
-	return outputStreams, nil
-}
-
-// RunCommandOnContainer  runs a command on container system and returns the stdout output stream
-func RunCommandOnContainer(command string, arg ...string) (string, error) {
-	outputStreams, err := RunCommandOnContainerWithOutputStreams(command, arg...)
-	return outputStreams.Stdout, err
-}
-
-// RunBackgroundCommand starts running a command on a container system in the background and returns its process ID
-func RunBackgroundCommand(command string, arg ...string) (int, error) {
-	cmd := exec.Command(command, arg...)
-	var out bytes.Buffer
-	var stderr bytes.Buffer
-	cmd.Stdout = &out
-	cmd.Stderr = &stderr
-	err := cmd.Start()
-	if err != nil {
-		return 0, fmt.Errorf("start background command in container exited with message %s: %w", stderr.String(), err)
-	}
-	return cmd.Process.Pid, nil
-}
-
-// Finds and kills a process with a given process ID
-func KillProcess(pid int) error {
-	process, err := os.FindProcess(pid)
-	if err != nil {
-		return fmt.Errorf("find process with pid %d to kill: %w", pid, err)
-	}
-	if err := process.Kill(); err != nil {
-		return err
-	}
-	return nil
-}
-
 // Tries to issue an HTTP GET request up to maxRetries times
 func GetUrlWithRetries(url string, maxRetries int) ([]byte, error) {
 	retry := 1
@@ -173,45 +114,9 @@ func GetUrlWithRetries(url string, maxRetries int) ([]byte, error) {
 			time.Sleep(5 * time.Second)
 		} else {
 			defer resp.Body.Close()
-			return ioutil.ReadAll(resp.Body)
+			return io.ReadAll(resp.Body)
 		}
 	}
-}
-
-// GetCreationTimeStamp returns a create timestamp
-func GetCreationTimeStamp(config *restclient.Config) (string, error) {
-	// Creates the clientset
-	creationTimeStamp := ""
-	clientset, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return "", fmt.Errorf("getting access to K8S failed: %w", err)
-	}
-	podList, err := GetPods(clientset, "aks-periscope")
-
-	if err != nil {
-		return "", err
-	}
-
-	// List all the pods similar to kubectl get pods -n <my namespace>
-	for _, pod := range podList.Items {
-		creationTimeStamp = pod.CreationTimestamp.Format(time.RFC3339Nano)
-	}
-
-	return creationTimeStamp, nil
-}
-
-func GetPods(clientset *kubernetes.Clientset, namespace string) (*v1.PodList, error) {
-	// Create a pod interface for the given namespace
-	podInterface := clientset.CoreV1().Pods(namespace)
-
-	// List the pods in the given namespace
-	podList, err := podInterface.List(context.TODO(), metav1.ListOptions{})
-
-	if err != nil {
-		return nil, fmt.Errorf("getting pods failed: %w", err)
-	}
-
-	return podList, nil
 }
 
 func Contains(flagsList []string, flag string) bool {
@@ -221,4 +126,20 @@ func Contains(flagsList []string, flag string) bool {
 		}
 	}
 	return false
+}
+
+func GetContent(readCloserProvider func() (io.ReadCloser, error)) (string, error) {
+	reader, err := readCloserProvider()
+	if err != nil {
+		return "", err
+	}
+
+	defer reader.Close()
+
+	content, err := io.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
+
+	return string(content), nil
 }

@@ -2,7 +2,6 @@ package test
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"sync"
@@ -231,7 +230,7 @@ func createClusterAccess(kubeConfigContentBytes []byte) (*ClusterAccess, error) 
 		return clusterAccess, fmt.Errorf("failed to create client connection to kubernetes from kubeconfig: %w", err)
 	}
 
-	clusterAccess.KubeConfigFile, err = ioutil.TempFile("", "")
+	clusterAccess.KubeConfigFile, err = os.CreateTemp("", "")
 	if err != nil {
 		return clusterAccess, fmt.Errorf("error creating temp file for kubeconfig: %w", err)
 	}

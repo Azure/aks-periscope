@@ -1,7 +1,7 @@
 package collector
 
 import (
-	"io/ioutil"
+	"io"
 	"log"
 	"os"
 	"regexp"
@@ -10,6 +10,7 @@ import (
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/test"
+	"github.com/Azure/aks-periscope/pkg/utils"
 )
 
 // TestMain coordinates the execution of all tests in the package. This is required because they all share
@@ -50,19 +51,10 @@ func runTests(m *testing.M, fixture *test.ClusterFixture) int {
 }
 
 func testDataValue(t *testing.T, dataValue interfaces.DataValue, test func(string)) {
-	reader, err := dataValue.GetReader()
-	if err != nil {
-		t.Errorf("error getting reader for value: %v", err)
-	}
-
-	defer reader.Close()
-
-	bytes, err := ioutil.ReadAll(reader)
+	value, err := utils.GetContent(func() (io.ReadCloser, error) { return dataValue.GetReader() })
 	if err != nil {
 		t.Errorf("error reading value: %v", err)
 	}
-
-	value := string(bytes)
 	test(value)
 }
 

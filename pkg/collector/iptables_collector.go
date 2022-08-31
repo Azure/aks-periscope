@@ -10,15 +10,17 @@ import (
 
 // IPTablesCollector defines a IPTables Collector struct
 type IPTablesCollector struct {
-	data        map[string]string
-	runtimeInfo *utils.RuntimeInfo
+	data         map[string]string
+	osIdentifier utils.OSIdentifier
+	runtimeInfo  *utils.RuntimeInfo
 }
 
 // NewIPTablesCollector is a constructor
-func NewIPTablesCollector(runtimeInfo *utils.RuntimeInfo) *IPTablesCollector {
+func NewIPTablesCollector(osIdentifier utils.OSIdentifier, runtimeInfo *utils.RuntimeInfo) *IPTablesCollector {
 	return &IPTablesCollector{
-		data:        make(map[string]string),
-		runtimeInfo: runtimeInfo,
+		data:         make(map[string]string),
+		osIdentifier: osIdentifier,
+		runtimeInfo:  runtimeInfo,
 	}
 }
 
@@ -28,8 +30,8 @@ func (collector *IPTablesCollector) GetName() string {
 
 func (collector *IPTablesCollector) CheckSupported() error {
 	// There's no obvious alternative to `iptables` on Windows.
-	if collector.runtimeInfo.OSIdentifier != "linux" {
-		return fmt.Errorf("unsupported OS: %s", collector.runtimeInfo.OSIdentifier)
+	if collector.osIdentifier != utils.Linux {
+		return fmt.Errorf("unsupported OS: %s", collector.osIdentifier)
 	}
 
 	if utils.Contains(collector.runtimeInfo.CollectorList, "connectedCluster") {

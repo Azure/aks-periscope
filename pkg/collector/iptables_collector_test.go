@@ -9,7 +9,7 @@ import (
 func TestIPTablesCollectorGetName(t *testing.T) {
 	const expectedName = "iptables"
 
-	c := NewIPTablesCollector(nil)
+	c := NewIPTablesCollector("", nil)
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
@@ -19,25 +19,25 @@ func TestIPTablesCollectorGetName(t *testing.T) {
 func TestIPTablesCollectorCheckSupported(t *testing.T) {
 	tests := []struct {
 		name          string
-		osIdentifier  string
+		osIdentifier  utils.OSIdentifier
 		collectorList []string
 		wantErr       bool
 	}{
 		{
 			name:          "windows",
-			osIdentifier:  "windows",
+			osIdentifier:  utils.Windows,
 			collectorList: []string{"connectedCluster"},
 			wantErr:       true,
 		},
 		{
 			name:          "'connectedCluster' in COLLECTOR_LIST",
-			osIdentifier:  "linux",
+			osIdentifier:  utils.Linux,
 			collectorList: []string{"connectedCluster"},
 			wantErr:       true,
 		},
 		{
 			name:          "'connectedCluster' not in COLLECTOR_LIST",
-			osIdentifier:  "linux",
+			osIdentifier:  utils.Linux,
 			collectorList: []string{},
 			wantErr:       false,
 		},
@@ -45,10 +45,9 @@ func TestIPTablesCollectorCheckSupported(t *testing.T) {
 
 	for _, tt := range tests {
 		runtimeInfo := &utils.RuntimeInfo{
-			OSIdentifier:  tt.osIdentifier,
 			CollectorList: tt.collectorList,
 		}
-		c := NewIPTablesCollector(runtimeInfo)
+		c := NewIPTablesCollector(tt.osIdentifier, runtimeInfo)
 		err := c.CheckSupported()
 		if (err != nil) != tt.wantErr {
 			t.Errorf("%s error = %v, wantErr %v", tt.name, err, tt.wantErr)
@@ -70,10 +69,9 @@ func TestIPTablesCollectorCollect(t *testing.T) {
 	}
 
 	runtimeInfo := &utils.RuntimeInfo{
-		OSIdentifier:  "linux",
 		CollectorList: []string{},
 	}
-	c := NewIPTablesCollector(runtimeInfo)
+	c := NewIPTablesCollector(utils.Linux, runtimeInfo)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

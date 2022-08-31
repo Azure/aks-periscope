@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 )
 
 // FakeFileSystem can be used to test code that uses the FileSystemAccessor interface to
@@ -11,6 +12,7 @@ import (
 type FakeFileSystem struct {
 	lookup     map[string]string
 	errorFiles map[string]error
+	lock       sync.RWMutex
 }
 
 // NewFakeFileSystem creates a FileSystemAccessor based on a map where the keys represent
@@ -19,11 +21,15 @@ func NewFakeFileSystem(lookup map[string]string) *FakeFileSystem {
 	return &FakeFileSystem{
 		lookup:     lookup,
 		errorFiles: map[string]error{},
+		lock:       sync.RWMutex{},
 	}
 }
 
 // GetFileReader implements the FileSystemAccessor interface
 func (ffs *FakeFileSystem) GetFileReader(path string) (io.ReadCloser, error) {
+	ffs.lock.RLock()
+	defer ffs.lock.RUnlock()
+
 	content, ok := ffs.lookup[path]
 	if !ok {
 		return nil, fmt.Errorf("file not found: %s", path)
@@ -36,6 +42,9 @@ func (ffs *FakeFileSystem) GetFileReader(path string) (io.ReadCloser, error) {
 
 // FileExists implements the FileSystemAccessor interface
 func (ffs *FakeFileSystem) FileExists(path string) (bool, error) {
+	ffs.lock.RLock()
+	defer ffs.lock.RUnlock()
+
 	if err := ffs.getError(path); err != nil {
 		return false, err
 	}
@@ -45,6 +54,9 @@ func (ffs *FakeFileSystem) FileExists(path string) (bool, error) {
 
 // GetFileSize implements the FileSystemAccessor interface
 func (ffs *FakeFileSystem) GetFileSize(path string) (int64, error) {
+	ffs.lock.RLock()
+	defer ffs.lock.RUnlock()
+
 	if err := ffs.getError(path); err != nil {
 		return 0, err
 	}
@@ -58,6 +70,9 @@ func (ffs *FakeFileSystem) GetFileSize(path string) (int64, error) {
 
 // ListFiles implements the FileSystemAccessor interface
 func (ffs *FakeFileSystem) ListFiles(directoryPath string) ([]string, error) {
+	ffs.lock.RLock()
+	defer ffs.lock.RUnlock()
+
 	files := []string{}
 	if err := ffs.getError(directoryPath); err != nil {
 		return files, err
@@ -71,14 +86,23 @@ func (ffs *FakeFileSystem) ListFiles(directoryPath string) ([]string, error) {
 }
 
 func (ffs *FakeFileSystem) SetFileAccessError(path string, err error) {
+	ffs.lock.Lock()
+	defer ffs.lock.Unlock()
+
 	ffs.errorFiles[path] = err
 }
 
 func (ffs *FakeFileSystem) AddOrUpdateFile(path, content string) {
+	ffs.lock.Lock()
+	defer ffs.lock.Unlock()
+
 	ffs.lookup[path] = content
 }
 
 func (ffs *FakeFileSystem) DeleteFile(path string) {
+	ffs.lock.Lock()
+	defer ffs.lock.Unlock()
+
 	delete(ffs.lookup, path)
 }
 

@@ -7,7 +7,6 @@ import (
 	"io"
 	"log"
 	"net/url"
-	"strings"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
@@ -18,7 +17,7 @@ import (
 type AzureBlobExporter struct {
 	runtimeInfo    *utils.RuntimeInfo
 	knownFilePaths *utils.KnownFilePaths
-	creationTime   string
+	containerName  string
 }
 
 type StorageKeyType string
@@ -31,11 +30,11 @@ var storageKeyTypes = map[string]StorageKeyType{
 	"Container": Container,
 }
 
-func NewAzureBlobExporter(runtimeInfo *utils.RuntimeInfo, knownFilePaths *utils.KnownFilePaths, creationTime string) *AzureBlobExporter {
+func NewAzureBlobExporter(runtimeInfo *utils.RuntimeInfo, knownFilePaths *utils.KnownFilePaths, containerName string) *AzureBlobExporter {
 	return &AzureBlobExporter{
 		runtimeInfo:    runtimeInfo,
 		knownFilePaths: knownFilePaths,
-		creationTime:   creationTime,
+		containerName:  containerName,
 	}
 }
 
@@ -86,7 +85,7 @@ func (exporter *AzureBlobExporter) Export(producer interfaces.DataProducer) erro
 	}
 
 	for key, value := range producer.GetData() {
-		blobURL := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.runtimeInfo.HostNodeName, key))
+		blobURL := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", exporter.containerName, exporter.runtimeInfo.HostNodeName, key))
 
 		log.Printf("\tAppend blob file: %s (of size %d bytes)", key, value.GetLength())
 
@@ -116,7 +115,7 @@ func (exporter *AzureBlobExporter) ExportReader(name string, reader io.ReadSeeke
 		return err
 	}
 
-	blobUrl := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", strings.Replace(exporter.creationTime, ":", "-", -1), exporter.runtimeInfo.HostNodeName, name))
+	blobUrl := containerURL.NewBlockBlobURL(fmt.Sprintf("%s/%s/%s", exporter.containerName, exporter.runtimeInfo.HostNodeName, name))
 	log.Printf("Uploading the file with blob name: %s\n", name)
 	_, err = azblob.UploadStreamToBlockBlob(context.Background(), reader, blobUrl, azblob.UploadStreamToBlockBlobOptions{})
 

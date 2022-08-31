@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"log"
+	"runtime"
 	"sync"
 	"time"
 
@@ -15,56 +17,87 @@ import (
 )
 
 func main() {
-	config, err := restclient.InClusterConfig()
+	osIdentifier, err := utils.StringToOSIdentifier(runtime.GOOS)
 	if err != nil {
-		log.Fatalf("Cannot load kubeconfig: %v", err)
+		log.Fatalf("cannot determine OS: %v", err)
 	}
 
-	creationTimeStamp, err := utils.GetCreationTimeStamp(config)
+	knownFilePaths, err := utils.GetKnownFilePaths(osIdentifier)
 	if err != nil {
-		log.Fatalf("Failed to get creation timestamp: %v", err)
+		log.Fatalf("failed to get file paths: %v", err)
 	}
 
-	runtimeInfo, err := utils.GetRuntimeInfo()
+	fileSystem := utils.NewFileSystem()
+
+	// Create a watcher for the Run ID file that checks its content every 10 seconds
+	fileWatcher := utils.NewFileContentWatcher(fileSystem, 10*time.Second)
+
+	// Create a channel for unrecoverable errors
+	errChan := make(chan error)
+
+	// Add a watcher for the run ID file content
+	runIdChan := make(chan string)
+	fileWatcher.AddHandler(knownFilePaths.GetConfigPath(utils.RunIdKey), runIdChan, errChan)
+
+	go func() {
+		for {
+			runId := <-runIdChan
+			log.Printf("Starting Periscope run %s", runId)
+			err := run(osIdentifier, knownFilePaths, fileSystem)
+			if err != nil {
+				errChan <- err
+			}
+
+			log.Printf("Completed Periscope run %s", runId)
+		}
+	}()
+
+	fileWatcher.Start()
+
+	// Run until unrecoverable error
+	err = <-errChan
+	log.Fatalf("Error running Periscope: %v", err)
+}
+
+func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, fileSystem interfaces.FileSystemAccessor) error {
+	runtimeInfo, err := utils.GetRuntimeInfo(fileSystem, knownFilePaths)
 	if err != nil {
 		log.Fatalf("Failed to get runtime information: %v", err)
 	}
 
-	knownFilePaths, err := utils.GetKnownFilePaths(runtimeInfo)
+	config, err := restclient.InClusterConfig()
 	if err != nil {
-		log.Fatalf("Failed to get file paths: %v", err)
+		return fmt.Errorf("cannot load kubeconfig: %w", err)
 	}
 
-	exp := exporter.NewAzureBlobExporter(runtimeInfo, knownFilePaths, creationTimeStamp)
+	exp := exporter.NewAzureBlobExporter(runtimeInfo, knownFilePaths, runtimeInfo.RunId)
 
 	// Copies self-signed cert information to container if application is running on Azure Stack Cloud.
 	// We need the cert in order to communicate with the storage account.
 	if utils.IsAzureStackCloud(knownFilePaths) {
 		if err := utils.CopyFile(knownFilePaths.AzureStackCertHost, knownFilePaths.AzureStackCertContainer); err != nil {
-			log.Fatalf("Cannot copy cert for Azure Stack Cloud environment: %v", err)
+			return fmt.Errorf("cannot copy cert for Azure Stack Cloud environment: %w", err)
 		}
 	}
 
-	fileSystem := utils.NewFileSystem()
-
-	dnsCollector := collector.NewDNSCollector(runtimeInfo, knownFilePaths, fileSystem)
-	kubeletCmdCollector := collector.NewKubeletCmdCollector(runtimeInfo)
+	dnsCollector := collector.NewDNSCollector(osIdentifier, knownFilePaths, fileSystem)
+	kubeletCmdCollector := collector.NewKubeletCmdCollector(osIdentifier, runtimeInfo)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector()
 	collectors := []interfaces.Collector{
 		dnsCollector,
 		kubeletCmdCollector,
 		networkOutboundCollector,
 		collector.NewHelmCollector(config, runtimeInfo),
-		collector.NewIPTablesCollector(runtimeInfo),
+		collector.NewIPTablesCollector(osIdentifier, runtimeInfo),
 		collector.NewKubeObjectsCollector(config, runtimeInfo),
 		collector.NewNodeLogsCollector(runtimeInfo, fileSystem),
 		collector.NewOsmCollector(config, runtimeInfo),
 		collector.NewPDBCollector(config, runtimeInfo),
 		collector.NewPodsContainerLogsCollector(config, runtimeInfo),
 		collector.NewSmiCollector(config, runtimeInfo),
-		collector.NewSystemLogsCollector(runtimeInfo),
+		collector.NewSystemLogsCollector(osIdentifier, runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
-		collector.NewWindowsLogsCollector(runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
+		collector.NewWindowsLogsCollector(osIdentifier, runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
 	}
 
 	collectorGrp := new(sync.WaitGroup)
@@ -136,10 +169,5 @@ func main() {
 		}
 	}
 
-	// TODO: Hack: for now AKS-Periscope is running as a deamonset so it shall not stop (or the pod will be restarted)
-	// Revert from https://github.com/Azure/aks-periscope/blob/b98d66a238e942158ef2628a9315b58937ff9c8f/cmd/aks-periscope/aks-periscope.go#L70
-	select {}
-
-	// TODO: remove this //nolint comment once the select{} has been removed
-	//nolint:govet
+	return nil
 }
