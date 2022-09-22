@@ -98,6 +98,7 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		collector.NewSystemLogsCollector(osIdentifier, runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
 		collector.NewWindowsLogsCollector(osIdentifier, runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
+		collector.NewInspektorGadgetBlockIOCollector(config, runtimeInfo),
 	}
 
 	collectorGrp := new(sync.WaitGroup)
