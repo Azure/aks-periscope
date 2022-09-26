@@ -1,0 +1,12 @@
+apiVersion: gadget.kinvolk.io/v1alpha1
+kind: Trace
+metadata:
+  name: dns-k9ptr
+  namespace: gadget
+  annotations:
+    gadget.kinvolk.io/operation: start
+spec:
+  node: aks-agentpool-14358782-vmss000000
+  gadget: dns
+  outputMode: Stream
+  runMode: Manual
