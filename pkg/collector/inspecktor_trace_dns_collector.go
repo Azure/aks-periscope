@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
@@ -11,7 +12,6 @@ import (
 	gadgetv1alpha1 "github.com/kinvolk/inspektor-gadget/pkg/apis/gadget/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/client-go/kubernetes"
 	restclient "k8s.io/client-go/rest"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -44,19 +44,17 @@ func (collector *InspektorGadgetDNSTraceCollector) GetName() string {
 }
 
 func (collector *InspektorGadgetDNSTraceCollector) CheckSupported() error {
-	clientset, err := kubernetes.NewForConfig(collector.kubeconfig)
-
-	opts := metav1.ListOptions{LabelSelector: "k8s-app=gadget"}
-	pods, err := clientset.CoreV1().Pods("gadget").List(context.TODO(), opts)
+	crds, err := collector.commandRunner.GetCRDUnstructuredList()
 	if err != nil {
-		return err
+		return fmt.Errorf("error listing CRDs in cluster")
 	}
 
-	if len(pods.Items) == 0 {
-		return fmt.Errorf("no gadget pods found. Inspektor gadget not deployed properly")
+	for _, crd := range crds.Items {
+		if strings.Contains(crd.GetName(), "traces.gadget.kinvolk.io") {
+			return nil
+		}
 	}
-
-	return nil
+	return fmt.Errorf("does not contain gadget crd")
 }
 
 // Collect implements the interface method
