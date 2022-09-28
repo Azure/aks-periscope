@@ -103,8 +103,9 @@ func (collector *InspektorGadgetDNSTraceCollector) Collect() error {
 	}
 
 	//collect output
-	err = collector.runTraceCommandOnPod(gadgetName)
+	err = collector.runTraceCommandOnPod(gadgetName, gadgetClient, trace)
 	if err != nil {
+		log.Printf("\t could not run trace : %s ", err)
 		return err
 	}
 
@@ -124,7 +125,7 @@ func randomPodID() string {
 	return string(output)
 }
 
-func (collector *InspektorGadgetDNSTraceCollector) runTraceCommandOnPod(gadgetName string) error {
+func (collector *InspektorGadgetDNSTraceCollector) runTraceCommandOnPod(gadgetName string, gadgetClient runtimeclient.Client, trace *gadgetv1alpha1.Trace) error {
 	// Creates the clientset
 	clientset, err := kubernetes.NewForConfig(collector.kubeconfig)
 	if err != nil {
@@ -137,19 +138,7 @@ func (collector *InspektorGadgetDNSTraceCollector) runTraceCommandOnPod(gadgetNa
 	}
 	var command = []string{"./bin/gadgettracermanager", "-call", "receive-stream", "-tracerid", fmt.Sprintf("trace_gadget_%s", gadgetName)}
 
-	for _, podName := range gadgetPods.Items {
-		request := clientset.CoreV1().RESTClient().Post().
-			Resource("pods").
-			Name(podName.Name).
-			Namespace("gadget").
-			SubResource("exec").
-			VersionedParams(&v1.PodExecOptions{
-				Stdin:   false,
-				Stdout:  true,
-				Stderr:  true,
-				TTY:     false,
-				Command: command,
-			}, scheme.ParameterCodec)
+	for _, pod := range gadgetPods.Items {
 
 		stdout := new(bytes.Buffer)
 		stderr := new(bytes.Buffer)
@@ -158,26 +147,48 @@ func (collector *InspektorGadgetDNSTraceCollector) runTraceCommandOnPod(gadgetNa
 			Stderr: stderr,
 		}
 
-		exec, err := remotecommand.NewSPDYExecutor(collector.kubeconfig, "POST", request.URL())
-		log.Printf("\tPost request to DNS trace stream : %s ", request.URL())
-		if err != nil {
-			return fmt.Errorf("could not create SPDY executor: %w", err)
-		}
+		go func(podName string) {
+			request := clientset.CoreV1().RESTClient().Post().
+				Resource("pods").
+				Name(podName).
+				Namespace("gadget").
+				SubResource("exec").
+				VersionedParams(&v1.PodExecOptions{
+					Stdin:   false,
+					Stdout:  true,
+					Stderr:  true,
+					TTY:     false,
+					Command: command,
+				}, scheme.ParameterCodec)
+			//TODO start streaming when trace is started
+			log.Printf("\tPost request to DNS trace stream : %s ", request.URL())
+			exec, err := remotecommand.NewSPDYExecutor(collector.kubeconfig, "POST", request.URL())
 
-		err = exec.Stream(streamOptions)
-		if err != nil {
+			if err != nil {
+				log.Printf("\tError creating SPDYExecutor for pod exec %q: %s", podName, err)
+				collector.data[fmt.Sprintf("dns-trace-%s-%s", gadgetName, podName)] = fmt.Sprintf("could not create SPDY executor: %v", err)
+				return
+			}
+			err = exec.Stream(streamOptions)
+			if err != nil {
+				result := strings.TrimSpace(stdout.String()) + "\n" + strings.TrimSpace(stderr.String())
+				result = strings.TrimSpace(result)
+				collector.data[fmt.Sprintf("dns-trace-%s-%s", gadgetName, podName)] = "try a different pod"
+				log.Printf("\tObtain DNS trace stream erred: %s, %s. Try a different pod ", podName, result)
+				return
+			}
+			log.Printf("\tCollecting DNS trace stream from pod %s", podName)
 			result := strings.TrimSpace(stdout.String()) + "\n" + strings.TrimSpace(stderr.String())
 			result = strings.TrimSpace(result)
 			collector.data[fmt.Sprintf("dns-trace-%s-%s", gadgetName, podName)] = result
-			return fmt.Errorf("error reading stream: %w", err)
-		}
-		result := strings.TrimSpace(stdout.String()) + "\n" + strings.TrimSpace(stderr.String())
-		result = strings.TrimSpace(result)
-		log.Printf("\tObtain DNS trace stream : %s ", result)
-
-		collector.data[fmt.Sprintf("dns-trace-%s-%s", gadgetName, podName)] = result
-		log.Printf("\tupdated collector data")
+			log.Printf("\tCollected DNS trace stream from pod %s", podName)
+		}(pod.Name)
 	}
-
+	log.Printf("\twait for 10 seconds to stop collection dns trace")
+	time.Sleep(10 * time.Second)
+	err = gadgetClient.Delete(context.TODO(), trace)
+	if err != nil {
+		log.Printf("could not stop trace %s: %w", trace.Name, err)
+	}
 	return nil
 }
