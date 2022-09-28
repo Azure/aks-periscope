@@ -7,6 +7,7 @@ import (
 	"log"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
@@ -138,6 +139,7 @@ func (collector *InspektorGadgetDNSTraceCollector) runTraceCommandOnPod(gadgetNa
 	}
 	var command = []string{"./bin/gadgettracermanager", "-call", "receive-stream", "-tracerid", fmt.Sprintf("trace_gadget_%s", gadgetName)}
 
+	collectorGrp := new(sync.WaitGroup)
 	for _, pod := range gadgetPods.Items {
 
 		stdout := new(bytes.Buffer)
@@ -146,8 +148,10 @@ func (collector *InspektorGadgetDNSTraceCollector) runTraceCommandOnPod(gadgetNa
 			Stdout: stdout,
 			Stderr: stderr,
 		}
+		collectorGrp.Add(1)
 
 		go func(podName string) {
+			defer collectorGrp.Done()
 			request := clientset.CoreV1().RESTClient().Post().
 				Resource("pods").
 				Name(podName).
@@ -166,21 +170,19 @@ func (collector *InspektorGadgetDNSTraceCollector) runTraceCommandOnPod(gadgetNa
 
 			if err != nil {
 				log.Printf("\tError creating SPDYExecutor for pod exec %q: %s", podName, err)
-				collector.data[fmt.Sprintf("dns-trace-%s-%s", gadgetName, podName)] = fmt.Sprintf("could not create SPDY executor: %v", err)
 				return
 			}
 			err = exec.Stream(streamOptions)
 			if err != nil {
 				result := strings.TrimSpace(stdout.String()) + "\n" + strings.TrimSpace(stderr.String())
 				result = strings.TrimSpace(result)
-				collector.data[fmt.Sprintf("dns-trace-%s-%s", gadgetName, podName)] = "try a different pod"
 				log.Printf("\tObtain DNS trace stream erred: %s, %s. Try a different pod ", podName, result)
 				return
 			}
 			log.Printf("\tCollecting DNS trace stream from pod %s", podName)
 			result := strings.TrimSpace(stdout.String()) + "\n" + strings.TrimSpace(stderr.String())
 			result = strings.TrimSpace(result)
-			collector.data[fmt.Sprintf("dns-trace-%s-%s", gadgetName, podName)] = result
+			collector.data[fmt.Sprintf("dns-trace-%s", podName)] = result
 			log.Printf("\tCollected DNS trace stream from pod %s", podName)
 		}(pod.Name)
 	}
@@ -188,7 +190,8 @@ func (collector *InspektorGadgetDNSTraceCollector) runTraceCommandOnPod(gadgetNa
 	time.Sleep(10 * time.Second)
 	err = gadgetClient.Delete(context.TODO(), trace)
 	if err != nil {
-		log.Printf("could not stop trace %s: %w", trace.Name, err)
+		log.Printf("could not stop trace %s: %v", trace.Name, err)
 	}
+	collectorGrp.Wait()
 	return nil
 }
