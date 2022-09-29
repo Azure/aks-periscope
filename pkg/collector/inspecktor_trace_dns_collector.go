@@ -140,18 +140,20 @@ func (collector *InspektorGadgetDNSTraceCollector) runTraceCommandOnPod(gadgetNa
 	var command = []string{"./bin/gadgettracermanager", "-call", "receive-stream", "-tracerid", fmt.Sprintf("trace_gadget_%s", gadgetName)}
 
 	collectorGrp := new(sync.WaitGroup)
+
 	for _, pod := range gadgetPods.Items {
 
-		stdout := new(bytes.Buffer)
-		stderr := new(bytes.Buffer)
-		streamOptions := remotecommand.StreamOptions{
-			Stdout: stdout,
-			Stderr: stderr,
-		}
 		collectorGrp.Add(1)
-
 		go func(podName string) {
 			defer collectorGrp.Done()
+
+			stdout := new(bytes.Buffer)
+			stderr := new(bytes.Buffer)
+			streamOptions := remotecommand.StreamOptions{
+				Stdout: stdout,
+				Stderr: stderr,
+			}
+
 			request := clientset.CoreV1().RESTClient().Post().
 				Resource("pods").
 				Name(podName).
@@ -164,34 +166,39 @@ func (collector *InspektorGadgetDNSTraceCollector) runTraceCommandOnPod(gadgetNa
 					TTY:     false,
 					Command: command,
 				}, scheme.ParameterCodec)
-			//TODO start streaming when trace is started
+
 			log.Printf("\tPost request to DNS trace stream : %s ", request.URL())
 			exec, err := remotecommand.NewSPDYExecutor(collector.kubeconfig, "POST", request.URL())
 
 			if err != nil {
-				log.Printf("\tError creating SPDYExecutor for pod exec %q: %s", podName, err)
+				log.Printf("\tError creating SPDYExecutor for pod exec %q: %v", podName, err)
 				return
 			}
+
 			err = exec.Stream(streamOptions)
 			if err != nil {
-				result := strings.TrimSpace(stdout.String()) + "\n" + strings.TrimSpace(stderr.String())
-				result = strings.TrimSpace(result)
-				log.Printf("\tObtain DNS trace stream erred: %s, %s. Try a different pod ", podName, result)
+				log.Printf("\tObtain DNS trace stream erred: %s, %v. Try a different pod ", podName, err)
 				return
 			}
+
 			log.Printf("\tCollecting DNS trace stream from pod %s", podName)
 			result := strings.TrimSpace(stdout.String()) + "\n" + strings.TrimSpace(stderr.String())
 			result = strings.TrimSpace(result)
-			collector.data[fmt.Sprintf("dns-trace-%s", podName)] = result
+			collector.data[fmt.Sprintf("%s-%s", gadgetName, podName)] = result
 			log.Printf("\tCollected DNS trace stream from pod %s", podName)
 		}(pod.Name)
 	}
+
+	//TODO kill in a proper way
 	log.Printf("\twait for 10 seconds to stop collection dns trace")
-	time.Sleep(10 * time.Second)
+	time.Sleep(2 * time.Minute)
 	err = gadgetClient.Delete(context.TODO(), trace)
 	if err != nil {
 		log.Printf("could not stop trace %s: %v", trace.Name, err)
 	}
+
+	// wait for the final result to be written
 	collectorGrp.Wait()
+
 	return nil
 }
