@@ -18,8 +18,7 @@ func (collector *InspektorGadgetDNSTraceCollector) Collect() error {
 }
 
 func (collector *InspektorGadgetDNSTraceCollector) GetData() map[string]interfaces.DataValue {
-	//TODO implement me
-	panic("implement me")
+	return collector.tracerGadget.GetData()
 }
 
 func (collector *InspektorGadgetDNSTraceCollector) CheckSupported() error {
