@@ -98,11 +98,11 @@ func (collector *InspektorGadgetTraceCollector) runTraceCommandOnPod(traceGadget
 				return
 			}
 
-			log.Printf("\tCollecting trace stream from pod %s", podName)
+			log.Printf("\tCollecting trace stream %s from pod %s", traceGadgetName, podName)
 			result := strings.TrimSpace(stdout.String()) + "\n" + strings.TrimSpace(stderr.String())
 			result = strings.TrimSpace(result)
 			collector.data[fmt.Sprintf("%s-%s", traceGadgetName, podName)] = result
-			log.Printf("\tCollected trace stream from pod %s", podName)
+			log.Printf("\tCollected trace stream %s from pod %s", traceGadgetName, podName)
 		}(pod.Name)
 	}
 
