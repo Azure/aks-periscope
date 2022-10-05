@@ -36,7 +36,7 @@ func (collector *InspektorGadgetTCPTraceCollector) GetName() string {
 
 // Collect implements the interface method
 func (collector *InspektorGadgetTCPTraceCollector) Collect() error {
-	return collector.tracerGadget.collect("tcptracer", 3*time.Minute)
+	return collector.tracerGadget.collect("tcptracer", 2*time.Minute)
 }
 
 func (collector *InspektorGadgetTCPTraceCollector) GetData() map[string]interfaces.DataValue {
