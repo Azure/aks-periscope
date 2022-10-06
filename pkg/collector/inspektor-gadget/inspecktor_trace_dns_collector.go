@@ -13,20 +13,14 @@ type InspektorGadgetDNSTraceCollector struct {
 	tracerGadget *InspektorGadgetTraceCollector
 }
 
-func (collector *InspektorGadgetDNSTraceCollector) Collect() error {
-	return collector.tracerGadget.collect("dns", 2*time.Minute)
-}
-
-func (collector *InspektorGadgetDNSTraceCollector) GetData() map[string]interfaces.DataValue {
-	return collector.tracerGadget.GetData()
-}
-
+// CheckSupported implements the interface method
 func (collector *InspektorGadgetDNSTraceCollector) CheckSupported() error {
 	return collector.tracerGadget.CheckSupported()
 }
 
 // NewInspektorGadgetDNSTraceCollector is a constructor.
 func NewInspektorGadgetDNSTraceCollector(config *restclient.Config, runtimeInfo *utils.RuntimeInfo) *InspektorGadgetDNSTraceCollector {
+
 	return &InspektorGadgetDNSTraceCollector{
 		tracerGadget: &InspektorGadgetTraceCollector{
 			data:          make(map[string]string),
@@ -38,5 +32,15 @@ func NewInspektorGadgetDNSTraceCollector(config *restclient.Config, runtimeInfo 
 }
 
 func (collector *InspektorGadgetDNSTraceCollector) GetName() string {
-	return "inspektorgadget-dnstrace"
+	return "inspektorgadget-dns"
+}
+
+// Collect implements the interface method
+func (collector *InspektorGadgetDNSTraceCollector) Collect() error {
+	return collector.tracerGadget.collect("dns", 2*time.Minute)
+}
+
+// GetData implements the interface method
+func (collector *InspektorGadgetDNSTraceCollector) GetData() map[string]interfaces.DataValue {
+	return collector.tracerGadget.GetData()
 }
