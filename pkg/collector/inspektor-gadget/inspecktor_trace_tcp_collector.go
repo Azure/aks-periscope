@@ -13,6 +13,7 @@ type InspektorGadgetTCPTraceCollector struct {
 	tracerGadget *InspektorGadgetTraceCollector
 }
 
+// CheckSupported implements the interface method
 func (collector *InspektorGadgetTCPTraceCollector) CheckSupported() error {
 	return collector.tracerGadget.CheckSupported()
 }
@@ -39,6 +40,7 @@ func (collector *InspektorGadgetTCPTraceCollector) Collect() error {
 	return collector.tracerGadget.collect("tcptracer", 2*time.Minute)
 }
 
+// GetData implements the interface method
 func (collector *InspektorGadgetTCPTraceCollector) GetData() map[string]interfaces.DataValue {
 	return collector.tracerGadget.GetData()
 }
