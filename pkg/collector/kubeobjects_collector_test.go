@@ -68,20 +68,6 @@ func getDefaultKubeObjectResults(fixture *test.ClusterFixture) (map[string]*rege
 	return results, nil
 }
 
-func getNodeNames(fixture *test.ClusterFixture) ([]string, error) {
-	nodeList, err := fixture.AdminAccess.Clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("error listing nodes: %w", err)
-	}
-
-	nodeNames := make([]string, len(nodeList.Items))
-	for i, node := range nodeList.Items {
-		nodeNames[i] = node.Name
-	}
-
-	return nodeNames, nil
-}
-
 func getNodeResults(nodeNames []string) map[string]*regexp.Regexp {
 	results := map[string]*regexp.Regexp{}
 	for _, nodeName := range nodeNames {
@@ -111,7 +97,7 @@ func TestKubeObjectsCollectorCollect(t *testing.T) {
 		t.Fatalf("Error determining expected results for default configuration: %v", err)
 	}
 
-	nodeNames, err := getNodeNames(fixture)
+	nodeNames, err := fixture.GetNodeNames()
 	if err != nil {
 		t.Fatalf("Error getting node names: %v", err)
 	}
