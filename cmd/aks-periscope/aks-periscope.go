@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Azure/aks-periscope/pkg/collector"
-	"github.com/Azure/aks-periscope/pkg/collector/inspektor-gadget"
+	inspektor_gadget "github.com/Azure/aks-periscope/pkg/collector/inspektor-gadget"
 	"github.com/Azure/aks-periscope/pkg/diagnoser"
 	"github.com/Azure/aks-periscope/pkg/exporter"
 	"github.com/Azure/aks-periscope/pkg/interfaces"
@@ -99,8 +99,8 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		collector.NewSystemLogsCollector(osIdentifier, runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
 		collector.NewWindowsLogsCollector(osIdentifier, runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
-		inspektor_gadget.NewInspektorGadgetDNSTraceCollector(config, runtimeInfo),
-		inspektor_gadget.NewInspektorGadgetTCPTraceCollector(config, runtimeInfo),
+		inspektor_gadget.NewInspektorGadgetDNSTraceCollector(osIdentifier, config, runtimeInfo, 2*time.Minute),
+		inspektor_gadget.NewInspektorGadgetTCPTraceCollector(osIdentifier, config, runtimeInfo, 2*time.Minute),
 	}
 
 	collectorGrp := new(sync.WaitGroup)

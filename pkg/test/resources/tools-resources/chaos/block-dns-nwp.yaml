@@ -1,11 +1,10 @@
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
-  name: deny-all-traffic
-  namespace: demo
+  name: deny-all-egress
+  namespace: gadget
 spec:
   podSelector:
-    matchLabels:
-      app: dns
+    matchLabels: {}
   policyTypes:
     - Egress

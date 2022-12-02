@@ -1,4 +1,4 @@
-package inspektor_gadget
+package collector
 
 import (
 	"time"
@@ -19,14 +19,16 @@ func (collector *InspektorGadgetDNSTraceCollector) CheckSupported() error {
 }
 
 // NewInspektorGadgetDNSTraceCollector is a constructor.
-func NewInspektorGadgetDNSTraceCollector(config *restclient.Config, runtimeInfo *utils.RuntimeInfo) *InspektorGadgetDNSTraceCollector {
+func NewInspektorGadgetDNSTraceCollector(osIdentifier utils.OSIdentifier, config *restclient.Config, runtimeInfo *utils.RuntimeInfo, collectingPeriod time.Duration) *InspektorGadgetDNSTraceCollector {
 
 	return &InspektorGadgetDNSTraceCollector{
 		tracerGadget: &InspektorGadgetTraceCollector{
-			data:          make(map[string]string),
-			kubeconfig:    config,
-			commandRunner: utils.NewKubeCommandRunner(config),
-			runtimeInfo:   runtimeInfo,
+			data:             make(map[string]string),
+			osIdentifier:     osIdentifier,
+			kubeconfig:       config,
+			commandRunner:    utils.NewKubeCommandRunner(config),
+			runtimeInfo:      runtimeInfo,
+			collectingPeriod: collectingPeriod,
 		},
 	}
 }
@@ -37,7 +39,7 @@ func (collector *InspektorGadgetDNSTraceCollector) GetName() string {
 
 // Collect implements the interface method
 func (collector *InspektorGadgetDNSTraceCollector) Collect() error {
-	return collector.tracerGadget.collect("dns", 2*time.Minute)
+	return collector.tracerGadget.collect("dns")
 }
 
 // GetData implements the interface method

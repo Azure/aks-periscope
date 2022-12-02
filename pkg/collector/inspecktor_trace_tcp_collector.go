@@ -1,4 +1,4 @@
-package inspektor_gadget
+package collector
 
 import (
 	"time"
@@ -19,14 +19,16 @@ func (collector *InspektorGadgetTCPTraceCollector) CheckSupported() error {
 }
 
 // NewInspektorGadgetTCPTraceCollector is a constructor.
-func NewInspektorGadgetTCPTraceCollector(config *restclient.Config, runtimeInfo *utils.RuntimeInfo) *InspektorGadgetTCPTraceCollector {
+func NewInspektorGadgetTCPTraceCollector(osIdentifier utils.OSIdentifier, config *restclient.Config, runtimeInfo *utils.RuntimeInfo, collectingPeriod time.Duration) *InspektorGadgetTCPTraceCollector {
 
 	return &InspektorGadgetTCPTraceCollector{
 		tracerGadget: &InspektorGadgetTraceCollector{
-			data:          make(map[string]string),
-			kubeconfig:    config,
-			commandRunner: utils.NewKubeCommandRunner(config),
-			runtimeInfo:   runtimeInfo,
+			data:             make(map[string]string),
+			osIdentifier:     osIdentifier,
+			kubeconfig:       config,
+			commandRunner:    utils.NewKubeCommandRunner(config),
+			runtimeInfo:      runtimeInfo,
+			collectingPeriod: collectingPeriod,
 		},
 	}
 }
@@ -37,7 +39,7 @@ func (collector *InspektorGadgetTCPTraceCollector) GetName() string {
 
 // Collect implements the interface method
 func (collector *InspektorGadgetTCPTraceCollector) Collect() error {
-	return collector.tracerGadget.collect("tcptracer", 2*time.Minute)
+	return collector.tracerGadget.collect("tcptracer")
 }
 
 // GetData implements the interface method
