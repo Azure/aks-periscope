@@ -1,6 +1,8 @@
 # Dev Overlay
 
-This can be used for running a locally-built Periscope image in a `Kind` cluster. Because `Kind` runs on Linux only, the Linux `DaemonSet` will refer to the locally-built image, whereas the Windows `DaemonSet` will refer to the latest published production Windows MCR image.
+This can be used for running a locally-built Periscope image in a `Kind` cluster. The environment files are `gitignore`d to avoid committing any credentials or user-specific configuration to source control.
+
+Because `Kind` runs on Linux only, the Linux `DaemonSet` will refer to the locally-built image, whereas the Windows `DaemonSet` will refer to the latest published production Windows MCR image (to test Windows changes, use the ['dynamic image'](../dynamic-image/README.md) overlay).
 
 It will deploy to its own namespace, `aks-periscope-dev` to avoid conflicts with any existing Periscope deployment.
 

@@ -227,9 +227,11 @@ CGO_ENABLED=0 GOOS=linux go build -mod=mod github.com/Azure/aks-periscope/cmd/ak
 
 See [this guide](./docs/testing.md) for running automated tests in a CI or development environment.
 
-**Tip**: To test local changes, there are instructions for running Periscope in a `Kind` cluster in the ['dev' Kustomize overlay notes](./deployment/overlays/dev/README.md). This allows for altering the configuration without touching any source-controlled files.
+### Manual Testing
 
-**Tip**: To test changes in a GitHub branch, there are instructions for running images published to a local GHCR registry in the ['dynamic-image' Kustomize overlay notes](./deployment/overlays/dynamic-image/README.md#ghcr).This is especially useful for verifying Windows images.
+You can build and run Periscope locally in a `Kind` cluster using the ['dev' Kustomize overlay notes](./deployment/overlays/dev/README.md).
+
+To build and push a Docker image to an external registry (GHCR or ACR), and then deploy that to any (local or cloud-hosted) cluster, please refer to the ['dynamic-image' Kustomize overlay notes](./deployment/overlays/dynamic-image/README.md#ghcr).
 
 ## Dependent Consuming Tools and Working Contract
 
