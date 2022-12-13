@@ -1,6 +1,8 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
+namespace: aks-periscope
+
 bases:
 - ../../base
 
@@ -17,9 +19,21 @@ secretGenerator:
   behavior: replace
   envs:
   - .env.secret
+- name: acr-secret
+  behavior: create
+  files:
+  - .dockerconfigjson=acr.dockerconfigjson
 
 configMapGenerator:
 - name: diagnostic-config
   behavior: merge
   envs:
   - .env.config
+
+patches:
+- target:
+    kind: DaemonSet
+  patch: |-
+    - op: add
+      path: /spec/template/spec/imagePullSecrets
+      value: [{ name: acr-secret }]
