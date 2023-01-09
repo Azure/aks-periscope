@@ -80,9 +80,11 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		}
 	}
 
+	// those collectors are reused in the diagnosers, hence declared explicitly
 	dnsCollector := collector.NewDNSCollector(osIdentifier, knownFilePaths, fileSystem)
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(osIdentifier, runtimeInfo)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector()
+
 	collectors := []interfaces.Collector{
 		dnsCollector,
 		kubeletCmdCollector,
@@ -102,7 +104,8 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 
 	collectorGrp := new(sync.WaitGroup)
 
-	dataProducers := []interfaces.DataProducer{}
+	var dataProducers []interfaces.DataProducer
+
 	for _, c := range collectors {
 		if err := c.CheckSupported(); err != nil {
 			// Log the reason why this collector is not supported, and skip to the next
@@ -112,6 +115,7 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 
 		dataProducers = append(dataProducers, c)
 		collectorGrp.Add(1)
+
 		go func(c interfaces.Collector) {
 			defer collectorGrp.Done()
 
@@ -141,6 +145,7 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 	for _, d := range diagnosers {
 		dataProducers = append(dataProducers, d)
 		diagnoserGrp.Add(1)
+
 		go func(d interfaces.Diagnoser) {
 			defer diagnoserGrp.Done()
 
@@ -157,7 +162,6 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 			}
 		}(d)
 	}
-
 	diagnoserGrp.Wait()
 
 	zip, err := exporter.Zip(dataProducers)
