@@ -89,6 +89,8 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		dnsCollector,
 		kubeletCmdCollector,
 		networkOutboundCollector,
+
+		//collector.NewDNSTracerCollector(osIdentifier),
 		collector.NewHelmCollector(config, runtimeInfo),
 		collector.NewIPTablesCollector(osIdentifier, runtimeInfo),
 		collector.NewKubeObjectsCollector(config, runtimeInfo),
@@ -162,6 +164,7 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 			}
 		}(d)
 	}
+
 	diagnoserGrp.Wait()
 
 	zip, err := exporter.Zip(dataProducers)
