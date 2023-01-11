@@ -41,14 +41,14 @@ var _ = Describe("DnsTracerCollector", func() {
 		done := make(chan struct{})
 
 		By("Starting tracer ")
-		var err error
-		go func(err error) {
-			tracerError := dnsTracerCollector.Collect()
-			if tracerError != nil {
-				err = tracerError
+
+		go func() {
+			err := dnsTracerCollector.Collect()
+			if err != nil {
+				Fail("could not collect dns trace information")
 			}
 			close(done)
-		}(err)
+		}()
 
 		By("Starting DNS activities")
 		urls := []string{"microsoft.com.", "google.com.", "shouldnotexist.com."}
@@ -73,7 +73,6 @@ var _ = Describe("DnsTracerCollector", func() {
 		}
 
 		By("Collecting result")
-		Expect(err).To(BeNil())
 		data := dnsTracerCollector.GetData()
 		log.Printf("==========================\nCollected dns trace data %v \n ==========================\n", data)
 		Expect(data).ToNot(BeNil())

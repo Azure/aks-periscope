@@ -58,7 +58,6 @@ func (collector *DNSTracerCollector) Collect() error {
 		}
 		result := fmt.Sprintf("A new %q dns %s about %s using packet type %s was observed. nameserver: %s, response: %s\n",
 			event.QType, qr, event.DNSName, event.PktType, event.Nameserver, event.Rcode)
-		log.Printf(result)
 		collector.data[fmt.Sprintf("%s-%s", collector.GetName(), event.ID)] = result
 	}
 
