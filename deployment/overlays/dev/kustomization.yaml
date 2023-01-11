@@ -15,12 +15,12 @@ patches:
   patch: |-
     - op: replace
       path: '/spec/template/spec/containers/0/imagePullPolicy'
-      value: Never
+      value: Always
 
 images:
 - name: periscope-linux
-  newName: periscope-local
-  newTag: latest
+  newName: loggeracr.azurecr.io/periscope-local
+  newTag: v0.4.0
 - name: periscope-windows
   newName: mcr.microsoft.com/aks/periscope-win
   newTag: latest

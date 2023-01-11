@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"github.com/Azure/aks-periscope/pkg/collector/gadgets"
 	"log"
 	"runtime"
 	"sync"
@@ -90,7 +91,6 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		kubeletCmdCollector,
 		networkOutboundCollector,
 
-		//collector.NewDNSTracerCollector(osIdentifier),
 		collector.NewHelmCollector(config, runtimeInfo),
 		collector.NewIPTablesCollector(osIdentifier, runtimeInfo),
 		collector.NewKubeObjectsCollector(config, runtimeInfo),
@@ -102,6 +102,7 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		collector.NewSystemLogsCollector(osIdentifier, runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
 		collector.NewWindowsLogsCollector(osIdentifier, runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
+		gadgets.NewDNSTracerCollector(osIdentifier),
 	}
 
 	collectorGrp := new(sync.WaitGroup)

@@ -186,7 +186,7 @@ AKS Periscope can be deployed by using Azure Command-Line tool (CLI). The steps 
       az aks kollect \
       -g MyResourceGroup \
       -n MyManagedCluster \
-      --container-logs "mynamespace1/mypod1 myns2"
+      --container-logs "mynamespace1/mypod1 /home/parallels/.local/binmyns2"
       ```
 
    5. Customize the kubernetes objects to collect. Its value can be either all objects of a type in a namespace, for example, kube-system/pod, or a specific object of a type in a namespace, for example, kube-system/deployment/tunnelfront.
