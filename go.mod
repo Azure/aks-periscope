@@ -8,8 +8,6 @@ require (
 	github.com/Azure/azure-storage-blob-go v0.14.0
 	github.com/cilium/ebpf v0.9.3
 	github.com/docker/docker v20.10.17+incompatible
-	github.com/go-openapi/strfmt v0.19.5 // indirect
-	github.com/go-openapi/validate v0.19.8 // indirect
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-multierror v1.1.1
 	helm.sh/helm/v3 v3.10.3

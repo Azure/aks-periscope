@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: pauseds
+spec:
+  selector:
+    matchLabels:
+      name: pauseds
+  template:
+    metadata:
+      labels:
+        name: pauseds
+    spec:
+      containers:
+      - name: testcontainer
+        image: k8s.gcr.io/pause:3.6
+        imagePullPolicy: Never
+        resources:
+          limits:
+            cpu: "0.1"
+            memory: "10Mi"
+      tolerations:
+      - key: node-role.kubernetes.io/master
+        effect: NoSchedule
