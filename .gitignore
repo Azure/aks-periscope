@@ -344,3 +344,6 @@ deployment/overlays/temp
 # Local deployment configuration files
 **/.env
 **/.env.*
+
+# Test binaries
+__debug_bin

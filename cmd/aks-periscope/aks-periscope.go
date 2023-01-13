@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/Azure/aks-periscope/pkg/collector"
-	inspektor_gadget "github.com/Azure/aks-periscope/pkg/collector/inspektor-gadget"
 	"github.com/Azure/aks-periscope/pkg/diagnoser"
 	"github.com/Azure/aks-periscope/pkg/exporter"
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
+
+	containercollection "github.com/inspektor-gadget/inspektor-gadget/pkg/container-collection"
+
 	restclient "k8s.io/client-go/rest"
 )
 
@@ -81,6 +83,25 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		}
 	}
 
+	// Use the default InspektorGadget behaviour for determining containers:
+	// https://github.com/inspektor-gadget/inspektor-gadget/blob/6b00fea3f925c9da478126931e774e340ca9bfdf/pkg/gadgettracermanager/gadgettracermanager.go#L275-L283
+	var containerCollectionOptions []containercollection.ContainerCollectionOption{
+	if runcfanotify.Supported() {
+		containerCollectionOptions = []containercollection.ContainerCollectionOption{
+			containercollection.WithRuncFanotify(),
+			containercollection.WithInitialKubernetesContainers(runtimeInfo.HostNodeName),
+		}
+	} else {
+		containerCollectionOptions = []containercollection.ContainerCollectionOption{
+			containercollection.WithPodInformer(runtimeInfo.HostNodeName),
+		}
+	}
+
+	waiter := func() {
+		log.Printf("\twait for %v to stop collection", collector.collectingPeriod)
+		time.Sleep(2*time.Minute)
+	}
+
 	dnsCollector := collector.NewDNSCollector(osIdentifier, knownFilePaths, fileSystem)
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(osIdentifier, runtimeInfo)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector()
@@ -99,8 +120,8 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		collector.NewSystemLogsCollector(osIdentifier, runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
 		collector.NewWindowsLogsCollector(osIdentifier, runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
-		inspektor_gadget.NewInspektorGadgetDNSTraceCollector(osIdentifier, config, runtimeInfo, 2*time.Minute),
-		inspektor_gadget.NewInspektorGadgetTCPTraceCollector(osIdentifier, config, runtimeInfo, 2*time.Minute),
+		collector.NewInspektorGadgetDNSTraceCollector(osIdentifier, config, runtimeInfo, waiter, containerCollectionOptions),
+		collector.NewInspektorGadgetTCPTraceCollector(osIdentifier, config, runtimeInfo, 2*time.Minute),
 	}
 
 	collectorGrp := new(sync.WaitGroup)
