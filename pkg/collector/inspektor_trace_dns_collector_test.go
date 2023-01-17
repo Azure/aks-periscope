@@ -18,13 +18,12 @@ import (
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/client-go/rest"
 )
 
 func TestInspektorGadgetDNSTraceCollectorGetName(t *testing.T) {
 	const expectedName = "inspektorgadget-dns"
 
-	c := NewInspektorGadgetDNSTraceCollector("", nil, nil, nil, []containercollection.ContainerCollectionOption{})
+	c := NewInspektorGadgetDNSTraceCollector("", nil, nil, []containercollection.ContainerCollectionOption{})
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
@@ -32,8 +31,6 @@ func TestInspektorGadgetDNSTraceCollectorGetName(t *testing.T) {
 }
 
 func TestInspektorGadgetDNSTraceCollectorCheckSupported(t *testing.T) {
-	fixture, _ := test.GetClusterFixture()
-
 	tests := []struct {
 		osIdentifier utils.OSIdentifier
 		wantErr      bool
@@ -49,7 +46,7 @@ func TestInspektorGadgetDNSTraceCollectorCheckSupported(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		c := NewInspektorGadgetDNSTraceCollector(tt.osIdentifier, fixture.PeriscopeAccess.ClientConfig, nil, nil, []containercollection.ContainerCollectionOption{})
+		c := NewInspektorGadgetDNSTraceCollector(tt.osIdentifier, nil, nil, []containercollection.ContainerCollectionOption{})
 		err := c.CheckSupported()
 		if (err != nil) != tt.wantErr {
 			t.Errorf("CheckSupported() error = %v, wantErr %v", err, tt.wantErr)
@@ -67,29 +64,8 @@ func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
 
 	nodeName := nodeNames[0]
 
-	tests := []struct {
-		name         string
-		config       *rest.Config
-		hostNodeName string
-		wantErr      bool
-		wantData     map[string]*regexp.Regexp
-	}{
-		{
-			name:         "bad kubeconfig",
-			config:       &rest.Config{Host: string([]byte{0})},
-			hostNodeName: "",
-			wantErr:      true,
-			wantData:     nil,
-		},
-		{
-			name:         "valid config",
-			config:       fixture.PeriscopeAccess.ClientConfig,
-			hostNodeName: nodeName,
-			wantErr:      false,
-			wantData:     map[string]*regexp.Regexp{},
-		},
-	}
-
+	// Ensure there is a pod running on our node. This pod process won't actually be traced, but we'll pretend
+	// our DNS queries are coming from this pod.
 	setupCommands := []string{
 		fmt.Sprintf("kubectl -n %s apply -f /resources/pause-daemonset.yaml", fixture.KnownNamespaces.Periscope),
 		fmt.Sprintf("kubectl -n %s rollout status daemonset pauseds --timeout=60s", fixture.KnownNamespaces.Periscope),
@@ -100,9 +76,28 @@ func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
 		t.Fatalf("Error installing test daemonset: %v", err)
 	}
 
+	// Find the pod we've created.
 	pod, err := getTestPod(fixture, nodeName)
 	if err != nil {
 		t.Fatalf("Unable to get test pod: %v", err)
+	}
+
+	domains := []string{"microsoft.com", "google.com", "shouldnotexist.com"}
+
+	tests := []struct {
+		name         string
+		hostNodeName string
+		wantErr      bool
+		wantData     map[string]*regexp.Regexp
+	}{
+		{
+			name:         "valid",
+			hostNodeName: nodeName,
+			wantErr:      false,
+			wantData: map[string]*regexp.Regexp{
+				"dnstracer": getExpectedDnsTraceData(fixture, nodeName, pod, domains),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -111,15 +106,42 @@ func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
 				HostNodeName: tt.hostNodeName,
 			}
 
-			testsready := make(chan struct{})
-			testsdone := make(chan struct{})
-			waiter := func() {
-				close(testsready)
-				<-testsdone
+			// Use a channel to get hold of the ContainerCollection (via a ContainerCollectionOption).
+			// We'll use this to add our pretend kubernetes container to.
+			ccChan := make(chan *containercollection.ContainerCollection)
+
+			// Create a container whose PID is the current process, but has the attributes of the pod.
+			testContainer := getCurrentProcessAsKubernetesContainer(pod)
+
+			// Make use of container collection options to:
+			// - Get hold of the ContainerCollection
+			// - Add node name to the collection
+			// - Add K8s pod metadata to the containers (based on the pod UID)
+			// We skip the following options that Periscope uses:
+			// - WithRuncFanotify: because we're not assuming our test is running in a containerized environment.
+			// - WithInitialKubernetesContainers: because this uses an in-cluster context that is inaccessible here.
+			// - WithPodInformer: also uses an in-cluster context.
+			// - WithCgroupEnrichment: because this process is not expected to have cgroups, and we're faking those.
+			// - WithLinuxNamespaceEnrichment: because this will set HostNetwork to true, and we're pretending it's false.
+			opts := []containercollection.ContainerCollectionOption{
+				withContainerCollectionReceiver(ccChan),
+				containercollection.WithNodeName(tt.hostNodeName),
+				containercollection.WithKubernetesEnrichment(tt.hostNodeName, fixture.PeriscopeAccess.ClientConfig),
 			}
 
-			option := getDNSTestContainerOption(pod, testsready, testsdone)
-			c := NewInspektorGadgetDNSTraceCollector(utils.Linux, tt.config, runtimeInfo, waiter, []containercollection.ContainerCollectionOption{option})
+			waiter := func() {
+				// While the tracer is running, add a fake container and perform some DNS queries from its process.
+				cc := <-ccChan
+				cc.AddContainer(testContainer)
+				defer cc.RemoveContainer(testContainer.ID)
+
+				for _, domain := range domains {
+					// Perform a DNS lookup (discarding the result because we're only testing the events it triggers)
+					net.LookupIP(domain)
+				}
+			}
+
+			c := NewInspektorGadgetDNSTraceCollector(utils.Linux, runtimeInfo, waiter, opts)
 			err := c.Collect()
 
 			if (err != nil) != tt.wantErr {
@@ -129,6 +151,28 @@ func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
 			compareCollectorData(t, tt.wantData, data)
 		})
 	}
+}
+
+func getExpectedDnsTraceData(fixture *test.ClusterFixture, nodeName string, pod *corev1.Pod, domains []string) *regexp.Regexp {
+	containerName := pod.Spec.Containers[0].Name
+
+	eventPatterns := []string{}
+	eventPatterns = append(eventPatterns,
+		fmt.Sprintf(
+			`{"node":%q,"namespace":%q,"pod":%q,"container":%q,"type":"debug","message":"tracer attached"}`,
+			nodeName, fixture.KnownNamespaces.Periscope, pod.Name, containerName),
+	)
+
+	for _, domain := range domains {
+		eventPatterns = append(eventPatterns,
+			fmt.Sprintf(
+				`{"node":%q,"namespace":%q,"pod":%q,"container":%q,"type":"normal","id":"[\d\w\.]+","qr":"Q","nameserver":"[\d\.]+","pktType":"OUTGOING","qtype":"A","name":%q}`,
+				nodeName, fixture.KnownNamespaces.Periscope, pod.Name, containerName, domain+"."),
+		)
+	}
+
+	pattern := strings.Join(eventPatterns, `(\n.*)*`)
+	return regexp.MustCompile(pattern)
 }
 
 func getTestPod(fixture *test.ClusterFixture, nodeName string) (*corev1.Pod, error) {
@@ -151,56 +195,38 @@ func getTestPod(fixture *test.ClusterFixture, nodeName string) (*corev1.Pod, err
 	return &pods.Items[0], nil
 }
 
-func getDNSTestContainerOption(pod *corev1.Pod, ready chan struct{}, done chan struct{}) func(*containercollection.ContainerCollection) error {
-	domains := []string{"microsoft.com", "google.com", "shouldnotexist.com"}
+func getCurrentProcessAsKubernetesContainer(pod *corev1.Pod) *containercollection.Container {
+	// Pretend the current test process is a kubernetes container.
+	testProcessPid := os.Getpid()
+	return &containercollection.Container{
+		ID: fmt.Sprintf("test%08d", testProcessPid),
+		// Namespace, Podname and Labels should be populated by the Kubernetes enricher.
+		Pid: uint32(testProcessPid),
+		// This would normally be added by the cgroup enricher
+		CgroupV2: fmt.Sprintf("/kubelet/kubepods/pod%s/k8scontainerid", pod.ObjectMeta.UID),
+		// If OciConfig.Mounts is populated, it's used by the Kubernetes enricher to set the container name
+		// when the container is added.
+		// In gadgettracermanager, whose behaviour we're trying to replicate, the RuncFanotify enricher
+		// populates this. If we don't populate it here, the kubernetes enricher 'drops' the container:
+		// (https://github.com/inspektor-gadget/inspektor-gadget/blob/08b450065bb839e33012d80d476b3a3c17946379/pkg/container-collection/options.go#L497-L500)
+		OciConfig: &ocispec.Spec{
+			Mounts: []ocispec.Mount{
+				ocispec.Mount{
+					Destination: "/dev/termination-log",
+					Type:        "bind",
+					Source:      fmt.Sprintf("/var/lib/kubelet/pods/%s/containers/%s/dnstest/a1234abcd", pod.ObjectMeta.UID, pod.Spec.Containers[0].Name),
+					Options:     []string{"rbind", "rprivate", "rw"},
+				},
+			},
+		},
+	}
+}
 
+func withContainerCollectionReceiver(ccChan chan *containercollection.ContainerCollection) containercollection.ContainerCollectionOption {
 	return func(cc *containercollection.ContainerCollection) error {
 		go func() {
-			// Wait until the Collect function has set up its trace and is ready to listen for events
-			<-ready
-
-			// Pretend the test process is a container which has just been launched.
-			testProcessPid := os.Getpid()
-			testContainer := containercollection.Container{
-				ID: fmt.Sprintf("test%08d", testProcessPid),
-				// Namespace, Podname and Labels should be populated by the Kubernetes enricher.
-				Pid: uint32(testProcessPid),
-				// This would normally be added by the cgroup enricher
-				CgroupV2: fmt.Sprintf("/kubelet/kubepods/pod%s/k8scontainerid", pod.ObjectMeta.UID),
-				// If OciConfig.Mounts is populated, it's used by the Kubernetes enricher to set the container name
-				// when the container is added.
-				// In gadgettracermanager, whose behaviour we're trying to replicate, the RuncFanotify enricher
-				// populates this. If we don't populate it here, the kubernetes enricher 'drops' the container:
-				// (https://github.com/inspektor-gadget/inspektor-gadget/blob/08b450065bb839e33012d80d476b3a3c17946379/pkg/container-collection/options.go#L497-L500)
-				OciConfig: &ocispec.Spec{
-					Mounts: []ocispec.Mount{
-						ocispec.Mount{
-							Destination: "/dev/termination-log",
-							Type:        "bind",
-							Source:      fmt.Sprintf("/var/lib/kubelet/pods/%s/containers/%s/dnstest/a1234abcd", pod.ObjectMeta.UID, pod.Spec.Containers[0].Name),
-							Options:     []string{"rbind", "rprivate", "rw"},
-						},
-					},
-				},
-			}
-
-			// Adding the container will invoke the other ContainerCollectionOptions, which will populate the k8s container properties.
-			cc.AddContainer(&testContainer)
-
-			// HostNetwork will have been set to true by now (because the 'container' and host PIDs are the same).
-			// For testing purposes we want it to be false, because the event callback checks this when populating
-			// the event properties.
-			testContainer.HostNetwork = false
-
-			for _, domain := range domains {
-				// Perform a DNS lookup (discarding the result because we're only testing the events it triggers)
-				net.LookupIP(domain)
-			}
-
-			cc.RemoveContainer(testContainer.ID)
-			close(done)
+			ccChan <- cc
 		}()
-
 		return nil
 	}
 }

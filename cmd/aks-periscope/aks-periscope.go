@@ -15,6 +15,7 @@ import (
 	"github.com/Azure/aks-periscope/pkg/utils"
 
 	containercollection "github.com/inspektor-gadget/inspektor-gadget/pkg/container-collection"
+	"github.com/inspektor-gadget/inspektor-gadget/pkg/runcfanotify"
 
 	restclient "k8s.io/client-go/rest"
 )
@@ -85,7 +86,7 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 
 	// Use the default InspektorGadget behaviour for determining containers:
 	// https://github.com/inspektor-gadget/inspektor-gadget/blob/6b00fea3f925c9da478126931e774e340ca9bfdf/pkg/gadgettracermanager/gadgettracermanager.go#L275-L283
-	var containerCollectionOptions []containercollection.ContainerCollectionOption{
+	var containerCollectionOptions []containercollection.ContainerCollectionOption
 	if runcfanotify.Supported() {
 		containerCollectionOptions = []containercollection.ContainerCollectionOption{
 			containercollection.WithRuncFanotify(),
@@ -97,9 +98,18 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		}
 	}
 
-	waiter := func() {
-		log.Printf("\twait for %v to stop collection", collector.collectingPeriod)
-		time.Sleep(2*time.Minute)
+	containerCollectionOptions = append(
+		containerCollectionOptions,
+		containercollection.WithNodeName(runtimeInfo.HostNodeName),
+		containercollection.WithCgroupEnrichment(),
+		containercollection.WithLinuxNamespaceEnrichment(),
+		containercollection.WithKubernetesEnrichment(runtimeInfo.HostNodeName, config),
+	)
+
+	traceCollectionPeriod := 2 * time.Minute
+	traceWaiter := func() {
+		log.Printf("\twait for %v to stop collection", traceCollectionPeriod)
+		time.Sleep(traceCollectionPeriod)
 	}
 
 	dnsCollector := collector.NewDNSCollector(osIdentifier, knownFilePaths, fileSystem)
@@ -120,7 +130,7 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		collector.NewSystemLogsCollector(osIdentifier, runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
 		collector.NewWindowsLogsCollector(osIdentifier, runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
-		collector.NewInspektorGadgetDNSTraceCollector(osIdentifier, config, runtimeInfo, waiter, containerCollectionOptions),
+		collector.NewInspektorGadgetDNSTraceCollector(osIdentifier, runtimeInfo, traceWaiter, containerCollectionOptions),
 		collector.NewInspektorGadgetTCPTraceCollector(osIdentifier, config, runtimeInfo, 2*time.Minute),
 	}
 
