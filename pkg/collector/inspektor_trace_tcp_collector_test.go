@@ -2,9 +2,8 @@ package collector
 
 import (
 	"fmt"
-	"net"
+	"net/http"
 	"regexp"
-	"strings"
 	"testing"
 
 	"github.com/Azure/aks-periscope/pkg/test"
@@ -13,17 +12,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func TestInspektorGadgetDNSTraceCollectorGetName(t *testing.T) {
-	const expectedName = "inspektorgadget-dnstrace"
+func TestInspektorGadgetTCPTraceCollectorGetName(t *testing.T) {
+	const expectedName = "inspektorgadget-tcptrace"
 
-	c := NewInspektorGadgetDNSTraceCollector("", nil, nil, []containercollection.ContainerCollectionOption{})
+	c := NewInspektorGadgetTCPTraceCollector("", nil, nil, []containercollection.ContainerCollectionOption{})
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
 	}
 }
 
-func TestInspektorGadgetDNSTraceCollectorCheckSupported(t *testing.T) {
+func TestInspektorGadgetTCPTraceCollectorCheckSupported(t *testing.T) {
 	tests := []struct {
 		osIdentifier utils.OSIdentifier
 		wantErr      bool
@@ -39,7 +38,7 @@ func TestInspektorGadgetDNSTraceCollectorCheckSupported(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		c := NewInspektorGadgetDNSTraceCollector(tt.osIdentifier, nil, nil, []containercollection.ContainerCollectionOption{})
+		c := NewInspektorGadgetTCPTraceCollector(tt.osIdentifier, nil, nil, []containercollection.ContainerCollectionOption{})
 		err := c.CheckSupported()
 		if (err != nil) != tt.wantErr {
 			t.Errorf("CheckSupported() error = %v, wantErr %v", err, tt.wantErr)
@@ -47,7 +46,7 @@ func TestInspektorGadgetDNSTraceCollectorCheckSupported(t *testing.T) {
 	}
 }
 
-func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
+func TestInspektorGadgetTCPTraceCollectorCollect(t *testing.T) {
 	fixture, _ := test.GetClusterFixture()
 
 	nodeNames, err := fixture.GetNodeNames()
@@ -70,8 +69,6 @@ func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
 		t.Fatalf("Unable create container from current process: %v", err)
 	}
 
-	domains := []string{"microsoft.com", "google.com", "shouldnotexist.com"}
-
 	tests := []struct {
 		name         string
 		hostNodeName string
@@ -83,7 +80,7 @@ func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
 			hostNodeName: nodeName,
 			wantErr:      false,
 			wantData: map[string]*regexp.Regexp{
-				"dnstracer": getExpectedDnsTraceData(fixture, nodeName, pod, domains),
+				"tcptracer": getExpectedTcpTraceData(fixture, nodeName, pod, testContainer),
 			},
 		},
 	}
@@ -106,13 +103,15 @@ func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
 				cc.AddContainer(testContainer)
 				defer cc.RemoveContainer(testContainer.ID)
 
-				for _, domain := range domains {
-					// Perform a DNS lookup (discarding the result because we're only testing the events it triggers)
-					net.LookupIP(domain)
+				// Make an HTTP request to a non-localhost URL - this should produce a TCP connect event.
+				url := "https://mcr.microsoft.com/v2/aks/periscope/tags/list"
+				_, err = http.Get(url)
+				if err != nil {
+					t.Fatalf("Unable to make request to %s: %v", url, err)
 				}
 			}
 
-			c := NewInspektorGadgetDNSTraceCollector(utils.Linux, runtimeInfo, waiter, opts)
+			c := NewInspektorGadgetTCPTraceCollector(utils.Linux, runtimeInfo, waiter, opts)
 			err := c.Collect()
 
 			if (err != nil) != tt.wantErr {
@@ -124,24 +123,12 @@ func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
 	}
 }
 
-func getExpectedDnsTraceData(fixture *test.ClusterFixture, nodeName string, pod *corev1.Pod, domains []string) *regexp.Regexp {
+func getExpectedTcpTraceData(fixture *test.ClusterFixture, nodeName string, pod *corev1.Pod, container *containercollection.Container) *regexp.Regexp {
 	containerName := pod.Spec.Containers[0].Name
 
-	eventPatterns := []string{}
-	eventPatterns = append(eventPatterns,
-		fmt.Sprintf(
-			`{"node":%q,"namespace":%q,"pod":%q,"container":%q,"type":"debug","message":"tracer attached"}`,
-			nodeName, fixture.KnownNamespaces.Periscope, pod.Name, containerName),
-	)
+	pattern := fmt.Sprintf(
+		`{"node":%q,"namespace":%q,"pod":%q,"container":%q,"type":"normal","operation":"connect","pid":\d+,"comm":"[\w.]+","ipversion":4,"saddr":"[\d\.]+","daddr":"[\d\.]+","sport":\d+,"dport":443,"mountnsid":%d}`,
+		nodeName, fixture.KnownNamespaces.Periscope, pod.Name, containerName, container.Mntns)
 
-	for _, domain := range domains {
-		eventPatterns = append(eventPatterns,
-			fmt.Sprintf(
-				`{"node":%q,"namespace":%q,"pod":%q,"container":%q,"type":"normal","id":"[\w.]+","qr":"Q","nameserver":"[\d\.]+","pktType":"OUTGOING","qtype":"A","name":%q}`,
-				nodeName, fixture.KnownNamespaces.Periscope, pod.Name, containerName, domain+"."),
-		)
-	}
-
-	pattern := strings.Join(eventPatterns, `(\n.*)*`)
 	return regexp.MustCompile(pattern)
 }
