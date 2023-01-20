@@ -51,7 +51,7 @@ func NewInspektorGadgetDNSTraceCollector(
 }
 
 func (collector *InspektorGadgetDNSTraceCollector) GetName() string {
-	return "inspektorgadget-dns"
+	return "inspektorgadget-dnstrace"
 }
 
 // Collect implements the interface method
