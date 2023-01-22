@@ -35,8 +35,8 @@ spec:
           mountPath: /secret
         - name: varlog
           mountPath: /var/log
-        - name: resolvlog
-          mountPath: /run/systemd/resolve
+        - name: run
+          mountPath: /run
         - name: etcvmlog
           mountPath: /etchostlogs
         resources:
@@ -56,9 +56,11 @@ spec:
       - name: varlog
         hostPath:
           path: /var/log
-      - name: resolvlog
+      # Need /run from the host to access the container runtime (e.g. containerd) client socket,
+      # which is used by InspektorGadget to determine the PID for a container ID.
+      - name: run
         hostPath:
-          path: /run/systemd/resolve
+          path: /run
       - name: etcvmlog
         hostPath:
           path: /etc
