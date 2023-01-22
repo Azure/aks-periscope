@@ -106,7 +106,9 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		containercollection.WithKubernetesEnrichment(runtimeInfo.HostNodeName, config),
 	)
 
-	traceCollectionPeriod := 2 * time.Minute
+	// Traces can produce a lot of data.
+	// TODO: Consider whether this should be lower or configurable.
+	traceCollectionPeriod := 30 * time.Second
 	traceWaiter := func() {
 		log.Printf("\twait for %v to stop collection", traceCollectionPeriod)
 		time.Sleep(traceCollectionPeriod)
