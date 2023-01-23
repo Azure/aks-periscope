@@ -16,7 +16,7 @@ import (
 func TestInspektorGadgetDNSTraceCollectorGetName(t *testing.T) {
 	const expectedName = "inspektorgadget-dnstrace"
 
-	c := NewInspektorGadgetDNSTraceCollector("", nil, nil, []containercollection.ContainerCollectionOption{})
+	c := NewInspektorGadgetDNSTraceCollector(nil, nil, []containercollection.ContainerCollectionOption{})
 	actualName := c.GetName()
 	if actualName != expectedName {
 		t.Errorf("unexpected name: expected %s, found %s", expectedName, actualName)
@@ -24,26 +24,10 @@ func TestInspektorGadgetDNSTraceCollectorGetName(t *testing.T) {
 }
 
 func TestInspektorGadgetDNSTraceCollectorCheckSupported(t *testing.T) {
-	tests := []struct {
-		osIdentifier utils.OSIdentifier
-		wantErr      bool
-	}{
-		{
-			osIdentifier: utils.Windows,
-			wantErr:      true,
-		},
-		{
-			osIdentifier: utils.Linux,
-			wantErr:      false,
-		},
-	}
-
-	for _, tt := range tests {
-		c := NewInspektorGadgetDNSTraceCollector(tt.osIdentifier, nil, nil, []containercollection.ContainerCollectionOption{})
-		err := c.CheckSupported()
-		if (err != nil) != tt.wantErr {
-			t.Errorf("CheckSupported() error = %v, wantErr %v", err, tt.wantErr)
-		}
+	c := NewInspektorGadgetDNSTraceCollector(nil, nil, []containercollection.ContainerCollectionOption{})
+	err := c.CheckSupported()
+	if err != nil {
+		t.Errorf("error checking supported: %v", err)
 	}
 }
 
@@ -112,7 +96,7 @@ func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
 				}
 			}
 
-			c := NewInspektorGadgetDNSTraceCollector(utils.Linux, runtimeInfo, waiter, opts)
+			c := NewInspektorGadgetDNSTraceCollector(runtimeInfo, waiter, opts)
 			err := c.Collect()
 
 			if (err != nil) != tt.wantErr {
