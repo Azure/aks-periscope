@@ -14,9 +14,6 @@ import (
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
 
-	containercollection "github.com/inspektor-gadget/inspektor-gadget/pkg/container-collection"
-	"github.com/inspektor-gadget/inspektor-gadget/pkg/runcfanotify"
-
 	restclient "k8s.io/client-go/rest"
 )
 
@@ -84,36 +81,6 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		}
 	}
 
-	// Use the default InspektorGadget behaviour for determining containers:
-	// https://github.com/inspektor-gadget/inspektor-gadget/blob/6b00fea3f925c9da478126931e774e340ca9bfdf/pkg/gadgettracermanager/gadgettracermanager.go#L275-L283
-	var containerCollectionOptions []containercollection.ContainerCollectionOption
-	if runcfanotify.Supported() {
-		containerCollectionOptions = []containercollection.ContainerCollectionOption{
-			containercollection.WithRuncFanotify(),
-			containercollection.WithInitialKubernetesContainers(runtimeInfo.HostNodeName),
-		}
-	} else {
-		containerCollectionOptions = []containercollection.ContainerCollectionOption{
-			containercollection.WithPodInformer(runtimeInfo.HostNodeName),
-		}
-	}
-
-	containerCollectionOptions = append(
-		containerCollectionOptions,
-		containercollection.WithNodeName(runtimeInfo.HostNodeName),
-		containercollection.WithCgroupEnrichment(),
-		containercollection.WithLinuxNamespaceEnrichment(),
-		containercollection.WithKubernetesEnrichment(runtimeInfo.HostNodeName, config),
-	)
-
-	// Traces can produce a lot of data.
-	// TODO: Consider whether this should be lower or configurable.
-	traceCollectionPeriod := 30 * time.Second
-	traceWaiter := func() {
-		log.Printf("\twait for %v to stop collection", traceCollectionPeriod)
-		time.Sleep(traceCollectionPeriod)
-	}
-
 	dnsCollector := collector.NewDNSCollector(osIdentifier, knownFilePaths, fileSystem)
 	kubeletCmdCollector := collector.NewKubeletCmdCollector(osIdentifier, runtimeInfo)
 	networkOutboundCollector := collector.NewNetworkOutboundCollector()
@@ -132,9 +99,8 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		collector.NewSystemLogsCollector(osIdentifier, runtimeInfo),
 		collector.NewSystemPerfCollector(config, runtimeInfo),
 		collector.NewWindowsLogsCollector(osIdentifier, runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
-		collector.NewInspektorGadgetDNSTraceCollector(osIdentifier, runtimeInfo, traceWaiter, containerCollectionOptions),
-		collector.NewInspektorGadgetTCPTraceCollector(osIdentifier, runtimeInfo, traceWaiter, containerCollectionOptions),
 	}
+	collectors = addOSSpecificCollectors(collectors, config, runtimeInfo)
 
 	collectorGrp := new(sync.WaitGroup)
 

@@ -21,7 +21,6 @@ import (
 // InspektorGadgetTCPTraceCollector defines a InspektorGadget Trace TCP Collector struct
 type InspektorGadgetTCPTraceCollector struct {
 	data                       map[string]string
-	osIdentifier               utils.OSIdentifier
 	runtimeInfo                *utils.RuntimeInfo
 	waiter                     func()
 	containerCollectionOptions []containercollection.ContainerCollectionOption
@@ -30,22 +29,18 @@ type InspektorGadgetTCPTraceCollector struct {
 // CheckSupported implements the interface method
 func (collector *InspektorGadgetTCPTraceCollector) CheckSupported() error {
 	// Inspektor Gadget relies on eBPF which is not (currently) available on Windows nodes.
-	if collector.osIdentifier != utils.Linux {
-		return fmt.Errorf("unsupported OS: %s", collector.osIdentifier)
-	}
+	// However, we're only compiling this for Linux OS right now, so we can skip the OS check.
 	return nil
 }
 
 // NewInspektorGadgetTCPTraceCollector is a constructor.
 func NewInspektorGadgetTCPTraceCollector(
-	osIdentifier utils.OSIdentifier,
 	runtimeInfo *utils.RuntimeInfo,
 	waiter func(),
 	containerCollectionOptions []containercollection.ContainerCollectionOption,
 ) *InspektorGadgetTCPTraceCollector {
 	return &InspektorGadgetTCPTraceCollector{
 		data:                       make(map[string]string),
-		osIdentifier:               osIdentifier,
 		runtimeInfo:                runtimeInfo,
 		waiter:                     waiter,
 		containerCollectionOptions: containerCollectionOptions,

@@ -19,7 +19,6 @@ import (
 // InspektorGadgetDNSTraceCollector defines a InspektorGadget Trace DNS Collector struct
 type InspektorGadgetDNSTraceCollector struct {
 	data                       map[string]string
-	osIdentifier               utils.OSIdentifier
 	runtimeInfo                *utils.RuntimeInfo
 	waiter                     func()
 	containerCollectionOptions []containercollection.ContainerCollectionOption
@@ -28,22 +27,18 @@ type InspektorGadgetDNSTraceCollector struct {
 // CheckSupported implements the interface method
 func (collector *InspektorGadgetDNSTraceCollector) CheckSupported() error {
 	// Inspektor Gadget relies on eBPF which is not (currently) available on Windows nodes.
-	if collector.osIdentifier != utils.Linux {
-		return fmt.Errorf("unsupported OS: %s", collector.osIdentifier)
-	}
+	// However, we're only compiling this for Linux OS right now, so we can skip the OS check.
 	return nil
 }
 
 // NewInspektorGadgetDNSTraceCollector is a constructor.
 func NewInspektorGadgetDNSTraceCollector(
-	osIdentifier utils.OSIdentifier,
 	runtimeInfo *utils.RuntimeInfo,
 	waiter func(),
 	containerCollectionOptions []containercollection.ContainerCollectionOption,
 ) *InspektorGadgetDNSTraceCollector {
 	return &InspektorGadgetDNSTraceCollector{
 		data:                       make(map[string]string),
-		osIdentifier:               osIdentifier,
 		runtimeInfo:                runtimeInfo,
 		waiter:                     waiter,
 		containerCollectionOptions: containerCollectionOptions,
