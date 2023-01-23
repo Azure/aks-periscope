@@ -1,9 +1,0 @@
-apiVersion: gadget.kinvolk.io/v1alpha1
-kind: Trace
-metadata:
-  name: biolatency
-  namespace: gadget
-spec:
-  gadget: biolatency
-  runMode: Manual
-  outputMode: Status
