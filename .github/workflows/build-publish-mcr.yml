@@ -66,7 +66,7 @@ jobs:
       - name: 'Run Azure CLI commands'
         run: |
           $tag = "${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}-${{ matrix.tagext }}"
-          docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
+          DOCKER_BUILDKIT=1 docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
           az acr login -n ${{ secrets.AZURE_REGISTRY_SERVER }}
           docker push $tag
           echo "acr push done"

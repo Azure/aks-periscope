@@ -55,5 +55,5 @@ jobs:
       # Currently, for pure gitops reconstructing this runtime setting will require looking at the repository owner of the commit
         run: |
           $tag = "ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}-${{ matrix.tagext }}"
-          docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
+          DOCKER_BUILDKIT=1 docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
           docker push $tag
