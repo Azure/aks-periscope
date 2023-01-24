@@ -38,22 +38,45 @@ jobs:
         run: |
           echo "Version: ${{ steps.changelog_reader.outputs.version }}"
           echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
-      # Lowercase my github ownername.
-      - name: Set Environment Variables
-        run: |
-          $owner="${{ github.repository_owner }}".ToLower()
-          Add-Content -Path $env:GITHUB_ENV -Value "REPO-OWNER=$owner"
-
       - name: Login to GitHub Packages OCI Registry
         uses: docker/login-action@v1
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Publish to ghcr.io 
+      - name: Publish to ghcr.io
       # Note the below automatically sets the registry to the local GH registry of the org name. 
       # Currently, for pure gitops reconstructing this runtime setting will require looking at the repository owner of the commit
         run: |
-          $tag = "ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}-${{ matrix.tagext }}"
-          DOCKER_BUILDKIT=1 docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
+          $owner = "${{ github.repository_owner }}".ToLower()
+          $tag = "ghcr.io/$owner/aks/periscope:${{ steps.changelog_reader.outputs.version }}-${{ matrix.tagext }}"
+          $env:DOCKER_BUILDKIT = 1
+          docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
           docker push $tag
+  # update-manifest:
+  #   runs-on: ubuntu-latest
+  #   needs: publish
+  #   defaults:
+  #     run:
+  #       shell: pwsh
+  #   steps:
+  #   - uses: actions/checkout@v2
+  #   - name: Get Changelog Entry
+  #     id: changelog_reader
+  #     uses: mindsers/changelog-reader-action@v2
+  #     with:
+  #       validation_depth: 10
+  #       path: ./CHANGELOG.md
+  #   - name: Login to GitHub Packages OCI Registry
+  #     uses: docker/login-action@v1
+  #     with:
+  #       registry: ghcr.io
+  #       username: ${{ github.repository_owner }}
+  #       password: ${{ secrets.GITHUB_TOKEN }}
+  #   - name: Publish manifest
+  #     run: |
+  #       $owner = "${{ github.repository_owner }}".ToLower()
+  #       $tag = "ghcr.io/$owner/aks/periscope:${{ steps.changelog_reader.outputs.version }}-${{ matrix.tagext }}"
+  #       $env:DOCKER_BUILDKIT = 1
+  #       DOCKER_BUILDKIT=1 docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
+  #       docker push $tag
