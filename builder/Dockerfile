@@ -5,6 +5,9 @@ ARG BUILDER_IMAGE=golang:1.19.5
 # For Windows, use https://mcr.microsoft.com/en-us/product/windows/nanoserver/about
 ARG BASE_IMAGE=mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 
+# For Windows, set to '.exe'
+ARG EXTENSION=
+
 # Builder
 FROM $BUILDER_IMAGE AS builder
 
@@ -20,17 +23,8 @@ COPY . .
 
 RUN go build ./cmd/aks-periscope
 
-# Use build stages to determine the appropriate executable file extension for the OS:
-# https://stackoverflow.com/a/60820156
-FROM $BASE_IMAGE AS getext-linux
-ENV EXTENSION=
-
-FROM $BASE_IMAGE AS getext-windows
-ENV EXTENSION=.exe
-
 # Runner
-# https://docs.docker.com/engine/reference/builder/#automatic-platform-args-in-the-global-scope
-FROM getext-$TARGETOS
+FROM $BASE_IMAGE
 
 COPY --from=builder /build/aks-periscope$EXTENSION /
 

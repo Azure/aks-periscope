@@ -17,12 +17,15 @@ jobs:
         - os: ubuntu-latest
           baseimage: 'mcr.microsoft.com/cbl-mariner/distroless/base:2.0'
           tagext: 'mariner2.0'
+          extension: ''
         - os: windows-2019
           baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2019'
           tagext: 'nanoserver2019'
+          extension: '.exe'
         - os: windows-2022
           baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2022'
           tagext: 'nanoserver2022'
+          extension: '.exe'
     defaults:
       run:
         shell: pwsh
@@ -50,8 +53,7 @@ jobs:
         run: |
           $owner = "${{ github.repository_owner }}".ToLower()
           $tag = "ghcr.io/$owner/aks/periscope:${{ steps.changelog_reader.outputs.version }}-${{ matrix.tagext }}"
-          $env:DOCKER_BUILDKIT = 1
-          docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
+          docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} --build-arg EXTENSION=${{ matrix.extension }} -t $tag .
           docker push $tag
   # update-manifest:
   #   runs-on: ubuntu-latest
@@ -77,6 +79,5 @@ jobs:
   #     run: |
   #       $owner = "${{ github.repository_owner }}".ToLower()
   #       $tag = "ghcr.io/$owner/aks/periscope:${{ steps.changelog_reader.outputs.version }}-${{ matrix.tagext }}"
-  #       $env:DOCKER_BUILDKIT = 1
-  #       DOCKER_BUILDKIT=1 docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
+  #       docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
   #       docker push $tag
