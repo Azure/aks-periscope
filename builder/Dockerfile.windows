@@ -1,0 +1,26 @@
+# Base image depends on target platform.
+# See: https://mcr.microsoft.com/en-us/product/windows/nanoserver/about
+ARG BASE_IMAGE=mcr.microsoft.com/windows/nanoserver:ltsc2019
+
+# Builder
+# golang builder image is multi-platform
+FROM golang:1.19.5 AS builder
+
+ENV GO111MODULE=on CGO_ENABLED=0
+
+WORKDIR /build
+
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+
+COPY . .
+
+RUN go build ./cmd/aks-periscope
+
+# Runner
+FROM $BASE_IMAGE
+
+COPY --from=builder /build/aks-periscope.exe /
+
+ENTRYPOINT ["/aks-periscope.exe"]
