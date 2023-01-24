@@ -23,6 +23,9 @@ COPY . .
 
 RUN go build ./cmd/aks-periscope
 
+# TODO: DELETE
+RUN ls /build/
+
 # Runner
 FROM $BASE_IMAGE
 
