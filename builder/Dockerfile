@@ -5,9 +5,6 @@ ARG BUILDER_IMAGE=golang:1.19.5
 # For Windows, use https://mcr.microsoft.com/en-us/product/windows/nanoserver/about
 ARG BASE_IMAGE=mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 
-# For Windows, set to '.exe'
-ARG EXTENSION=
-
 # Builder
 FROM $BUILDER_IMAGE AS builder
 
@@ -23,11 +20,11 @@ COPY . .
 
 RUN go build ./cmd/aks-periscope
 
-# TODO: DELETE
-RUN ls /build/
-
 # Runner
 FROM $BASE_IMAGE
+
+# For Windows, set to '.exe'
+ARG EXTENSION=
 
 COPY --from=builder /build/aks-periscope$EXTENSION /
 

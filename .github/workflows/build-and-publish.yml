@@ -55,14 +55,17 @@ jobs:
           $tag = "ghcr.io/$owner/aks/periscope:${{ steps.changelog_reader.outputs.version }}-${{ matrix.tagext }}"
           docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} --build-arg EXTENSION=${{ matrix.extension }} -t $tag .
           docker push $tag
-  # update-manifest:
-  #   runs-on: ubuntu-latest
-  #   needs: publish
-  #   defaults:
-  #     run:
-  #       shell: pwsh
-  #   steps:
-  #   - uses: actions/checkout@v2
+          echo "TAG-${{ matrix.tagext }}=$tag" >> $GITHUB_ENV
+  update-manifest:
+    runs-on: ubuntu-latest
+    needs: publish
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+    - uses: actions/checkout@v2
+    - name: List of the GitHub Actions environment variables on Windows
+      run: env
   #   - name: Get Changelog Entry
   #     id: changelog_reader
   #     uses: mindsers/changelog-reader-action@v2
