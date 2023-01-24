@@ -24,8 +24,7 @@ jobs:
       run: |
         echo "Version: ${{ steps.changelog_reader.outputs.version }}"
         echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
-        $owner = "${{ github.repository_owner }}".ToLower()
-        $tagbase = "ghcr.io/$owner/aks/periscope:${{ steps.changelog_reader.outputs.version }}"
+        $tagbase = "${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}"
         echo "tagbase=$tagbase" >> $env:GITHUB_OUTPUT
     outputs:
       tagbase: ${{ steps.read_metadata.outputs.tagbase }}
