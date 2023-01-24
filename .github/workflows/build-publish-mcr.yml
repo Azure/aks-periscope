@@ -29,16 +29,19 @@ jobs:
   publish:
     runs-on: ${{ matrix.os }}
     strategy:
-      max-parallel: 2
+      max-parallel: 4
       matrix:
-        os: [ubuntu-latest, windows-2019]
+        os: [ubuntu-latest, windows-2019, windows-2022]
         include:
         - os: ubuntu-latest
-          file: ./builder/Dockerfile.linux
-          imagename: 'aks/periscope'
+          baseimage: 'mcr.microsoft.com/cbl-mariner/distroless/base:2.0'
+          tagext: 'mariner2.0'
         - os: windows-2019
-          file: ./builder/Dockerfile.windows
-          imagename: 'aks/periscope-win'
+          baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2019'
+          tagext: 'nanoserver2019'
+        - os: windows-2022
+          baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2022'
+          tagext: 'nanoserver2022'
     defaults:
       run:
         shell: pwsh
@@ -62,7 +65,8 @@ jobs:
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
       - name: 'Run Azure CLI commands'
         run: |
-          docker build -f ${{ matrix.file }} -t ${{ secrets.AZURE_REGISTRY_SERVER }}/public/${{ matrix.imagename }}:${{ steps.changelog_reader.outputs.version }} .
+          $tag = "${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}-${{ matrix.tagext }}"
+          docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
           az acr login -n ${{ secrets.AZURE_REGISTRY_SERVER }}
-          docker push ${{ secrets.AZURE_REGISTRY_SERVER }}/public/${{ matrix.imagename }}:${{ steps.changelog_reader.outputs.version }}
+          docker push $tag
           echo "acr push done"

@@ -10,16 +10,19 @@ jobs:
   publish:
     runs-on: ${{ matrix.os }}
     strategy:
-      max-parallel: 2
+      max-parallel: 4
       matrix:
-        os: [ubuntu-latest, windows-2019]
+        os: [ubuntu-latest, windows-2019, windows-2022]
         include:
         - os: ubuntu-latest
-          file: ./builder/Dockerfile.linux
-          imagename: 'aks/periscope'
+          baseimage: 'mcr.microsoft.com/cbl-mariner/distroless/base:2.0'
+          tagext: 'mariner2.0'
         - os: windows-2019
-          file: ./builder/Dockerfile.windows
-          imagename: 'aks/periscope-win'
+          baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2019'
+          tagext: 'nanoserver2019'
+        - os: windows-2022
+          baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2022'
+          tagext: 'nanoserver2022'
     defaults:
       run:
         shell: pwsh
@@ -51,5 +54,6 @@ jobs:
       # Note the below automatically sets the registry to the local GH registry of the org name. 
       # Currently, for pure gitops reconstructing this runtime setting will require looking at the repository owner of the commit
         run: |
-          docker build -f ${{ matrix.file }} -t ghcr.io/${{ env.REPO-OWNER }}/${{ matrix.imagename }}:${{ steps.changelog_reader.outputs.version }} .
-          docker push ghcr.io/${{ env.REPO-OWNER }}/${{ matrix.imagename }}:${{ steps.changelog_reader.outputs.version }}
+          $tag = "ghcr.io/${{ env.REPO-OWNER }}/aks/periscope:${{ steps.changelog_reader.outputs.version }}-${{ matrix.tagext }}"
+          docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
+          docker push $tag
