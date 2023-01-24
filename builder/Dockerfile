@@ -1,12 +1,10 @@
-# golang builder image is multi-platform
-ARG BUILDER_IMAGE=golang:1.19.5
-
 # Base image depends on target platform.
 # For Windows, use https://mcr.microsoft.com/en-us/product/windows/nanoserver/about
 ARG BASE_IMAGE=mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 
 # Builder
-FROM $BUILDER_IMAGE AS builder
+# golang builder image is multi-platform
+FROM golang:1.19.5 AS builder
 
 ENV GO111MODULE=on CGO_ENABLED=0
 
@@ -23,9 +21,7 @@ RUN go build ./cmd/aks-periscope
 # Runner
 FROM $BASE_IMAGE
 
-# For Windows, set to '.exe'
-ARG EXTENSION=
+# Use wildcard in case there is an '.exe' extension
+COPY --from=builder /build/aks-periscope* /
 
-COPY --from=builder /build/aks-periscope$EXTENSION /
-
-ENTRYPOINT ["/aks-periscope$EXTENSION"]
+ENTRYPOINT ["/aks-periscope"]

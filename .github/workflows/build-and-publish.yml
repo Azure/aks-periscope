@@ -41,15 +41,12 @@ jobs:
         - os: ubuntu-latest
           baseimage: 'mcr.microsoft.com/cbl-mariner/distroless/base:2.0'
           tagext: 'mariner2.0'
-          extension: ''
         - os: windows-2019
           baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2019'
           tagext: 'nanoserver2019'
-          extension: '.exe'
         - os: windows-2022
           baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2022'
           tagext: 'nanoserver2022'
-          extension: '.exe'
     defaults:
       run:
         shell: pwsh
@@ -66,7 +63,7 @@ jobs:
       run: |
         $tag = "${{ needs.common.outputs.tagbase }}-${{ matrix.tagext }}"
         echo "tag-${{ matrix.os }}=$tag" >> $env:GITHUB_OUTPUT
-        docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} --build-arg EXTENSION=${{ matrix.extension }} -t $tag .
+        docker build -f ./builder/Dockerfile --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
         docker push $tag
     outputs:
       linux: ${{ steps.publish.outputs.tag-ubuntu-latest }}
