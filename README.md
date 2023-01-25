@@ -79,12 +79,17 @@ The [`Kustomize`](https://kubernetes.io/docs/tasks/manage-kubernetes-objects/kus
 resources:
 - https://github.com/azure/aks-periscope//deployment/base?ref=<RELEASE_TAG>
 
+# Optional feature components, uncomment if applicable:
+# - win-hpc: only useful if the cluster contains Windows nodes
+# components:
+# - https://github.com/Azure/aks-periscope//deployment/components/win-hpc?ref=<RELEASE_TAG>
+
 images:
 - name: periscope-linux
   newName: mcr.microsoft.com/aks/periscope
   newTag: <IMAGE_TAG>
 - name: periscope-windows
-  newName: mcr.microsoft.com/aks/periscope-win
+  newName: mcr.microsoft.com/aks/periscope
   newTag: <IMAGE_TAG>
 
 secretGenerator:
