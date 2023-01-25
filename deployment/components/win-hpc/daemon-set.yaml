@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  name: diagnostics-collection-win
+  name: diagnostics-collection-win2019
   labels:
     app: diagnostics-collection
 spec:
@@ -16,6 +16,7 @@ spec:
       hostPID: true
       nodeSelector:
         kubernetes.io/os: windows
+        kubernetes.azure.com/os-sku: Windows2019
       hostNetwork: true
       securityContext:
         windowsOptions:
@@ -23,7 +24,55 @@ spec:
           runAsUserName: "NT AUTHORITY\\SYSTEM"
       containers:
       - name: diagnostics-collection
-        image: mcr.microsoft.com/windows/servercore:1809
+        image: mcr.microsoft.com/windows/nanoserver:ltsc2019
+        imagePullPolicy: Always
+        command:
+        - powershell
+        args:
+        - scripts\CollectDiagnostics.ps1
+        volumeMounts:
+        - name: diag-config-volume
+          mountPath: config
+        - name: script-config-volume
+          mountPath: scripts
+      volumes:
+      - name: diag-config-volume
+        configMap:
+          name: diagnostic-config
+          items:
+          - key: DIAGNOSTIC_RUN_ID
+            path: run_id
+      - name: script-config-volume
+        configMap:
+          name: script-config
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: diagnostics-collection-win2022
+  labels:
+    app: diagnostics-collection
+spec:
+  selector:
+    matchLabels:
+      app: diagnostics-collection
+  template:
+    metadata:
+      labels:
+        app: diagnostics-collection
+    spec:
+      hostPID: true
+      nodeSelector:
+        kubernetes.io/os: windows
+        kubernetes.azure.com/os-sku: Windows2022
+      hostNetwork: true
+      securityContext:
+        windowsOptions:
+          hostProcess: true
+          runAsUserName: "NT AUTHORITY\\SYSTEM"
+      containers:
+      - name: diagnostics-collection
+        image: mcr.microsoft.com/windows/nanoserver:ltsc2022
         imagePullPolicy: Always
         command:
         - powershell
