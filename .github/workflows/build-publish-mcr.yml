@@ -24,8 +24,7 @@ jobs:
       run: |
         echo "Version: ${{ steps.changelog_reader.outputs.version }}"
         echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
-        $tagbase = "${{ secrets.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}"
-        echo "Tag base: $tagbase"
+        $tagbase = "${{ vars.AZURE_REGISTRY_SERVER }}/public/aks/periscope:${{ steps.changelog_reader.outputs.version }}"
         echo "tagbase=$tagbase" >> $env:GITHUB_OUTPUT
     outputs:
       tagbase: ${{ steps.read_metadata.outputs.tagbase }}
@@ -75,18 +74,17 @@ jobs:
     - name: 'Az CLI login'
       uses: azure/login@v1
       with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     - name: 'Publish to ACR'
       id: publish
       run: |
         $tag = "${{ needs.common.outputs.tagbase }}-${{ matrix.tagext }}"
         echo "tag-${{ matrix.os }}=$tag" >> $env:GITHUB_OUTPUT
-        echo "${{ toJSON(needs) }}"
-        # docker build -f ${{ matrix.file }} --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
-        # az acr login -n ${{ secrets.AZURE_REGISTRY_SERVER }}
-        # docker push $tag
+        docker build -f ${{ matrix.file }} --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t $tag .
+        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+        docker push $tag
     outputs:
       linux: ${{ steps.publish.outputs.tag-ubuntu-latest }}
       win2019: ${{ steps.publish.outputs.tag-windows-2019 }}
@@ -102,13 +100,13 @@ jobs:
     - name: 'Az CLI login'
       uses: azure/login@v1
       with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     - name: Publish cross-platform manifest
       id: publish
       run: |
         $tagbase = "${{ needs.common.outputs.tagbase }}"
-        # az acr login -n ${{ secrets.AZURE_REGISTRY_SERVER }}
-        # docker manifest create $tagbase ${{ needs.publish.outputs.linux }} ${{ needs.publish.outputs.win2019 }} ${{ needs.publish.outputs.win2022 }}
-        # docker manifest push $tagbase
+        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+        docker manifest create $tagbase ${{ needs.publish.outputs.linux }} ${{ needs.publish.outputs.win2019 }} ${{ needs.publish.outputs.win2022 }}
+        docker manifest push $tagbase
