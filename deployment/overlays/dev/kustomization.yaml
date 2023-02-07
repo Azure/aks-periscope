@@ -22,7 +22,7 @@ images:
   newName: periscope-local
   newTag: latest
 - name: periscope-windows
-  newName: mcr.microsoft.com/aks/periscope-win
+  newName: mcr.microsoft.com/aks/periscope
   newTag: latest
 
 secretGenerator:

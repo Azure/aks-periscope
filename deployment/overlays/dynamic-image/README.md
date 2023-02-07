@@ -41,8 +41,7 @@ These variables are needed for both publishing the images and deploying Periscop
 ```sh
 acr_name=...
 export IMAGE_TAG=...
-export IMAGE_NAME_LINUX=${acr_name}.azurecr.io/aks/periscope
-export IMAGE_NAME_WINDOWS=${acr_name}.azurecr.io/aks/periscope-win
+export IMAGE_NAME=${acr_name}.azurecr.io/aks/periscope
 ```
 
 #### 3. Run an ACR Build
@@ -50,8 +49,15 @@ export IMAGE_NAME_WINDOWS=${acr_name}.azurecr.io/aks/periscope-win
 You can build and publish both Linux and Windows images using the `az acr build` command:
 
 ```sh
-az acr build --registry $acr_name -f ./builder/Dockerfile.linux -t $IMAGE_NAME_LINUX:$IMAGE_TAG --platform linux/amd64 .
-az acr build --registry $acr_name -f ./builder/Dockerfile.windows -t $IMAGE_NAME_WINDOWS:$IMAGE_TAG --platform windows/amd64 .
+# Build images for each required platform.
+az acr build --registry $acr_name -f ./builder/Dockerfile.linux -t $IMAGE_NAME:$IMAGE_TAG-linux --platform linux/amd64 .
+az acr build --registry $acr_name -f ./builder/Dockerfile.windows -t $IMAGE_NAME:$IMAGE_TAG-win2019 --build-arg BASE_IMAGE=mcr.microsoft.com/windows/nanoserver:ltsc2019 --platform windows/amd64 .
+az acr build --registry $acr_name -f ./builder/Dockerfile.windows -t $IMAGE_NAME:$IMAGE_TAG-win2022 --build-arg BASE_IMAGE=mcr.microsoft.com/windows/nanoserver:ltsc2022 --platform windows/amd64 .
+
+# Create a cross-platform manifest file
+az acr login -n $acr_name
+docker manifest create $IMAGE_NAME:$IMAGE_TAG $IMAGE_NAME:$IMAGE_TAG-linux $IMAGE_NAME:$IMAGE_TAG-win2019 $IMAGE_NAME:$IMAGE_TAG-win2022
+docker manifest push $IMAGE_NAME:$IMAGE_TAG
 ```
 
 ### Publishing to GHCR
@@ -69,8 +75,7 @@ These variables will be needed for deploying Periscope. Fill in the name of the 
 ```sh
 repo_username=...
 export IMAGE_TAG=...
-export IMAGE_NAME_LINUX=ghcr.io/${REPO_USERNAME}/aks/periscope
-export IMAGE_NAME_WINDOWS=ghcr.io/${REPO_USERNAME}/aks/periscope-win
+export IMAGE_NAME=ghcr.io/${repo_username}/aks/periscope
 ```
 
 #### 3. Ensure Packages are Public

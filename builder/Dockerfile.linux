@@ -1,11 +1,12 @@
-# Builder
-FROM golang:alpine AS builder
-RUN apk add git
+# Base image depends on target platform.
+# See: https://mcr.microsoft.com/en-us/product/cbl-mariner/distroless/base/about
+ARG BASE_IMAGE=mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 
-ENV GO111MODULE=on \
-    CGO_ENABLED=0 \
-    GOOS=linux \
-    GOARCH=amd64
+# Builder
+# golang builder image is multi-platform
+FROM golang:1.19.5 AS builder
+
+ENV GO111MODULE=on CGO_ENABLED=0
 
 WORKDIR /build
 
@@ -18,7 +19,7 @@ COPY . .
 RUN go build ./cmd/aks-periscope
 
 # Runner
-FROM alpine
+FROM $BASE_IMAGE
 
 COPY --from=builder /build/aks-periscope /
 

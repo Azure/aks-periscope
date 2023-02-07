@@ -11,7 +11,7 @@ images:
   newName: mcr.microsoft.com/aks/periscope
   newTag: "${IMAGE_TAG}"
 - name: periscope-windows
-  newName: mcr.microsoft.com/aks/periscope-win
+  newName: mcr.microsoft.com/aks/periscope
   newTag: "${IMAGE_TAG}"
 
 secretGenerator:
