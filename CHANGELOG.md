@@ -1,5 +1,15 @@
 # Change Log
 
+## [0.0.12]
+
+* Fix/remove confusing diagram. by @Tatsinnit in https://github.com/Azure/aks-periscope/pull/200
+* Update deployment notes for image registries to include ACR as well as GHCR by @peterbom in https://github.com/Azure/aks-periscope/pull/202
+* Update codeql to latest versions and use. by @Tatsinnit in https://github.com/Azure/aks-periscope/pull/206
+* Feature/upgrade go1.19 by @bravebeaver in https://github.com/Azure/aks-periscope/pull/210
+* Allow building and using images for Windows Server 2022 as well as 2019 by @peterbom in https://github.com/Azure/aks-periscope/pull/212
+
+Thanks to @bravebeaver and @Tatsinnit
+
 ## [0.0.11]
 
 * Allow multiple 'runs' for Periscope by @peterbom in https://github.com/Azure/aks-periscope/pull/196
