@@ -121,7 +121,7 @@ All placeholders in angled brackets (`<`/`>`) need to be substituted for the rel
 - `SAS_KEY`: An [Account SAS](https://docs.microsoft.com/en-us/azure/storage/common/storage-sas-overview#account-sas) including preceding `?` with [parameters](https://docs.microsoft.com/en-us/rest/api/storageservices/create-account-sas#specify-the-account-sas-parameters):
   - `ss`: `b` (Service: blob)
   - `srt`: `sco` (Resource types: service, container and object)
-  - `sp`: `rlacwd` (Permissions: read, list, add, create, write, delete)
+  - `sp`: `rlacw` (Permissions: read, list, add, create, write)
 - `RUN_ID`: The identifier for a particular 'run' of Periscope, by convention a timestamp formatted as `YYYY-MM-DDThh-mm-ssZ`. This will become the topmost container within `CONTAINER_NAME`.
 
 You can then deploy Periscope by running:
