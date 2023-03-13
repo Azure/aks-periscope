@@ -41,10 +41,10 @@ spec:
           mountPath: /etchostlogs
         resources:
           requests:
-            memory: "500Mi"
-            cpu: "250m"
+            memory: "40Mi"
+            cpu: "1m"
           limits:
-            memory: "2000Mi"
+            memory: "500Mi"
             cpu: "1000m"
       volumes:
       - name: diag-config-volume
@@ -102,10 +102,10 @@ spec:
           mountPath: /AzureData
         resources:
           requests:
-            memory: "500Mi"
-            cpu: "250m"
+            memory: "100Mi"
+            cpu: "100m"
           limits:
-            memory: "2000Mi"
+            memory: "1Gi"
             cpu: "1000m"
       volumes:
       - name: diag-config-volume

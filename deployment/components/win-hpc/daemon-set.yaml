@@ -35,6 +35,13 @@ spec:
           mountPath: config
         - name: script-config-volume
           mountPath: scripts
+        resources:
+          requests:
+            memory: "1000Mi"
+            cpu: "100m"
+          limits:
+            memory: "2000Mi"
+            cpu: "1000m"
       volumes:
       - name: diag-config-volume
         configMap:
@@ -83,6 +90,13 @@ spec:
           mountPath: config
         - name: script-config-volume
           mountPath: scripts
+        resources:
+          requests:
+            memory: "1000Mi"
+            cpu: "100m"
+          limits:
+            memory: "2000Mi"
+            cpu: "1000m"
       volumes:
       - name: diag-config-volume
         configMap:
