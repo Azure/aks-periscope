@@ -95,7 +95,7 @@ sas_expiry=`date -u -d "30 minutes" '+%Y-%m-%dT%H:%MZ'`
 sas=$(az storage account generate-sas \
     --account-name $stg_account \
     --subscription $sub_id \
-    --permissions rwdlacup \
+    --permissions rlacw \
     --services b \
     --resource-types sco \
     --expiry $sas_expiry \
