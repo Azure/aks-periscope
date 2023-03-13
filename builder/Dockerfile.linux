@@ -18,9 +18,22 @@ COPY . .
 
 RUN go build ./cmd/aks-periscope
 
+# Add dependencies for building nsenter
+RUN apt-get update && \
+    apt-get install -y autoconf autopoint bison gettext libtool
+
+# Create a statically-compiled nsenter binary (see: https://github.com/alexei-led/nsenter/blob/master/Dockerfile)
+# nsenter versions: https://www.kernel.org/pub/linux/utils/util-linux/
+ADD https://github.com/util-linux/util-linux/archive/v2.38.tar.gz .
+RUN tar -xf v2.38.tar.gz && mv util-linux-2.38 util-linux
+WORKDIR /build/util-linux
+RUN ./autogen.sh && ./configure
+RUN make LDFLAGS="--static" nsenter
+
 # Runner
 FROM $BASE_IMAGE
 
 COPY --from=builder /build/aks-periscope /
+COPY --from=builder /build/util-linux/nsenter /usr/bin/
 
 ENTRYPOINT ["/aks-periscope"]
