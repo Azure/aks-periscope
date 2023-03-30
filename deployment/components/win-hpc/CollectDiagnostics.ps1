@@ -12,7 +12,7 @@ $previousRunId = ""
 
 while ($true) {
     $runId = Get-Content $runIdPath
-    if ($runId -ne $previousRunId) {
+    if ($runId -and $runId -ne $previousRunId) {
         Write-Host "Collecting diagnostics for ${runId}"
 
         # The FileInfo containing the zip file is the last output from the script
