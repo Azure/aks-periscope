@@ -6,7 +6,7 @@ go 1.19
 
 require (
 	github.com/Azure/azure-storage-blob-go v0.14.0
-	github.com/docker/docker v20.10.17+incompatible
+	github.com/docker/docker v20.10.24+incompatible
 	github.com/google/uuid v1.2.0
 	github.com/hashicorp/go-multierror v1.1.1
 	helm.sh/helm/v3 v3.10.3
@@ -143,4 +143,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
-
