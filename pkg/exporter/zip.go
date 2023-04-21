@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"io"
+	"log"
 
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 )
@@ -15,9 +16,13 @@ func Zip(data []interfaces.DataProducer) (*bytes.Buffer, error) {
 
 	for _, prd := range data {
 		for name, value := range prd.GetData() {
-			dataf, err := z.Create(prd.GetName() + "/" + name)
+			key := prd.GetName() + "/" + name
+			dataf, err := z.Create(key)
 			if err != nil {
-				return nil, err
+				// If there's an error creating one value, log the error and continue.
+				// We don't this to prevent all the other logs from being exported.
+				log.Printf("Error creating zip entry %q: %v", key, err)
+				continue
 			}
 
 			err = func() error {
@@ -33,7 +38,10 @@ func Zip(data []interfaces.DataProducer) (*bytes.Buffer, error) {
 			}()
 
 			if err != nil {
-				return nil, err
+				// If there's an error writing one value, log the error and continue.
+				// This will leave the entry in the zip empty but allow export of other entries.
+				log.Printf("Error writing zip entry %q: %v", key, err)
+				continue
 			}
 		}
 	}
