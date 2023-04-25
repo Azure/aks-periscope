@@ -1,5 +1,14 @@
 # Change Log
 
+## [0.0.13]
+
+* Remove unnecessary permissions in documentation for SAS generation by @peterbom in https://github.com/Azure/aks-periscope/pull/220
+* Add nsenter to Linux Periscope image by @peterbom in https://github.com/Azure/aks-periscope/pull/221
+* Update resource requests and limits for all Periscope pods by @peterbom in https://github.com/Azure/aks-periscope/pull/222
+* Handle individual errors for entries in zip file by @peterbom in https://github.com/Azure/aks-periscope/pull/226
+
+Thanks to @Tatsinnit
+
 ## [0.0.12]
 
 * Fix/remove confusing diagram. by @Tatsinnit in https://github.com/Azure/aks-periscope/pull/200
