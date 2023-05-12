@@ -92,7 +92,7 @@ func TestInspektorGadgetDNSTraceCollectorCollect(t *testing.T) {
 
 				for _, domain := range domains {
 					// Perform a DNS lookup (discarding the result because we're only testing the events it triggers)
-					net.LookupIP(domain)
+					_, _ = net.LookupIP(domain)
 				}
 			}
 
