@@ -96,7 +96,7 @@ func getCurrentProcessAsKubernetesContainer(pod *corev1.Pod) (*containercollecti
 		// (https://github.com/inspektor-gadget/inspektor-gadget/blob/08b450065bb839e33012d80d476b3a3c17946379/pkg/container-collection/options.go#L497-L500)
 		OciConfig: &ocispec.Spec{
 			Mounts: []ocispec.Mount{
-				ocispec.Mount{
+				{
 					Destination: "/dev/termination-log",
 					Type:        "bind",
 					Source:      fmt.Sprintf("/var/lib/kubelet/pods/%s/containers/%s/dnstest/a1234abcd", pod.ObjectMeta.UID, pod.Spec.Containers[0].Name),
