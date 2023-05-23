@@ -48,6 +48,6 @@ jobs:
         with:
           go-version: ${{ env.GO_VERSION }}
       - name: Go tests
-        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+        run: sudo go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
       - name: Upload coverage to Codecov
         run: bash <(curl -s https://codecov.io/bash) -C $(Build.SourceVersion)

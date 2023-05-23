@@ -16,7 +16,7 @@ RUN go mod download
 
 COPY . .
 
-RUN go build ./cmd/aks-periscope
+RUN go build -buildvcs=false ./cmd/aks-periscope
 
 # Add dependencies for building nsenter
 RUN apt-get update && \

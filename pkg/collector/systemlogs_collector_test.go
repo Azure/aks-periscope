@@ -64,7 +64,7 @@ func TestSystemLogsCollectorCollect(t *testing.T) {
 		{
 			name:    "get system logs",
 			want:    1,
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 

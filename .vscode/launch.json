@@ -8,22 +8,15 @@
             "name": "Launch Tests",
             "type": "go",
             "request": "launch",
-            "program": "${fileDirname}",
-            "mode": "test",
+            "program": "${fileDirname}/__debug_bin",
+            "mode": "exec",
             "env": {},
             "args": ["-test.v"],
-            "showLog": true
-        },
-        {
-            "name": "Launch Tests with race check",
-            "type": "go",
-            "request": "launch",
-            "program": "${fileDirname}",
-            "mode": "test",
-            "env": {},
-            "buildFlags": "-race",
-            "args": ["-test.v"],
-            "showLog": true
+            "showLog": true,
+            // https://github.com/golang/vscode-go/blob/master/docs/debugging.md#debug-a-package-test-as-root
+            "console": "integratedTerminal",
+            "asRoot": true,
+            "preLaunchTask": "go test (debug)",
         },
     ]
 }

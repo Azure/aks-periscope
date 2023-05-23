@@ -112,6 +112,7 @@ func pullDockerImages(client *dockerclient.Client, imagesToPull []string) error 
 			pullOutput, err := client.ImagePull(context.Background(), image, dockertypes.ImagePullOptions{})
 			if err != nil {
 				pullErrorsChan <- fmt.Errorf("error pulling image %s: %w", image, err)
+				return
 			}
 			defer pullOutput.Close()
 			_, err = io.Copy(os.Stdout, pullOutput)

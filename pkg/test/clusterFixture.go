@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -93,6 +95,21 @@ func (fixture *ClusterFixture) PrintDiagnostics() {
 	if err != nil {
 		fmt.Printf("error running test diagnostics command: %v", err)
 	}
+}
+
+// GetNodeNames retrieves the names of the nodes in the test cluster.
+func (fixture *ClusterFixture) GetNodeNames() ([]string, error) {
+	nodeList, err := fixture.AdminAccess.Clientset.CoreV1().Nodes().List(context.TODO(), metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("error listing nodes: %w", err)
+	}
+
+	nodeNames := make([]string, len(nodeList.Items))
+	for i, node := range nodeList.Items {
+		nodeNames[i] = node.Name
+	}
+
+	return nodeNames, nil
 }
 
 // GetKubeConfigBinding gets the Docker volume binding required to map the fixture's kubeconfig file

@@ -13,6 +13,7 @@ import (
 	"github.com/Azure/aks-periscope/pkg/exporter"
 	"github.com/Azure/aks-periscope/pkg/interfaces"
 	"github.com/Azure/aks-periscope/pkg/utils"
+
 	restclient "k8s.io/client-go/rest"
 )
 
@@ -99,6 +100,7 @@ func run(osIdentifier utils.OSIdentifier, knownFilePaths *utils.KnownFilePaths, 
 		collector.NewSystemPerfCollector(config, runtimeInfo),
 		collector.NewWindowsLogsCollector(osIdentifier, runtimeInfo, knownFilePaths, fileSystem, 10*time.Second, 20*time.Minute),
 	}
+	collectors = addOSSpecificCollectors(collectors, config, runtimeInfo)
 
 	collectorGrp := new(sync.WaitGroup)
 
