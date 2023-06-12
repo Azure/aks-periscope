@@ -148,7 +148,7 @@ func getExpectedSmiData(knownNamespaces *test.KnownNamespaces) map[string]*regex
 			crdName: "tcproutes.specs.smi-spec.io",
 			kind:    "TCPRoute",
 			resources: []crdResource{
-				crdResource{
+				{
 					namespace:  knownNamespaces.OsmBookWarehouse,
 					name:       "mysql",
 					apiVersion: "specs.smi-spec.io/v1alpha4",
@@ -159,7 +159,7 @@ func getExpectedSmiData(knownNamespaces *test.KnownNamespaces) map[string]*regex
 			crdName: "trafficsplits.split.smi-spec.io",
 			kind:    "TrafficSplit",
 			resources: []crdResource{
-				crdResource{
+				{
 					namespace:  knownNamespaces.OsmBookStore,
 					name:       "bookstore-split",
 					apiVersion: "split.smi-spec.io/v1alpha2",
