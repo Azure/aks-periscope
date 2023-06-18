@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"path"
@@ -68,9 +69,10 @@ func (collector *WindowsLogsCollector) Collect() error {
 	completionNotificationPath := path.Join(collector.filePaths.WindowsLogsOutput, collector.runtimeInfo.RunId)
 
 	// Poll to check existence of this file.
-	err := wait.Poll(collector.pollInterval, collector.timeout, func() (bool, error) {
-		return collector.fileSystem.FileExists(completionNotificationPath)
-	})
+	err := wait.PollUntilContextTimeout(context.Background(), collector.pollInterval, collector.timeout, false,
+		func(context.Context) (bool, error) {
+			return collector.fileSystem.FileExists(completionNotificationPath)
+		})
 
 	if err != nil {
 		return fmt.Errorf("error waiting for windows log collection: %w", err)

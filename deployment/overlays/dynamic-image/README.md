@@ -7,8 +7,8 @@ This overlay is used to deploy specific Periscope Docker images to a cluster.
 The typical use-case would be to manually test an in-development build of Periscope on a managed cluster. You might do this if your development environment does not have Docker/Kind available, or does not support the feature you wish to test. One example is running Periscope on Windows nodes (further notes on creating a cluster with Windows nodes is [below](#creating-a-windows-cluster)).
 
 If the resources are being deployed to a managed cluster, your Periscope build will need to be published to an external image registry. The options described here are:
-- ACR: If you have local (not yet pushed) changes that you want to test on a managed AKS cluster, you can publish images to an ACR from your local filesystem.
-- GHCR: If you have pushed changes to a fork of the Periscope repository on which you have permission to publish releases, you can publish images to GHCR from a branch in your repository.
+- Azure Container Registry (ACR): If you have local (not yet pushed) changes that you want to test on a managed AKS cluster, you can publish images to an ACR from your local filesystem.
+-Github Container Registry (GHCR): If you have pushed changes to a fork of the Periscope repository on which you have permission to publish releases, you can publish images to GHCR from a branch in your repository.
 
 ## Publishing Images
 
