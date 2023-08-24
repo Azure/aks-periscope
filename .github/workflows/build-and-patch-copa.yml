@@ -1,5 +1,5 @@
 # This is a basic workflow to help you get started with Actions
-name: Bundle building and Patch
+name: Building and Patch
 
 # Controls when the action will run. Triggers the workflow on push or pull request
 # events but only for the main branch
@@ -10,12 +10,36 @@ permissions:
   packages: write
 
 jobs:
+  common:
+      runs-on: ubuntu-latest
+      defaults:
+        run:
+          shell: pwsh
+      steps:
+      - uses: actions/checkout@v3
+      - name: Get Changelog Entry
+        id: changelog_reader
+        uses: mindsers/changelog-reader-action@v2
+        with:
+          validation_depth: 10
+          path: ./CHANGELOG.md
+      - name: Get Version Info
+        id: read_metadata
+        run: |
+          echo "Version: ${{ steps.changelog_reader.outputs.version }}"
+          echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
+          $owner = "${{ github.repository_owner }}".ToLower()
+          $tagbase = "ghcr.io/$owner/aks/periscope:${{ steps.changelog_reader.outputs.version }}"
+          echo "tagbase=$tagbase" >> $env:GITHUB_OUTPUT
+      outputs:
+        tagbase: ${{ steps.read_metadata.outputs.tagbase }}
   patch:
       runs-on: ubuntu-latest
+      needs: common
       strategy:
         fail-fast: false
         matrix:
-          images: ['ghcr.io/azure/aks/periscope:latest', 'ghcr.io/azure/aks/periscope-win:latest']
+          images: ['ghcr.io/azure/aks/periscope:${{ needs.common.outputs.tagbase }}', 'ghcr.io/azure/aks/periscope-win:latest']
       steps:
       - name: Harden Runner 
         uses: step-security/harden-runner@cba0d00b1fc9a034e1e642ea0f1103c282990604 # v2.5.0 
@@ -56,23 +80,3 @@ jobs:
         run: |
           docker tag ghcr.io/azure/aks/periscope:patched ${{ matrix.images }}
           docker push ${{ matrix.images }}
-
-  create-updated-manifest:
-      needs: patch
-      runs-on: ubuntu-latest
-      steps:
-      - name: Harden Runner 
-        uses: step-security/harden-runner@cba0d00b1fc9a034e1e642ea0f1103c282990604 # v2.5.0 
-        with: 
-          egress-policy: audit 
-      - name: Login to ghcr.io
-        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Docker manifest create
-        run: |
-          export DOCKER_CLI_EXPERIMENTAL=enabled
-          docker manifest create ghcr.io/azure/aks/periscope:latest --amend ghcr.io/azure/aks/periscope:latest --amend ghcr.io/azure/aks/periscope-win:latest
-          docker manifest push ghcr.io/azure/aks/periscope:latest
