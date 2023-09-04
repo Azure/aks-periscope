@@ -28,18 +28,17 @@ jobs:
         run: |
           echo "Version: ${{ steps.changelog_reader.outputs.version }}"
           echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
+          $version = "${{ steps.changelog_reader.outputs.version }}"
           $owner = "${{ github.repository_owner }}".ToLower()
-          $tagbase = "ghcr.io/$owner/aks/periscope:${{ steps.changelog_reader.outputs.version }}"
-          echo "tagbase=$tagbase" >> $env:GITHUB_OUTPUT
+          $image = "ghcr.io/$owner/aks/periscope"
+          echo "image=$image" >> $env:GITHUB_OUTPUT
+          echo "version=$version" >> $env:GITHUB_OUTPUT
       outputs:
-        tagbase: ${{ steps.read_metadata.outputs.tagbase }}
+        image: ${{ steps.read_metadata.outputs.image }}
+        version: ${{ steps.read_metadata.outputs.version }}
   patch:
       runs-on: ubuntu-latest
       needs: common
-      strategy:
-        fail-fast: false
-        matrix:
-          images: ['${{ needs.common.outputs.tagbase }}']
       steps:
       - name: Harden Runner 
         uses: step-security/harden-runner@cba0d00b1fc9a034e1e642ea0f1103c282990604 # v2.5.0 
@@ -49,7 +48,7 @@ jobs:
         uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.2.0
         with:
           registry: ghcr.io
-          username: ${{ github.actor }}
+          username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Generate Trivy Report
         uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # v0.11.2
@@ -59,7 +58,7 @@ jobs:
           output: 'report.json'
           ignore-unfixed: true
           vuln-type: 'os'
-          image-ref:  ${{ matrix.images }}
+          image-ref:  ${{ needs.common.outputs.image }}:${{ needs.common.outputs.version }}
       - name: Check Vuln Count
         id: vuln_cout
         run: |
@@ -71,12 +70,11 @@ jobs:
         id: copa
         uses: project-copacetic/copa-action@1eb86b0907bce48225b66dc9488c7d329c2d48a0 # v1.0.0
         with:
-          image:  ${{ matrix.images }}
+          image:  ${{ needs.common.outputs.image }}:${{ needs.common.outputs.version }}
           image-report: 'report.json'
-          patched-tag: 'patched'
+          patched-tag: '${{ needs.common.outputs.version }}-patched'
           buildkit-version: 'v0.12.1'
       - name: Push patched image
         if: steps.copa.conclusion == 'success'
         run: |
-          docker tag ghcr.io/azure/aks/periscope:patched ${{ matrix.images }}
-          docker push ${{ matrix.images }}
+          docker push ${{ needs.common.outputs.image }}:${{ needs.common.outputs.version }}-patched
