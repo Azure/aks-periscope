@@ -82,8 +82,7 @@ jobs:
         tenant-id: ${{ vars.AZURE_TENANT_ID }}
         subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     - name: Authenticate to ACR
-      run: |
-        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+      run: az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
     - name: Get Image References
       id: getref
       run: |
@@ -125,8 +124,7 @@ jobs:
         buildkit-version: 'v0.12.1'
     - name: Publish to ACR
       id: publish
-      run: |
-        docker push ${{ steps.getref.outputs.image_ref }}
+      run: docker push ${{ steps.getref.outputs.image_ref }}
     outputs:
       linux: ${{ steps.getref.outputs.ubuntu-latest-image-ref }}
       win2019: ${{ steps.getref.outputs.windows-2019-image-ref }}

@@ -61,8 +61,7 @@ jobs:
         tenant-id: ${{ vars.AZURE_TENANT_ID }}
         subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     - name: Authenticate to ACR
-      run: |
-        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+      run: az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
     - name: Get Image References
       id: getref
       run: |
@@ -71,6 +70,9 @@ jobs:
         echo "tag_id=$tag_id" >> $env:GITHUB_OUTPUT
         echo "image_ref=$image_ref" >> $env:GITHUB_OUTPUT
         echo "${{ matrix.os }}-image-ref=$image_ref" >> $env:GITHUB_OUTPUT
+    - name: Pull ACR Image
+      if: matrix.canpatch
+      run: docker pull ${{ steps.getref.outputs.image_ref }}
     - name: Generate Trivy Report
       if: matrix.canpatch
       uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # v0.11.2
