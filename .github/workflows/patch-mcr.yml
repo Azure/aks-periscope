@@ -3,7 +3,7 @@ name: Patch Latest MCR
 on:
   workflow_dispatch:
   schedule:
-    - cron: "0 0 * * *" # nightly
+  - cron: "0 0 * * *" # nightly
 
 permissions:
   id-token: write
@@ -28,8 +28,7 @@ jobs:
       run: |
         echo "Version: ${{ steps.changelog_reader.outputs.version }}"
         echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
-        $owner = "${{ github.repository_owner }}".ToLower()
-        echo "image_id=ghcr.io/$owner/aks/periscope" >> $env:GITHUB_OUTPUT
+        echo "image_id=${{ vars.AZURE_REGISTRY_SERVER }}/public/aks/periscope" >> $env:GITHUB_OUTPUT
         echo "tag_id_base=${{ steps.changelog_reader.outputs.version }}" >> $env:GITHUB_OUTPUT
     outputs:
       image_id: ${{ steps.read_metadata.outputs.image_id }}
