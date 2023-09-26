@@ -60,6 +60,9 @@ jobs:
         client-id: ${{ vars.AZURE_CLIENT_ID }}
         tenant-id: ${{ vars.AZURE_TENANT_ID }}
         subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    - name: Authenticate to ACR
+      run: |
+        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
     - name: Get Image References
       id: getref
       run: |
@@ -99,7 +102,6 @@ jobs:
       if: matrix.canpatch && steps.copa.conclusion == 'success'
       id: push
       run: |
-        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
         docker push ${{ steps.getref.outputs.image_ref }}
     outputs:
       linux: ${{ steps.getref.outputs.ubuntu-latest-image-ref }}
