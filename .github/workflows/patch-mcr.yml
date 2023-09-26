@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
   common:
@@ -55,12 +54,12 @@ jobs:
       run:
         shell: pwsh
     steps:
-    - name: Login to ghcr.io
-      uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.2.0
+    - name: Az CLI Login
+      uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
       with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     - name: Get Image References
       id: getref
       run: |
@@ -100,6 +99,7 @@ jobs:
       if: matrix.canpatch && steps.copa.conclusion == 'success'
       id: push
       run: |
+        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
         docker push ${{ steps.getref.outputs.image_ref }}
     outputs:
       linux: ${{ steps.getref.outputs.ubuntu-latest-image-ref }}
@@ -113,15 +113,16 @@ jobs:
         shell: pwsh
     steps:
     - uses: actions/checkout@v3
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v2
+    - name: Az CLI Login
+      uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
       with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     - name: Update Cross-Platform Manifest
       id: publish
       run: |
         $xplat_image_ref = "${{ needs.common.outputs.image_id }}:${{ needs.common.outputs.tag_id_base }}"
+        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
         docker manifest create $xplat_image_ref ${{ needs.patch.outputs.linux }} ${{ needs.patch.outputs.win2019 }} ${{ needs.patch.outputs.win2022 }}
         docker manifest push $xplat_image_ref
