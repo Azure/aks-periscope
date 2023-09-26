@@ -1,9 +1,9 @@
-# This is a basic workflow to help you get started with Actions
-name: Building and Patch
+name: Patch Latest MCR
 
-# Controls when the action will run. Triggers the workflow on push or pull request
-# events but only for the main branch
-on: [workflow_dispatch]
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *" # nightly
 
 permissions:
   contents: read
@@ -11,71 +11,117 @@ permissions:
 
 jobs:
   common:
-      runs-on: ubuntu-latest
-      defaults:
-        run:
-          shell: pwsh
-      steps:
-      - uses: actions/checkout@v3
-      - name: Get Changelog Entry
-        id: changelog_reader
-        uses: mindsers/changelog-reader-action@v2
-        with:
-          validation_depth: 10
-          path: ./CHANGELOG.md
-      - name: Get Version Info
-        id: read_metadata
-        run: |
-          echo "Version: ${{ steps.changelog_reader.outputs.version }}"
-          echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
-          $version = "${{ steps.changelog_reader.outputs.version }}"
-          $owner = "${{ github.repository_owner }}".ToLower()
-          $image = "ghcr.io/$owner/aks/periscope"
-          echo "image=$image" >> $env:GITHUB_OUTPUT
-          echo "version=$version" >> $env:GITHUB_OUTPUT
-      outputs:
-        image: ${{ steps.read_metadata.outputs.image }}
-        version: ${{ steps.read_metadata.outputs.version }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+    - uses: actions/checkout@v3
+    - name: Get Changelog Entry
+      id: changelog_reader
+      uses: mindsers/changelog-reader-action@v2
+      with:
+        validation_depth: 10
+        path: ./CHANGELOG.md
+    - name: Get Version Info
+      id: read_metadata
+      run: |
+        echo "Version: ${{ steps.changelog_reader.outputs.version }}"
+        echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
+        $owner = "${{ github.repository_owner }}".ToLower()
+        echo "image_id=ghcr.io/$owner/aks/periscope" >> $env:GITHUB_OUTPUT
+        echo "tag_id_base=${{ steps.changelog_reader.outputs.version }}" >> $env:GITHUB_OUTPUT
+    outputs:
+      image_id: ${{ steps.read_metadata.outputs.image_id }}
+      tag_id_base: ${{ steps.read_metadata.outputs.tag_id_base }}
   patch:
-      runs-on: ubuntu-latest
-      needs: common
-      steps:
-      - name: Harden Runner 
-        uses: step-security/harden-runner@cba0d00b1fc9a034e1e642ea0f1103c282990604 # v2.5.0 
-        with: 
-          egress-policy: audit 
-      - name: Login to ghcr.io
-        uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.2.0
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Generate Trivy Report
-        uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # v0.11.2
-        with:
-          scan-type: 'image'
-          format: 'json'
-          output: 'report.json'
-          ignore-unfixed: true
-          vuln-type: 'os'
-          image-ref:  ${{ needs.common.outputs.image }}:${{ needs.common.outputs.version }}
-      - name: Check Vuln Count
-        id: vuln_cout
-        run: |
-          report_file="report.json"
-          cat "$report_file"
-          vuln_count=$(jq '.Results[0].Vulnerabilities | length' "$report_file")
-          echo "vuln_count=$vuln_count" >> $GITHUB_OUTPUT
-      - name: Copa Action
-        if: steps.vuln_cout.outputs.vuln_count != '0'
-        id: copa
-        uses: project-copacetic/copa-action@1eb86b0907bce48225b66dc9488c7d329c2d48a0 # v1.0.0
-        with:
-          image:  ${{ needs.common.outputs.image }}:${{ needs.common.outputs.version }}
-          image-report: 'report.json'
-          patched-tag: '${{ needs.common.outputs.version }}-patched'
-          buildkit-version: 'v0.12.1'
-      - name: Push patched image
-        if: steps.copa.conclusion == 'success'
-        run: |
-          docker push ${{ needs.common.outputs.image }}:${{ needs.common.outputs.version }}-patched
+    runs-on: ${{ matrix.os }}
+    needs: common
+    strategy:
+      max-parallel: 4
+      matrix:
+        os: [ubuntu-latest, windows-2019, windows-2022]
+        include:
+        - os: ubuntu-latest
+          tagext: 'mariner2.0'
+          canpatch: true
+        - os: windows-2019
+          tagext: 'nanoserver2019'
+          canpatch: false
+        - os: windows-2022
+          tagext: 'nanoserver2022'
+          canpatch: false
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+    - name: Login to ghcr.io
+      uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.2.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Get Image References
+      id: getref
+      run: |
+        $tag_id = "${{ needs.common.outputs.tag_id_base }}-${{ matrix.tagext }}"
+        $image_ref = "${{ needs.common.outputs.image_id }}:$tag_id"
+        echo "tag_id=$tag_id" >> $env:GITHUB_OUTPUT
+        echo "image_ref=$image_ref" >> $env:GITHUB_OUTPUT
+        echo "${{ matrix.os }}-image-ref=$image_ref" >> $env:GITHUB_OUTPUT
+    - name: Generate Trivy Report
+      if: matrix.canpatch
+      uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # v0.11.2
+      with:
+        scan-type: 'image'
+        format: 'json'
+        output: 'report.json'
+        ignore-unfixed: true
+        vuln-type: 'os'
+        image-ref: ${{ steps.getref.outputs.image_ref }}
+    - name: Check Vuln Count
+      if: matrix.canpatch
+      id: vuln_cout
+      run: |
+        $report_file = "report.json"
+        cat $report_file
+        $vuln_count = jq '.Results[0].Vulnerabilities | length' $report_file
+        echo "vuln_count=$vuln_count" >> $GITHUB_OUTPUT
+    - name: Copa Action
+      if: matrix.canpatch && steps.vuln_cout.outputs.vuln_count != '0'
+      id: copa
+      uses: project-copacetic/copa-action@1eb86b0907bce48225b66dc9488c7d329c2d48a0 # v1.0.0
+      with:
+        image: '${{ steps.getref.outputs.image_ref }}'
+        image-report: 'report.json'
+        patched-tag: '${{ steps.getref.outputs.tag_id }}'
+        buildkit-version: 'v0.12.1'
+    - name: Push Patched Image
+      if: matrix.canpatch && steps.copa.conclusion == 'success'
+      id: push
+      run: |
+        docker push ${{ steps.getref.outputs.image_ref }}
+    outputs:
+      linux: ${{ steps.getref.outputs.ubuntu-latest-image-ref }}
+      win2019: ${{ steps.getref.outputs.windows-2019-image-ref }}
+      win2022: ${{ steps.getref.outputs.windows-2022-image-ref }}
+  update-manifest:
+    runs-on: ubuntu-latest
+    needs: [common, patch]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+    - uses: actions/checkout@v3
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Update Cross-Platform Manifest
+      id: publish
+      run: |
+        $xplat_image_ref = "${{ needs.common.outputs.image_id }}:${{ needs.common.outputs.tag_id_base }}"
+        docker manifest create $xplat_image_ref ${{ needs.patch.outputs.linux }} ${{ needs.patch.outputs.win2019 }} ${{ needs.patch.outputs.win2022 }}
+        docker manifest push $xplat_image_ref
