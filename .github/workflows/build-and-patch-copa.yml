@@ -69,7 +69,7 @@ jobs:
       - name: Copa Action
         if: steps.vuln_cout.outputs.vuln_count != '0'
         id: copa
-        uses: project-copacetic/copa-action@3c942a3d9f1a1e05810d989b15733e5a70203045 # v1.0.0
+        uses: project-copacetic/copa-action@1eb86b0907bce48225b66dc9488c7d329c2d48a0 # v1.0.0
         with:
           image:  ${{ matrix.images }}
           image-report: 'report.json'
