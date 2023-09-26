@@ -81,14 +81,14 @@ jobs:
         image-ref: ${{ steps.getref.outputs.image_ref }}
     - name: Check Vuln Count
       if: matrix.canpatch
-      id: vuln_cout
+      id: vulncount
       run: |
         $report_file = "report.json"
         cat $report_file
         $vuln_count = jq '.Results[0].Vulnerabilities | length' $report_file
-        echo "vuln_count=$vuln_count" >> $GITHUB_OUTPUT
+        echo "vuln_count=$vuln_count" >> $env:GITHUB_OUTPUT
     - name: Copa Action
-      if: matrix.canpatch && steps.vuln_cout.outputs.vuln_count != '0'
+      if: matrix.canpatch && steps.vulncount.outputs.vuln_count != '0'
       id: copa
       uses: project-copacetic/copa-action@1eb86b0907bce48225b66dc9488c7d329c2d48a0 # v1.0.0
       with:
