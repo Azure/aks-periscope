@@ -2,13 +2,11 @@ name: Build and Publish to GHCR and MCR
 
 on: [workflow_dispatch]
 
-permissions:
-  id-token: write
-  contents: read
-
 jobs:
   common:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         shell: pwsh
@@ -56,6 +54,7 @@ jobs:
     needs: common
     permissions:
       contents: read
+      id-token: write
       packages: write
     strategy:
       max-parallel: 4
@@ -168,6 +167,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [common, publish]
     permissions:
+      id-token: write
       packages: write
     defaults:
       run:
