@@ -110,7 +110,7 @@ jobs:
     - name: Copa Action
       if: matrix.canpatch && steps.vulncount.outputs.vuln_count != '0'
       id: copa
-      uses: project-copacetic/copa-action@1eb86b0907bce48225b66dc9488c7d329c2d48a0 # v1.0.0
+      uses: project-copacetic/copa-action@04fbe0ef30896b3fef2280aa86365589cc524304 # v1.0.1
       with:
         image: ${{ steps.getref.outputs.ghcr_image_ref }}
         image-report: 'report.json'
