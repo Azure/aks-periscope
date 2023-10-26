@@ -1,0 +1,199 @@
+name: Build and Publish to GHCR and MCR
+
+on: [workflow_dispatch]
+
+jobs:
+  common:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+    - uses: actions/checkout@v3
+    - name: Get Changelog Entry
+      id: changelog_reader
+      uses: mindsers/changelog-reader-action@v2
+      with:
+        validation_depth: 10
+        path: ./CHANGELOG.md
+    - name: Get Version Info
+      id: read_metadata
+      run: |
+        echo "Version: ${{ steps.changelog_reader.outputs.version }}"
+        echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
+        $owner = "${{ github.repository_owner }}".ToLower()
+        echo "acr_image_id=${{ vars.AZURE_REGISTRY_SERVER }}/public/aks/periscope" >> $env:GITHUB_OUTPUT
+        echo "ghcr_image_id=ghcr.io/$owner/aks/periscope" >> $env:GITHUB_OUTPUT
+        echo "tag_id_base=${{ steps.changelog_reader.outputs.version }}" >> $env:GITHUB_OUTPUT
+    outputs:
+      acr_image_id: ${{ steps.read_metadata.outputs.acr_image_id }}
+      ghcr_image_id: ${{ steps.read_metadata.outputs.ghcr_image_id }}
+      tag_id_base: ${{ steps.read_metadata.outputs.tag_id_base }}
+      version: ${{ steps.changelog_reader.outputs.version }}
+      changes: ${{ steps.changelog_reader.outputs.changes }}
+  release:
+    runs-on: ubuntu-latest
+    needs: common
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v3
+    - name: Create a Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+      with:
+        tag_name: ${{ needs.common.outputs.version }}
+        release_name: ${{ needs.common.outputs.version }}
+        body: Publish ${{ needs.common.outputs.changes }}
+  publish:
+    runs-on: ${{ matrix.os }}
+    needs: common
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    strategy:
+      max-parallel: 4
+      matrix:
+        os: [ubuntu-latest, windows-2019, windows-2022]
+        include:
+        - os: ubuntu-latest
+          file: ./builder/Dockerfile.linux
+          baseimage: 'mcr.microsoft.com/cbl-mariner/distroless/base:2.0'
+          tagext: 'mariner2.0'
+          canpatch: true
+        - os: windows-2019
+          file: ./builder/Dockerfile.windows
+          baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2019'
+          tagext: 'nanoserver2019'
+          canpatch: false
+        - os: windows-2022
+          file: ./builder/Dockerfile.windows
+          baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2022'
+          tagext: 'nanoserver2022'
+          canpatch: false
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+    - uses: actions/checkout@v3
+    # Perform a 'docker login' so that we can push to the ACR that provides the MCR images.
+    # This requires an Az login first.
+    - name: Az CLI Login
+      uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
+      with:
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    - name: Authenticate to ACR
+      run: az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+    # Perform a 'docker login' so that we can push to the current repo's GHCR. We will push the unpatched
+    # images to GHCR first, run a Trivy scan and Copa patch on those, and then push the patched images
+    # to both GHCR and ACR.
+    - name: Authenticate to GHCR
+      uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    # Work out the target image references (registry images and tags) for publishing.
+    - name: Get Image References
+      id: getref
+      run: |
+        $tag_id = "${{ needs.common.outputs.tag_id_base }}-${{ matrix.tagext }}"
+        echo "tag_id=$tag_id" >> $env:GITHUB_OUTPUT
+        echo "acr_image_ref=${{ needs.common.outputs.acr_image_id }}:$tag_id" >> $env:GITHUB_OUTPUT
+        echo "ghcr_image_ref=${{ needs.common.outputs.ghcr_image_id }}:$tag_id" >> $env:GITHUB_OUTPUT
+        echo "${{ matrix.os }}-acr-image-ref=${{ needs.common.outputs.acr_image_id }}:$tag_id" >> $env:GITHUB_OUTPUT
+        echo "${{ matrix.os }}-ghcr-image-ref=${{ needs.common.outputs.ghcr_image_id }}:$tag_id" >> $env:GITHUB_OUTPUT
+    - name: Build Image
+      id: build
+      run: docker build -f ${{ matrix.file }} --build-arg BASE_IMAGE=${{ matrix.baseimage }} -t ${{ steps.getref.outputs.ghcr_image_ref }} .
+    # If this OS supports patching images using Copa, push the unpatched image to GHCR with the tag suffix '-unpatched'.
+    # Then, scan and patch this image, and re-tag it with the original tag (no suffix).
+    - name: Push Unpatched Image to GHCR
+      if: matrix.canpatch
+      run: |
+        docker tag ${{ steps.getref.outputs.ghcr_image_ref }} ${{ steps.getref.outputs.ghcr_image_ref }}-unpatched
+        docker push ${{ steps.getref.outputs.ghcr_image_ref }}-unpatched
+    - name: Generate Trivy Report
+      if: matrix.canpatch
+      uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # v0.11.2
+      with:
+        scan-type: 'image'
+        format: 'json'
+        output: 'report.json'
+        ignore-unfixed: true
+        vuln-type: 'os'
+        image-ref: ${{ steps.getref.outputs.ghcr_image_ref }}-unpatched
+    - name: Check Vuln Count
+      if: matrix.canpatch
+      id: vulncount
+      run: |
+        $report_file = "report.json"
+        cat $report_file
+        $vuln_count = jq '.Results[0].Vulnerabilities | length' $report_file
+        echo "vuln_count=$vuln_count" >> $env:GITHUB_OUTPUT
+    - name: Copa Action
+      if: matrix.canpatch && steps.vulncount.outputs.vuln_count != '0'
+      id: copa
+      uses: project-copacetic/copa-action@04fbe0ef30896b3fef2280aa86365589cc524304 # v1.0.1
+      with:
+        image: ${{ steps.getref.outputs.ghcr_image_ref }}-unpatched
+        image-report: 'report.json'
+        patched-tag: ${{ steps.getref.outputs.tag_id }}
+        buildkit-version: 'v0.12.1'
+    # Push to both GHCR and ACR. The image being pushed will be the patched one, if patching is supported,
+    # or the original built image otherwise.
+    - name: Push Image to GHCR
+      run: docker push ${{ steps.getref.outputs.ghcr_image_ref }}
+    - name: Push Image to ACR
+      id: publish
+      run: |
+        docker tag ${{ steps.getref.outputs.ghcr_image_ref }} ${{ steps.getref.outputs.acr_image_ref }}
+        docker push ${{ steps.getref.outputs.acr_image_ref }}
+    outputs:
+      ghcr_linux: ${{ steps.getref.outputs.ubuntu-latest-ghcr-image-ref }}
+      ghcr_win2019: ${{ steps.getref.outputs.windows-2019-ghcr-image-ref }}
+      ghcr_win2022: ${{ steps.getref.outputs.windows-2022-ghcr-image-ref }}
+      acr_linux: ${{ steps.getref.outputs.ubuntu-latest-acr-image-ref }}
+      acr_win2019: ${{ steps.getref.outputs.windows-2019-acr-image-ref }}
+      acr_win2022: ${{ steps.getref.outputs.windows-2022-acr-image-ref }}
+  update-manifest:
+    runs-on: ubuntu-latest
+    needs: [common, publish]
+    permissions:
+      id-token: write
+      packages: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+    # As for the 'publish' job, we need to 'docker login' to both GHCR and ACR to push manifests.
+    - name: Az CLI Login
+      uses: azure/login@92a5484dfaf04ca78a94597f4f19fea633851fa2 # v1.4.6
+      with:
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    - name: Authenticate to ACR
+      run: az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+    - name: Authenticate to GHCR
+      uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Publish Cross-Platform Manifest
+      id: publish
+      run: |
+        $ghcr_xplat_image_ref = "${{ needs.common.outputs.ghcr_image_id }}:${{ needs.common.outputs.tag_id_base }}"
+        $acr_xplat_image_ref = "${{ needs.common.outputs.acr_image_id }}:${{ needs.common.outputs.tag_id_base }}"
+        docker manifest create $ghcr_xplat_image_ref ${{ needs.publish.outputs.ghcr_linux }} ${{ needs.publish.outputs.ghcr_win2019 }} ${{ needs.publish.outputs.ghcr_win2022 }}
+        docker manifest create $acr_xplat_image_ref ${{ needs.publish.outputs.acr_linux }} ${{ needs.publish.outputs.acr_win2019 }} ${{ needs.publish.outputs.acr_win2022 }}
+        docker manifest push $ghcr_xplat_image_ref
+        docker manifest push $acr_xplat_image_ref
