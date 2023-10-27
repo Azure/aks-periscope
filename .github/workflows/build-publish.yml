@@ -11,7 +11,7 @@ jobs:
       run:
         shell: pwsh
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Get Changelog Entry
       id: changelog_reader
       uses: mindsers/changelog-reader-action@v2
@@ -39,7 +39,7 @@ jobs:
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - name: Create a Release
       id: create_release
       uses: actions/create-release@v1
@@ -80,7 +80,7 @@ jobs:
       run:
         shell: pwsh
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     # Perform a 'docker login' so that we can push to the ACR that provides the MCR images.
     # This requires an Az login first.
     - name: Az CLI Login
