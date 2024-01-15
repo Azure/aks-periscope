@@ -61,7 +61,7 @@ jobs:
     # Perform a 'docker login' so that we can push to the ACR that provides the MCR images.
     # This requires an Az login first.
     - name: Az CLI Login
-      uses: azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.4.6
+      uses: azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.4.6
       with:
         client-id: ${{ vars.AZURE_CLIENT_ID }}
         tenant-id: ${{ vars.AZURE_TENANT_ID }}
@@ -142,7 +142,7 @@ jobs:
     steps:
     # As for the 'patch' job, we need to 'docker login' to both GHCR and ACR to push manifests.
     - name: Az CLI Login
-      uses: azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.4.6
+      uses: azure/login@e15b166166a8746d1a47596803bd8c1b595455cf # v1.4.6
       with:
         client-id: ${{ vars.AZURE_CLIENT_ID }}
         tenant-id: ${{ vars.AZURE_TENANT_ID }}
