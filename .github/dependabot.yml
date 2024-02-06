@@ -8,6 +8,7 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -16,4 +17,4 @@ updates:
   - package-ecosystem: docker
     directory: /pkg/test/resources
     schedule:
-      interval: daily
+      interval: weekly
