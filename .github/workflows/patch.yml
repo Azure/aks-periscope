@@ -5,6 +5,9 @@ on:
   schedule:
   - cron: "0 0 * * *" # nightly
 
+permissions:
+  contents: read
+
 jobs:
   common:
     runs-on: ubuntu-latest
@@ -14,10 +17,15 @@ jobs:
       run:
         shell: pwsh
     steps:
-    - uses: actions/checkout@v4
+    - name: Harden Runner
+      uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
     - name: Get Changelog Entry
       id: changelog_reader
-      uses: mindsers/changelog-reader-action@v2
+      uses: mindsers/changelog-reader-action@b97ce03a10d9bdbb07beb491c76a5a01d78cd3ef # v2.2.2
       with:
         validation_depth: 10
         path: ./CHANGELOG.md
@@ -60,6 +68,11 @@ jobs:
     steps:
     # Perform a 'docker login' so that we can push to the ACR that provides the MCR images.
     # This requires an Az login first.
+    - name: Harden Runner
+      uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+      with:
+        egress-policy: audit
+
     - name: Az CLI Login
       uses: azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.4.6
       with:
@@ -141,6 +154,11 @@ jobs:
         shell: pwsh
     steps:
     # As for the 'patch' job, we need to 'docker login' to both GHCR and ACR to push manifests.
+    - name: Harden Runner
+      uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
+      with:
+        egress-policy: audit
+
     - name: Az CLI Login
       uses: azure/login@de95379fe4dadc2defb305917eaa7e5dde727294 # v1.4.6
       with:
