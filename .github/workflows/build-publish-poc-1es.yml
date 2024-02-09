@@ -1,4 +1,4 @@
-name: Building and Pushing to MCR
+name: 1ES POC
 on: [workflow_dispatch]
 
 permissions:
