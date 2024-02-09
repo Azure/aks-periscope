@@ -1,0 +1,56 @@
+name: Building and Pushing to MCR
+on: [workflow_dispatch]
+
+permissions:
+      id-token: write
+      contents: read
+
+jobs:
+  common:
+    runs-on:
+      labels: ["self-hosted", "1ES.Pool=1es-aks-periscope-pool-msit-poc"]
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+    - uses: actions/checkout@v3
+    - name: Get Changelog Entry
+      id: changelog_reader
+      uses: mindsers/changelog-reader-action@v2
+      with:
+        validation_depth: 10
+        path: ./CHANGELOG.md
+    - name: Get Version Info
+      id: read_metadata
+      run: |
+        echo "Version: ${{ steps.changelog_reader.outputs.version }}"
+        echo "Changes: ${{ steps.changelog_reader.outputs.changes }}"
+        $tagbase = "${{ vars.AZURE_REGISTRY_SERVER }}/periscope-test:${{ steps.changelog_reader.outputs.version }}"
+        echo "tagbase=$tagbase" >> $env:GITHUB_OUTPUT
+    outputs:
+      tagbase: ${{ steps.read_metadata.outputs.tagbase }}
+      version: ${{ steps.changelog_reader.outputs.version }}
+      changes: ${{ steps.changelog_reader.outputs.changes }}
+  publish:
+    runs-on:
+      labels: ["self-hosted", "1ES.Pool=1es-aks-periscope-pool-msit-poc"]
+    needs: common
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+    - uses: actions/checkout@v3
+    # - name: 'Az CLI login'
+    - name: "Login to ACR"
+      run: |
+          az login --identity
+    - name: 'Publish to ACR'
+      id: publish
+      run: |
+        $tag = "${{ needs.common.outputs.tagbase }}-mariner2.0"
+        echo "tag-ubuntu-latest=$tag" >> $env:GITHUB_OUTPUT
+        docker build -f ./builder/Dockerfile.linux --build-arg BASE_IMAGE=mcr.microsoft.com/cbl-mariner/distroless/base:2.0 -t $tag .
+        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+        docker push $tag
+    outputs:
+      linux: ${{ steps.publish.outputs.tag-ubuntu-latest }}
