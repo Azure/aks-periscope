@@ -7,7 +7,7 @@ go 1.19
 require (
 	github.com/Azure/azure-storage-blob-go v0.15.0
 	github.com/docker/docker v24.0.7+incompatible
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/hashicorp/go-multierror v1.1.1
 	helm.sh/helm/v3 v3.14.0
 	k8s.io/api v0.29.1
