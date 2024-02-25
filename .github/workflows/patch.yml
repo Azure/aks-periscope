@@ -43,7 +43,8 @@ jobs:
       ghcr_image_id: ${{ steps.read_metadata.outputs.ghcr_image_id }}
       tag_id_base: ${{ steps.read_metadata.outputs.tag_id_base }}
   patch:
-    runs-on: ${{ matrix.os }}
+    runs-on:
+      labels: [self-hosted, "1ES.Pool=${{ matrix.runner }}"]
     needs: common
     permissions:
       id-token: write
@@ -54,33 +55,31 @@ jobs:
         os: [ubuntu-latest, windows-2019, windows-2022]
         include:
         - os: ubuntu-latest
+          runner: ${{ vars.RUNNER_BASE_NAME }}-ubuntu
           tagext: 'mariner2.0'
           canpatch: true
         - os: windows-2019
+          runner: ${{ vars.RUNNER_BASE_NAME }}-win2019
           tagext: 'nanoserver2019'
           canpatch: false
         - os: windows-2022
+          runner: ${{ vars.RUNNER_BASE_NAME }}-win2022
           tagext: 'nanoserver2022'
           canpatch: false
     defaults:
       run:
         shell: pwsh
     steps:
-    # Perform a 'docker login' so that we can push to the ACR that provides the MCR images.
-    # This requires an Az login first.
     - name: Harden Runner
       uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
       with:
         egress-policy: audit
-
-    - name: Az CLI Login
-      uses: azure/login@cb79c773a3cfa27f31f25eb3f677781210c9ce3d # v1.4.6
-      with:
-        client-id: ${{ vars.AZURE_CLIENT_ID }}
-        tenant-id: ${{ vars.AZURE_TENANT_ID }}
-        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    # Perform a 'docker login' so that we can push to the ACR that provides the MCR images.
+    # This requires an Az login first.
     - name: Authenticate to ACR
-      run: az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+      run: |
+        az login --identity
+        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
     # Perform a 'docker login' so that we can push to the current repo's GHCR. We will run a Trivy scan
     # on the GHCR images, perform a Copa patch if there are vulnerabilities, and then push the patched images
     # to both GHCR and ACR.
@@ -144,7 +143,8 @@ jobs:
       acr_win2019: ${{ steps.getref.outputs.windows-2019-acr-image-ref }}
       acr_win2022: ${{ steps.getref.outputs.windows-2022-acr-image-ref }}
   update-manifest:
-    runs-on: ubuntu-latest
+    runs-on:
+      labels: ["self-hosted", "1ES.Pool=${{ vars.RUNNER_BASE_NAME }}-ubuntu"]
     needs: [common, patch]
     permissions:
       id-token: write
@@ -153,20 +153,15 @@ jobs:
       run:
         shell: pwsh
     steps:
-    # As for the 'patch' job, we need to 'docker login' to both GHCR and ACR to push manifests.
     - name: Harden Runner
       uses: step-security/harden-runner@63c24ba6bd7ba022e95695ff85de572c04a18142 # v2.7.0
       with:
         egress-policy: audit
-
-    - name: Az CLI Login
-      uses: azure/login@cb79c773a3cfa27f31f25eb3f677781210c9ce3d # v1.4.6
-      with:
-        client-id: ${{ vars.AZURE_CLIENT_ID }}
-        tenant-id: ${{ vars.AZURE_TENANT_ID }}
-        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+    # As for the 'patch' job, we need to 'docker login' to both GHCR and ACR to push manifests.
     - name: Authenticate to ACR
-      run: az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+      run: |
+        az login --identity
+        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
     - name: Authenticate to GHCR
       uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
       with:

@@ -63,7 +63,8 @@ jobs:
         release_name: ${{ needs.common.outputs.version }}
         body: Publish ${{ needs.common.outputs.changes }}
   publish:
-    runs-on: ${{ matrix.os }}
+    runs-on:
+      labels: [self-hosted, "1ES.Pool=${{ matrix.runner }}"]
     needs: common
     permissions:
       contents: read
@@ -75,16 +76,19 @@ jobs:
         os: [ubuntu-latest, windows-2019, windows-2022]
         include:
         - os: ubuntu-latest
+          runner: ${{ vars.RUNNER_BASE_NAME }}-ubuntu
           file: ./builder/Dockerfile.linux
           baseimage: 'mcr.microsoft.com/cbl-mariner/distroless/base:2.0'
           tagext: 'mariner2.0'
           canpatch: true
         - os: windows-2019
+          runner: ${{ vars.RUNNER_BASE_NAME }}-win2019
           file: ./builder/Dockerfile.windows
           baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2019'
           tagext: 'nanoserver2019'
           canpatch: false
         - os: windows-2022
+          runner: ${{ vars.RUNNER_BASE_NAME }}-win2022
           file: ./builder/Dockerfile.windows
           baseimage: 'mcr.microsoft.com/windows/nanoserver:ltsc2022'
           tagext: 'nanoserver2022'
@@ -101,14 +105,10 @@ jobs:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
     # Perform a 'docker login' so that we can push to the ACR that provides the MCR images.
     # This requires an Az login first.
-    - name: Az CLI Login
-      uses: azure/login@cb79c773a3cfa27f31f25eb3f677781210c9ce3d # v1.4.6
-      with:
-        client-id: ${{ vars.AZURE_CLIENT_ID }}
-        tenant-id: ${{ vars.AZURE_TENANT_ID }}
-        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     - name: Authenticate to ACR
-      run: az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+      run: |
+        az login --identity
+        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
     # Perform a 'docker login' so that we can push to the current repo's GHCR. We will push the unpatched
     # images to GHCR first, run a Trivy scan and Copa patch on those, and then push the patched images
     # to both GHCR and ACR.
@@ -182,7 +182,8 @@ jobs:
       acr_win2019: ${{ steps.getref.outputs.windows-2019-acr-image-ref }}
       acr_win2022: ${{ steps.getref.outputs.windows-2022-acr-image-ref }}
   update-manifest:
-    runs-on: ubuntu-latest
+    runs-on:
+      labels: ["self-hosted", "1ES.Pool=${{ vars.RUNNER_BASE_NAME }}-ubuntu"]
     needs: [common, publish]
     permissions:
       id-token: write
@@ -197,14 +198,10 @@ jobs:
       with:
         egress-policy: audit
 
-    - name: Az CLI Login
-      uses: azure/login@cb79c773a3cfa27f31f25eb3f677781210c9ce3d # v1.4.6
-      with:
-        client-id: ${{ vars.AZURE_CLIENT_ID }}
-        tenant-id: ${{ vars.AZURE_TENANT_ID }}
-        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
     - name: Authenticate to ACR
-      run: az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
+      run: |
+        az login --identity
+        az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
     - name: Authenticate to GHCR
       uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
       with:
