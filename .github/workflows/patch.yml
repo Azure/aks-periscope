@@ -103,7 +103,7 @@ jobs:
       run: docker pull ${{ steps.getref.outputs.ghcr_image_ref }}
     - name: Generate Trivy Report
       if: matrix.canpatch
-      uses: aquasecurity/trivy-action@062f2592684a31eb3aa050cc61e7ca1451cecd3d # v0.18.0
+      uses: aquasecurity/trivy-action@b2933f565dbc598b29947660e66259e3c7bc8561 # v0.20.0
       with:
         scan-type: 'image'
         format: 'json'
