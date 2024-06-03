@@ -84,7 +84,7 @@ jobs:
     # on the GHCR images, perform a Copa patch if there are vulnerabilities, and then push the patched images
     # to both GHCR and ACR.
     - name: Authenticate to GHCR
-      uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+      uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
       with:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
@@ -163,7 +163,7 @@ jobs:
         az login --identity
         az acr login -n ${{ vars.AZURE_REGISTRY_SERVER }}
     - name: Authenticate to GHCR
-      uses: docker/login-action@343f7c4344506bcbf9b4de18042ae17996df046d # v3.0.0
+      uses: docker/login-action@0d4c9c5ea7693da7b068278f7b52bda2a190a446 # v3.2.0
       with:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
