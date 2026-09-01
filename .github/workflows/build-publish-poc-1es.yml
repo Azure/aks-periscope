@@ -13,10 +13,10 @@ jobs:
       run:
         shell: pwsh
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
     - name: Get Changelog Entry
       id: changelog_reader
-      uses: mindsers/changelog-reader-action@v2
+      uses: mindsers/changelog-reader-action@1faaf50aa09d5793d9a100819973df801febfb31 # v2.4.0
       with:
         validation_depth: 10
         path: ./CHANGELOG.md
@@ -39,7 +39,7 @@ jobs:
       run:
         shell: pwsh
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
     # - name: 'Az CLI login'
     - name: "Login to ACR"
       run: |
