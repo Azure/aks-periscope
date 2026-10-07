@@ -4,7 +4,7 @@ ARG BASE_IMAGE=mcr.microsoft.com/cbl-mariner/distroless/base:2.0
 
 # Builder
 # golang builder image is multi-platform
-FROM golang:1.19.5 AS builder
+FROM golang:1.23.6 AS builder
 
 ENV GO111MODULE=on CGO_ENABLED=0
 
